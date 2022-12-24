@@ -75,7 +75,11 @@ QFuture<void> QXmppOmemoMemoryStorage::removeSignedPreKeyPair(const uint32_t key
 
 QFuture<void> QXmppOmemoMemoryStorage::addPreKeyPairs(const QHash<uint32_t, QByteArray> &keyPairs)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     d->preKeyPairs.insert(keyPairs);
+#else
+    d->preKeyPairs.unite(keyPairs);
+#endif
     return makeReadyFuture();
 }
 

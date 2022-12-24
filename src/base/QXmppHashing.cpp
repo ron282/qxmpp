@@ -13,6 +13,8 @@
 #include <QRunnable>
 #include <QThreadPool>
 
+#include <functional>
+
 using namespace QXmpp;
 using namespace QXmpp::Private;
 
@@ -28,10 +30,12 @@ static HashAlgorithm toHashAlgorithm(QCryptographicHash::Algorithm algorithm)
 {
     switch (algorithm) {
     case QCryptographicHash::Md4:
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 2)
     case QCryptographicHash::Keccak_224:
     case QCryptographicHash::Keccak_256:
     case QCryptographicHash::Keccak_384:
     case QCryptographicHash::Keccak_512:
+#endif
     case QCryptographicHash::Sha3_224:
     case QCryptographicHash::Sha3_384:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

@@ -326,7 +326,8 @@ void QXmppStream::setSocket(QSslSocket *socket)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(socket, &QSslSocket::errorOccurred, this, &QXmppStream::_q_socketError);
 #else
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppStream::_q_socketError);
+    //connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppStream::_q_socketError);
+    connect(socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error), this, &QXmppStream::_q_socketError);
 #endif
     connect(socket, &QIODevice::readyRead, this, &QXmppStream::_q_socketReadyRead);
 }

@@ -24,7 +24,8 @@
 #include <QFutureWatcher>
 #include <QObject>
 
-namespace QXmpp::Private {
+namespace QXmpp {
+namespace Private {
 
 // helper for std::visit
 template<class... Ts>
@@ -210,6 +211,7 @@ auto mapSuccess(std::variant<T, Err> var, Function lambda)
                       std::move(var));
 }
 
-}  // namespace QXmpp::Private
+}  // namespace Private
+}  // namespace QXmpp
 
 #endif  // QXMPPFUTUREUTILS_P_H

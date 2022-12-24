@@ -1590,6 +1590,51 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             }
         }
 
+#if 1
+        // XEP-0085: Chat State Notifications
+        if (d->state > None && d->state <= Paused) {
+            writer->writeStartElement(CHAT_STATES.at(d->state));
+            writer->writeDefaultNamespace(ns_chat_states);
+            writer->writeEndElement();
+        }
+#endif
+
+#if 1
+        // XEP-0184: Message Delivery Receipts
+        // An ack message (message containing a "received" element) must not
+        // include a receipt request ("request" element) in order to prevent
+        // looping.
+        if (!d->receiptId.isEmpty()) {
+            writer->writeStartElement(QStringLiteral("received"));
+            writer->writeDefaultNamespace(ns_message_receipts);
+            writer->writeAttribute(QStringLiteral("id"), d->receiptId);
+            writer->writeEndElement();
+        } else if (d->receiptRequested) {
+            writer->writeStartElement(QStringLiteral("request"));
+            writer->writeDefaultNamespace(ns_message_receipts);
+            writer->writeEndElement();
+        }
+#endif
+
+#if 1
+        // XEP-0333: Chat Markers
+        if (d->markable) {
+            writer->writeStartElement(QStringLiteral("markable"));
+            writer->writeDefaultNamespace(ns_chat_markers);
+            writer->writeEndElement();
+        }
+        if (d->marker != NoMarker) {
+            writer->writeStartElement(MARKER_TYPES.at(d->marker));
+            writer->writeDefaultNamespace(ns_chat_markers);
+            writer->writeAttribute(QStringLiteral("id"), d->markedId);
+            if (!d->markedThread.isNull() && !d->markedThread.isEmpty()) {
+                writer->writeAttribute(QStringLiteral("thread"), d->markedThread);
+            }
+            writer->writeEndElement();
+        }
+#endif
+
+
         // XEP-0359: Unique and Stable Stanza IDs
         if (!d->stanzaId.isNull()) {
             writer->writeStartElement(QStringLiteral("stanza-id"));
@@ -1683,14 +1728,15 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeEndElement();
             writer->writeEndElement();
         }
-
+#if 1
+#else
         // XEP-0085: Chat State Notifications
         if (d->state > None && d->state <= Paused) {
             writer->writeStartElement(CHAT_STATES.at(d->state));
             writer->writeDefaultNamespace(ns_chat_states);
             writer->writeEndElement();
         }
-
+#endif
         // XEP-0091: Legacy Delayed Delivery | XEP-0203: Delayed Delivery
         if (d->stamp.isValid()) {
             QDateTime utcStamp = d->stamp.toUTC();
@@ -1709,6 +1755,8 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             }
         }
 
+#if 1
+#else
         // XEP-0184: Message Delivery Receipts
         // An ack message (message containing a "received" element) must not
         // include a receipt request ("request" element) in order to prevent
@@ -1723,7 +1771,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeDefaultNamespace(ns_message_receipts);
             writer->writeEndElement();
         }
-
+#endif
         // XEP-0224: Attention
         if (d->attentionRequested) {
             writer->writeStartElement(QStringLiteral("attention"));
@@ -1758,6 +1806,8 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeEndElement();
         }
 
+#if 1
+#else
         // XEP-0333: Chat Markers
         if (d->markable) {
             writer->writeStartElement(QStringLiteral("markable"));
@@ -1773,6 +1823,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             }
             writer->writeEndElement();
         }
+#endif
 
         // XEP-0367: Message Attaching
         if (!d->attachId.isEmpty()) {

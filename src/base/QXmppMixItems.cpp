@@ -140,7 +140,7 @@ bool QXmppMixInfoItem::isItem(const QDomElement &element)
 {
     return QXmppPubSubItem::isItem(element, [](const QDomElement &payload) {
         // check FORM_TYPE without parsing a full QXmppDataForm
-        if (payload.tagName() != u'x' || payload.namespaceURI() != ns_data) {
+        if (payload.tagName() != QChar('x') || payload.namespaceURI() != ns_data) {
             return false;
         }
         for (auto fieldEl = payload.firstChildElement();

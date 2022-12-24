@@ -546,7 +546,11 @@ void QXmppPubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
         subscription().value_or(QXmppPubSubSubscription()).toXml(writer);
     } else {
         // write query type
-        writer->writeStartElement(PUBSUB_QUERIES.at(d->queryType));
+        if(type() == QXmppIq::Set && (d->queryType == Items) && d->queryNode.contains(ns_omemo_bundles))
+            writer->writeStartElement(PUBSUB_QUERIES.at(Publish));
+        else
+            writer->writeStartElement(PUBSUB_QUERIES.at(d->queryType));
+
         helperToXmlAddAttribute(writer, QStringLiteral("jid"), d->queryJid);
         helperToXmlAddAttribute(writer, QStringLiteral("node"), d->queryNode);
 
@@ -569,7 +573,7 @@ void QXmppPubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
             }
             break;
         case Items:
-            if (d->maxItems > 0) {
+            if (d->maxItems > 0 && (d->queryNode.contains(ns_omemo_bundles) == false)) {
                 writer->writeAttribute(QStringLiteral("max_items"), QString::number(d->maxItems));
             }
             [[fallthrough]];
@@ -613,35 +617,38 @@ void QXmppPubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
 
         writer->writeEndElement();  // query type
 
-        // add extra element with data form
-        if (auto form = d->dataForm) {
-            const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
-                writer->writeStartElement(subElementName);
-                form.toXml(writer);
-                writer->writeEndElement();
-            };
+        if(d->queryNode.contains(ns_omemo_bundles) == false)
+        {
+            // add extra element with data form
+            if (auto form = d->dataForm) {
+                const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
+                    writer->writeStartElement(subElementName);
+                    form.toXml(writer);
+                    writer->writeEndElement();
+                };
 
-            // make sure form type is 'submit'
-            form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
+                // make sure form type is 'submit'
+                form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
 
-            switch (d->queryType) {
-            case Create:
-                writeForm(writer, *form, QStringLiteral("configure"));
-                break;
-            case Publish:
-                writeForm(writer, *form, QStringLiteral("publish-options"));
-                break;
-            case Subscribe:
-            case Subscription:
-                writeForm(writer, *form, QStringLiteral("options"));
-                break;
-            default:
-                break;
+                switch (d->queryType) {
+                case Create:
+                    writeForm(writer, *form, QStringLiteral("configure"));
+                    break;
+                case Publish:
+                    writeForm(writer, *form, QStringLiteral("publish-options"));
+                    break;
+                case Subscribe:
+                case Subscription:
+                    writeForm(writer, *form, QStringLiteral("options"));
+                    break;
+                default:
+                    break;
+                }
             }
         }
 
         // Result Set Management
-        if (d->queryType == Items && d->itemsContinuation.has_value()) {
+        if (d->queryType == Items && d->itemsContinuation.has_value() && (d->queryNode.contains(ns_omemo_bundles) == false)) {
             d->itemsContinuation->toXml(writer);
         }
     }

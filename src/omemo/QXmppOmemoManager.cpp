@@ -857,10 +857,10 @@ QFuture<void> Manager::buildMissingSessions(const QList<QString> &jids)
     for (const auto &jid : jids) {
         // Do not exceed the maximum of manageable devices.
         if (devicesCount > d->maximumDevicesPerStanza - devicesCount) {
-            warning("Sessions could not be built for all JIDs because their devices are "
-                    "altogether more than the maximum of manageable devices " %
+            warning(QString("Sessions could not be built for all JIDs because their devices are ") %
+                    QString("altogether more than the maximum of manageable devices ") %
                     QString::number(d->maximumDevicesPerStanza) %
-                    u" - Use QXmppOmemoManager::setMaximumDevicesPerStanza() to increase the maximum");
+                    QString(" - Use QXmppOmemoManager::setMaximumDevicesPerStanza() to increase the maximum"));
             break;
         } else {
             devicesCount += devices.value(jid).size();
@@ -1092,9 +1092,16 @@ QFuture<QXmppE2eeExtension::IqDecryptResult> Manager::decryptIq(const QDomElemen
 
 QStringList Manager::discoveryFeatures() const
 {
+#if 1
+    return {
+        QString(ns_omemo_devices), 
+        QString(ns_omemo_devices) % "+notify"
+    };
+#else
     return {
         QString(ns_omemo_2_devices) % "+notify"
     };
+#endif
 }
 
 bool Manager::handleStanza(const QDomElement &stanza)
@@ -1229,7 +1236,11 @@ void Manager::setClient(QXmppClient *client)
 
 bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSubService, const QString &nodeName)
 {
+#if 1    
+    if (nodeName == ns_omemo_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
+#else
     if (nodeName == ns_omemo_2_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
+#endif
         QXmppPubSubEvent<QXmppOmemoDeviceListItem> event;
         event.parse(element);
 
@@ -1251,12 +1262,16 @@ bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSu
                 // That is necessary because PubSub allows publishing without
                 // items leading to notification-only events.
                 if (!items.isEmpty()) {
+#if 0 
                     const auto &deviceListItem = items.constFirst();
                     if (deviceListItem.id() == QXmppPubSubManager::standardItemIdToString(QXmppPubSubManager::Current)) {
                         d->updateDevices(pubSubService, event.items().constFirst());
                     } else {
                         d->handleIrregularDeviceListChanges(pubSubService);
                     }
+#else
+                    d->updateDevices(pubSubService, event.items().constFirst());
+#endif
                 }
             }
 

@@ -197,6 +197,8 @@ extern const char *ns_eme;
 extern const char *ns_spoiler;
 // XEP-0384: OMEMO Encryption
 extern const char *ns_omemo;
+extern const char *ns_omemo_bundles;
+extern const char *ns_omemo_devices;
 extern const char *ns_omemo_1;
 extern const char *ns_omemo_2;
 extern const char *ns_omemo_2_bundles;

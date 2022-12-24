@@ -11,6 +11,8 @@
 #include <QDomElement>
 #include <QXmlStreamWriter>
 
+#include <QDebug>
+
 /// \cond
 ///
 /// \class QXmppOmemoEnvelope
@@ -92,6 +94,17 @@ void QXmppOmemoEnvelope::setData(const QByteArray &data)
 
 void QXmppOmemoEnvelope::parse(const QDomElement &element)
 {
+#if 1
+    m_recipientDeviceId = element.attribute(QStringLiteral("rid")).toInt();
+
+    const auto isUsedForKeyExchange = element.attribute(QStringLiteral("prekey"));
+    if (isUsedForKeyExchange == QStringLiteral("true") ||
+        isUsedForKeyExchange == QStringLiteral("1")) {
+        m_isUsedForKeyExchange = true;
+    }
+
+    m_data = QByteArray::fromBase64(element.text().toLatin1());
+#else
     m_recipientDeviceId = element.attribute(QStringLiteral("rid")).toInt();
 
     const auto isUsedForKeyExchange = element.attribute(QStringLiteral("kex"));
@@ -101,10 +114,23 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
     }
 
     m_data = QByteArray::fromBase64(element.text().toLatin1());
+#endif
 }
 
 void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 {
+#if 1
+    writer->writeStartElement(QStringLiteral("key"));
+    writer->writeAttribute(QStringLiteral("rid"), QString::number(m_recipientDeviceId));
+
+    if (m_isUsedForKeyExchange) {
+        helperToXmlAddAttribute(writer, QStringLiteral("prekey"), QStringLiteral("true"));
+    }
+
+    writer->writeCharacters(m_data.toBase64());
+    writer->writeEndElement();
+
+#else
     writer->writeStartElement(QStringLiteral("key"));
     writer->writeAttribute(QStringLiteral("rid"), QString::number(m_recipientDeviceId));
 
@@ -114,6 +140,7 @@ void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 
     writer->writeCharacters(m_data.toBase64());
     writer->writeEndElement();
+#endif
 }
 
 ///
@@ -125,8 +152,13 @@ void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoEnvelope::isOmemoEnvelope(const QDomElement &element)
 {
+#if 1
+    return element.tagName() == QStringLiteral("key") &&
+        element.namespaceURI() == ns_omemo;    
+#else
     return element.tagName() == QStringLiteral("key") &&
         element.namespaceURI() == ns_omemo_2;
+#endif
 }
 
 ///
@@ -181,6 +213,19 @@ void QXmppOmemoElement::setPayload(const QByteArray &payload)
     m_payload = payload;
 }
 
+#if 1
+
+QByteArray QXmppOmemoElement::iv() const
+{
+    return m_iv;
+}
+
+void QXmppOmemoElement::setIv(const QByteArray &iv)
+{
+    m_iv = iv;
+}
+
+#endif
 ///
 /// Searches for an OMEMO envelope by its recipient JID and device ID.
 ///
@@ -191,6 +236,17 @@ void QXmppOmemoElement::setPayload(const QByteArray &payload)
 ///
 std::optional<QXmppOmemoEnvelope> QXmppOmemoElement::searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const
 {
+#if 1
+    for (auto itr = m_envelopes.constBegin();
+         itr != m_envelopes.constEnd();
+         ++itr) {
+        const auto &envelope = itr.value();
+        if (envelope.recipientDeviceId() == recipientDeviceId) {
+            return envelope;
+        }
+    }
+
+#else
     for (auto itr = m_envelopes.constFind(recipientJid);
          itr != m_envelopes.constEnd() && itr.key() == recipientJid;
          ++itr) {
@@ -200,6 +256,7 @@ std::optional<QXmppOmemoEnvelope> QXmppOmemoElement::searchEnvelope(const QStrin
         }
     }
 
+#endif
     return std::nullopt;
 }
 
@@ -224,11 +281,25 @@ void QXmppOmemoElement::parse(const QDomElement &element)
 
     m_senderDeviceId = header.attribute(QStringLiteral("sid")).toInt();
 
+#if 1
+        for (auto envelope = header.firstChildElement(QStringLiteral("key"));
+             !envelope.isNull();
+             envelope = envelope.nextSiblingElement(QStringLiteral("key"))) {
+            QXmppOmemoEnvelope omemoEnvelope;
+            omemoEnvelope.parse(envelope);
+            addEnvelope("", omemoEnvelope);
+        }
+        
+        auto iv = header.firstChildElement(QStringLiteral("iv"));
+        if(!iv.isNull()) {
+            m_iv = QByteArray::fromBase64(iv.text().toLatin1());;
+        }
+
+#else
     for (auto recipient = header.firstChildElement(QStringLiteral("keys"));
          !recipient.isNull();
          recipient = recipient.nextSiblingElement(QStringLiteral("keys"))) {
         const auto recipientJid = recipient.attribute(QStringLiteral("jid"));
-
         for (auto envelope = recipient.firstChildElement(QStringLiteral("key"));
              !envelope.isNull();
              envelope = envelope.nextSiblingElement(QStringLiteral("key"))) {
@@ -237,6 +308,7 @@ void QXmppOmemoElement::parse(const QDomElement &element)
             addEnvelope(recipientJid, omemoEnvelope);
         }
     }
+#endif
 
     m_payload = QByteArray::fromBase64(element.firstChildElement(QStringLiteral("payload")).text().toLatin1());
 }
@@ -251,9 +323,10 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 
     const auto recipientJids = m_envelopes.uniqueKeys();
     for (const auto &recipientJid : recipientJids) {
+#if 0
         writer->writeStartElement(QStringLiteral("keys"));
         writer->writeAttribute(QStringLiteral("jid"), recipientJid);
-
+#endif
         for (auto itr = m_envelopes.constFind(recipientJid);
              itr != m_envelopes.constEnd() && itr.key() == recipientJid;
              ++itr) {
@@ -261,8 +334,16 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
             envelope.toXml(writer);
         }
 
+#if 0
         writer->writeEndElement();  // keys
+#endif
     }
+
+#if 1
+    writer->writeStartElement(QStringLiteral("iv"));
+    writer->writeCharacters(m_iv.toBase64());
+    writer->writeEndElement();  // iv
+#endif
 
     writer->writeEndElement();  // header
 
@@ -284,7 +365,12 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoElement::isOmemoElement(const QDomElement &element)
 {
+#if 1
+    return element.tagName() == QStringLiteral("encrypted") &&
+        (element.namespaceURI() == ns_omemo_2 || element.namespaceURI() == ns_omemo);
+#else
     return element.tagName() == QStringLiteral("encrypted") &&
         element.namespaceURI() == ns_omemo_2;
+#endif
 }
 /// \endcond
