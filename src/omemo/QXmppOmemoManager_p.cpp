@@ -262,13 +262,15 @@ bool ManagerPrivate::initLocking()
     const auto lock = [](void *user_data) {
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
-        d->mutex.lock();
+        qDebug() << "Lock" << endl;
+//        d->mutex.lock();
     };
 
     const auto unlock = [](void *user_data) {
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
-        d->mutex.unlock();
+        qDebug() << "Unlock" << endl;
+//        d->mutex.unlock();
     };
 
     if (signal_context_set_locking_functions(globalContext.get(), lock, unlock) < 0) {
@@ -1477,7 +1479,6 @@ QByteArray ManagerPrivate::createOmemoEnvelopeData(const signal_protocol_address
     }
 
 #if 1
-    session_cipher_set_version(sessionCipher.get(), 3);
 #else
     session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
@@ -1547,13 +1548,16 @@ QFuture<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessage
 #endif
             await(future, q, [=](std::optional<DecryptionResult> optionalDecryptionResult) mutable {
                 if (optionalDecryptionResult) {
+                    qDebug() << "stanza.parseExtensions" << endl;
                     const auto decryptionResult = std::move(*optionalDecryptionResult);
                     stanza.parseExtensions(decryptionResult.sceContent, SceSensitive);
 
                     // Remove the OMEMO element from the message because it is not needed
                     // anymore after decryption.
+                    qDebug() << "stanza.setOmemoElement" << endl;
                     stanza.setOmemoElement({});
 
+                    qDebug() << "stanza.setE2eeMetadata" << endl;
                     stanza.setE2eeMetadata(decryptionResult.e2eeMetadata);
 
                     reportFinishedResult(interface, { stanza });
@@ -1645,6 +1649,8 @@ QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza,
     auto future = extractSceEnvelope(senderJid, senderDeviceId, omemoEnvelope, omemoPayload, isMessageStanza);
 #endif
     await(future, q, [=](QByteArray serializedSceEnvelope) mutable {
+        qDebug() << "decryptedPayload " << serializedSceEnvelope << endl;
+
         if (serializedSceEnvelope.isEmpty()) {
             warning("SCE envelope could not be extracted");
             reportFinishedResult(interface, {});
@@ -1785,7 +1791,6 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
     }
 
 #if 1
-    session_cipher_set_version(sessionCipher.get(), 3);
 #else
     session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
@@ -1813,14 +1818,18 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
         RefCountedPtr<pre_key_signal_message> omemoEnvelopeData;
         const auto serializedOmemoEnvelopeData = omemoEnvelope.data();
 
+#if 1
+        if (pre_key_signal_message_deserialize(omemoEnvelopeData.ptrRef(),
+                                                     reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()),
+                                                     serializedOmemoEnvelopeData.size(),
+                                                     globalContext.get()) < 0) {
+#else
         if (pre_key_signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(),
                                                      reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()),
                                                      serializedOmemoEnvelopeData.size(),
                                                      senderDeviceId,
                                                      globalContext.get()) < 0) {
             warning("OMEMO envelope data could not be deserialized");
-#if 1
-            qDebug() << "DEBUG OMEMO envelop data: " << omemoEnvelope.data().toBase64() << endl;
 #endif
             reportFinishedResult(interface, {});
         } else {
@@ -1843,6 +1852,9 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
                 }
 
                 // Decrypt the OMEMO envelope data and build a session.
+#if 1
+                qDebug() << "FIXME session_cipher_decrypt_pre_key_signal_message is blocking with locking functions are enabled" << endl;
+#endif
                 switch (session_cipher_decrypt_pre_key_signal_message(sessionCipher.get(), omemoEnvelopeData.get(), nullptr, payloadDecryptionDataBuffer.ptrRef())) {
                 case SG_ERR_INVALID_MESSAGE:
                     warning("OMEMO envelope data for key exchange is not valid");
@@ -1909,10 +1921,12 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
         RefCountedPtr<signal_message> omemoEnvelopeData;
         const auto serializedOmemoEnvelopeData = omemoEnvelope.data();
 
+#if 1
+        if (signal_message_deserialize(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get()) < 0) {
+            warning("OMEMO envelope data could not be deserialized");
+#else
         if (signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get()) < 0) {
             warning("OMEMO envelope data could not be deserialized");
-#if 1
-            qDebug() << "DEBUG OMEMO envelop data: " << omemoEnvelope.data().toBase64() << endl;
 #endif
             reportFinishedResult(interface, {});
         } else {
@@ -1934,6 +1948,7 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
                 warning("Session for OMEMO envelope data could not be found");
                 reportFinishedResult(interface, {});
             case SG_SUCCESS:
+                qDebug() << "DEBUG session_cipher_decrypt_signal_message sucessful" << endl;
                 reportResult(payloadDecryptionDataBuffer);
             }
         }
@@ -3633,7 +3648,6 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
     }
 
 #if 1
-    session_builder_set_version(sessionBuilder.get(), 3);
 #else
     session_builder_set_version(sessionBuilder.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
