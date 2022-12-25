@@ -1649,12 +1649,38 @@ QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza,
     auto future = extractSceEnvelope(senderJid, senderDeviceId, omemoEnvelope, omemoPayload, isMessageStanza);
 #endif
     await(future, q, [=](QByteArray serializedSceEnvelope) mutable {
-        qDebug() << "decryptedPayload " << serializedSceEnvelope << endl;
 
         if (serializedSceEnvelope.isEmpty()) {
             warning("SCE envelope could not be extracted");
             reportFinishedResult(interface, {});
-        } else {
+        } else 
+        {
+#if 1
+            QDomDocument document;
+            document.setContent(QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
+                                serializedSceEnvelope + QByteArray("</body></content></envelope>"), true);
+            QXmppSceEnvelopeReader sceEnvelopeReader(document.documentElement());
+
+            auto &device = devices[senderJid][senderDeviceId];
+            device.unrespondedSentStanzasCount = 0;
+
+            // Send a heartbeat message to the sender if too many stanzas were
+            // received responding to none.
+            if (device.unrespondedReceivedStanzasCount == UNRESPONDED_STANZAS_UNTIL_HEARTBEAT_MESSAGE_IS_SENT) {
+                sendEmptyMessage(senderJid, senderDeviceId);
+                device.unrespondedReceivedStanzasCount = 0;
+            } else {
+                ++device.unrespondedReceivedStanzasCount;
+            }
+
+            QXmppE2eeMetadata e2eeMetadata;
+            e2eeMetadata.setEncryption(QXmpp::Omemo0);
+            const auto &senderDevice = devices.value(senderJid).value(senderDeviceId);
+            e2eeMetadata.setSenderKey(senderDevice.keyId);
+
+            reportFinishedResult(interface, { { sceEnvelopeReader.contentElement(), e2eeMetadata } });
+
+#else
             QDomDocument document;
             document.setContent(serializedSceEnvelope, true);
             QXmppSceEnvelopeReader sceEnvelopeReader(document.documentElement());
@@ -1695,17 +1721,14 @@ QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza,
 
                     QXmppE2eeMetadata e2eeMetadata;
                     e2eeMetadata.setSceTimestamp(sceEnvelopeReader.timestamp());
-#if 1
-                    e2eeMetadata.setEncryption(QXmpp::Omemo0);
-#else
                     e2eeMetadata.setEncryption(QXmpp::Omemo2);
-#endif
                     const auto &senderDevice = devices.value(senderJid).value(senderDeviceId);
                     e2eeMetadata.setSenderKey(senderDevice.keyId);
 
                     reportFinishedResult(interface, { { sceEnvelopeReader.contentElement(), e2eeMetadata } });
                 }
             }
+#endif
         }
     });
 
@@ -2001,8 +2024,6 @@ QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecrypt
         warning("Following payload could not be decrypted: " % QString(payload));
         return {};
     }
-
-    qDebug() << "DEBUG decryptPayload " << " decryptedPayload: " <<  decryptedPayload.toByteArray()  << endl; 
 
     return decryptedPayload.toByteArray();
 #else
