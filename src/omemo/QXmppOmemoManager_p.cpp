@@ -227,11 +227,6 @@ void ManagerPrivate::init()
 }
 
 
-static void logsignal(int level, const char *message, size_t len, void *user_data)
-{
-    qDebug() << "DEBUG Signal. Level=" << level << " Msg=" << QString(message) << endl;
-}
-
 //
 // Initializes the OMEMO library's global context.
 //
@@ -246,9 +241,6 @@ bool ManagerPrivate::initGlobalContext()
         warning("Signal context could not be be created");
         return false;
     }
-
-    signal_context_set_log_function(globalContext.get(), logsignal);
-
     return true;
 }
 
@@ -262,15 +254,19 @@ bool ManagerPrivate::initLocking()
     const auto lock = [](void *user_data) {
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
-        qDebug() << "Lock" << endl;
-//        d->mutex.lock();
+#if 1
+#else
+        d->mutex.lock();
+#endif
     };
 
     const auto unlock = [](void *user_data) {
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
-        qDebug() << "Unlock" << endl;
-//        d->mutex.unlock();
+#if 1
+#else
+        d->mutex.unlock();
+#endif
     };
 
     if (signal_context_set_locking_functions(globalContext.get(), lock, unlock) < 0) {
@@ -1116,6 +1112,9 @@ QFuture<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const T 
             auto processedDevicesCount = std::make_shared<int>(0);
             auto successfullyProcessedDevicesCount = std::make_shared<int>(0);
             auto skippedDevicesCount = std::make_shared<int>(0);
+#if 1
+            omemoElement->setIv(payloadEncryptionResult.iv);
+#endif
 
             // Add envelopes for all devices of the recipients.
             for (const auto &jid : recipientJids) {
@@ -1124,8 +1123,6 @@ QFuture<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const T 
                 for (auto itr = recipientDevices.begin(); itr != recipientDevices.end(); ++itr) {
                     const auto &deviceId = itr.key();
                     const auto &device = itr.value();
-
-                    qDebug() << "DEBUG encrypt for " << jid << " deviceId: " << deviceId << endl; 
 
                     // Skip encrypting for a device if it does not respond for a while.
                     if (const auto unrespondedSentStanzasCount = device.unrespondedSentStanzasCount; unrespondedSentStanzasCount == UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED) {
@@ -1151,9 +1148,6 @@ QFuture<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const T 
                             } else {
                                 omemoElement->setSenderDeviceId(ownDevice.id);
                                 omemoElement->setPayload(payloadEncryptionResult.encryptedPayload);
-#if 1
-                                omemoElement->setIv(payloadEncryptionResult.iv);
-#endif
                                 reportFinishedResult(interface, { *omemoElement });
                             }
                         }
@@ -1170,7 +1164,8 @@ QFuture<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const T 
                                     "' and device ID '" % QString::number(deviceId) %
                                     "' could not be created because its data could not be encrypted");
                             controlDeviceProcessing(false);
-                        } else if (devices.value(jid).contains(deviceId)) {
+                        } 
+                        else if (devices.value(jid).contains(deviceId)) {
                             auto &deviceBeingModified = devices[jid][deviceId];
                             deviceBeingModified.unrespondedReceivedStanzasCount = 0;
                             ++deviceBeingModified.unrespondedSentStanzasCount;
@@ -1304,22 +1299,21 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
     QCA::SymmetricKey key(16);
 
 
-    qDebug() << "DEBUG Payload to encrypt: " << payload << endl;
-
     // Create a random initialisation vector - you need this
     // value to decrypt the resulting cipher text, but it
     // need not be kept secret (unlike the key).
     QCA::InitializationVector iv(16);
+    QCA::AuthTag tag(16);
 
     // create a 128 bit AES cipher object using Cipher Block Chaining (CBC) mode
     QCA::Cipher cipher(QStringLiteral("aes128"),
                        QCA::Cipher::GCM,
-                       // use Default padding
-                       QCA::Cipher::DefaultPadding,
+                       QCA::Cipher::NoPadding,
                        // this object will encrypt
                        QCA::Encode,
                        key,
-                       iv);
+                       iv,
+                       tag);
 
     auto encryptedPayload = cipher.process(QCA::MemoryRegion(payload));
 
@@ -1341,11 +1335,7 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
     PayloadEncryptionResult payloadEncryptionData;
     payloadEncryptionData.decryptionData = key.append(authTag);
     payloadEncryptionData.encryptedPayload = encryptedPayload.toByteArray();
-#if 1
     payloadEncryptionData.iv = iv.toByteArray();
-#endif
-
-    qDebug() << "DEBUG encryptPayload " << " decryptionData: " <<  payloadEncryptionData.decryptionData.toByteArray().toBase64() << " iv: " <<  iv.toByteArray().toBase64()  << endl; 
 
     return payloadEncryptionData;
 
@@ -1518,12 +1508,8 @@ QFuture<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessage
     if (auto optionalOmemoEnvelope = omemoElement.searchEnvelope(ownBareJid(), ownDevice.id)) {
         const auto senderJid = QXmppUtils::jidToBareJid(stanza.from());
         const auto senderDeviceId = omemoElement.senderDeviceId();
-#if 1
-        const auto iv = omemoElement.iv();
-#endif
         const auto omemoEnvelope = *optionalOmemoEnvelope;
         const auto omemoPayload = omemoElement.payload();
-
         subscribeToNewDeviceLists(senderJid, senderDeviceId);
 
         // Process empty OMEMO messages sent by a receiver of this device's first OMEMO message
@@ -1541,23 +1527,16 @@ QFuture<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessage
                 reportFinishedResult(interface, {});
             });
         } else {
-#if 1
-            auto future = decryptStanza(stanza, senderJid, senderDeviceId, iv, omemoEnvelope, omemoPayload);
-#else
             auto future = decryptStanza(stanza, senderJid, senderDeviceId, omemoEnvelope, omemoPayload);
-#endif
             await(future, q, [=](std::optional<DecryptionResult> optionalDecryptionResult) mutable {
                 if (optionalDecryptionResult) {
-                    qDebug() << "stanza.parseExtensions" << endl;
                     const auto decryptionResult = std::move(*optionalDecryptionResult);
                     stanza.parseExtensions(decryptionResult.sceContent, SceSensitive);
 
                     // Remove the OMEMO element from the message because it is not needed
                     // anymore after decryption.
-                    qDebug() << "stanza.setOmemoElement" << endl;
                     stanza.setOmemoElement({});
 
-                    qDebug() << "stanza.setE2eeMetadata" << endl;
                     stanza.setE2eeMetadata(decryptionResult.e2eeMetadata);
 
                     reportFinishedResult(interface, { stanza });
@@ -1592,17 +1571,10 @@ QFuture<std::optional<IqDecryptionResult>> ManagerPrivate::decryptIq(const QDomE
     if (const auto envelope = omemoElement.searchEnvelope(ownBareJid(), ownDevice.id)) {
         const auto senderJid = QXmppUtils::jidToBareJid(iq.from());
         const auto senderDeviceId = omemoElement.senderDeviceId();
-#if 1
-        const auto iv = omemoElement.iv();
-#endif
 
         subscribeToNewDeviceLists(senderJid, senderDeviceId);
 
-#if 1
-        auto future = decryptStanza(iq, senderJid, senderDeviceId, iv, *envelope, omemoElement.payload(), false);
-#else
         auto future = decryptStanza(iq, senderJid, senderDeviceId, *envelope, omemoElement.payload(), false);
-#endif
         return chain<Result>(future, q, [iqElement](auto result) -> Result {
             if (result) {
                 auto decryptedElement = iqElement.cloneNode(true).toElement();
@@ -1633,21 +1605,12 @@ QFuture<std::optional<IqDecryptionResult>> ManagerPrivate::decryptIq(const QDomE
 //
 // \return the result of the decryption if it succeeded
 //
-#if 1
-template<typename T>
-QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza, const QString &senderJid, uint32_t senderDeviceId, const QByteArray &iv, const QXmppOmemoEnvelope &omemoEnvelope, const QByteArray &omemoPayload, bool isMessageStanza)
-#else
 template<typename T>
 QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza, const QString &senderJid, uint32_t senderDeviceId, const QXmppOmemoEnvelope &omemoEnvelope, const QByteArray &omemoPayload, bool isMessageStanza)
-#endif
 {
     QFutureInterface<std::optional<DecryptionResult>> interface(QFutureInterfaceBase::Started);
 
-#if 1
-    auto future = extractSceEnvelope(senderJid, senderDeviceId, iv, omemoEnvelope, omemoPayload, isMessageStanza);
-#else
     auto future = extractSceEnvelope(senderJid, senderDeviceId, omemoEnvelope, omemoPayload, isMessageStanza);
-#endif
     await(future, q, [=](QByteArray serializedSceEnvelope) mutable {
 
         if (serializedSceEnvelope.isEmpty()) {
@@ -1674,7 +1637,6 @@ QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza,
             }
 
             QXmppE2eeMetadata e2eeMetadata;
-            e2eeMetadata.setEncryption(QXmpp::Omemo0);
             const auto &senderDevice = devices.value(senderJid).value(senderDeviceId);
             e2eeMetadata.setSenderKey(senderDevice.keyId);
 
@@ -1750,41 +1712,25 @@ QFuture<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanza,
 // \return the serialized SCE envelope if it could be extracted, otherwise a
 //         default-constructed byte array
 //
-#if 1
-QFuture<QByteArray> ManagerPrivate::extractSceEnvelope(const QString &senderJid, uint32_t senderDeviceId, const QByteArray &iv, const QXmppOmemoEnvelope &omemoEnvelope, const QByteArray &omemoPayload, bool isMessageStanza)
-#else
 QFuture<QByteArray> ManagerPrivate::extractSceEnvelope(const QString &senderJid, uint32_t senderDeviceId, const QXmppOmemoEnvelope &omemoEnvelope, const QByteArray &omemoPayload, bool isMessageStanza)
-#endif
 {
+    QFutureInterface<QByteArray> interface(QFutureInterfaceBase::Started);
+
+    auto future = extractPayloadDecryptionData(senderJid, senderDeviceId, omemoEnvelope, isMessageStanza);
+    await(future, q, [=](QCA::SecureArray payloadDecryptionData) mutable {
+        if (payloadDecryptionData.isEmpty()) {
+            warning("Data for decrypting OMEMO payload could not be extracted");
+            reportFinishedResult(interface, {});
+        } else {
 #if 1
-    QFutureInterface<QByteArray> interface(QFutureInterfaceBase::Started);
-
-    auto future = extractPayloadDecryptionData(senderJid, senderDeviceId, omemoEnvelope, isMessageStanza);
-    await(future, q, [=](QCA::SecureArray payloadDecryptionData) mutable {
-        if (payloadDecryptionData.isEmpty()) {
-            warning("Data for decrypting OMEMO payload could not be extracted");
-            reportFinishedResult(interface, {});
-        } else {
-            reportFinishedResult(interface, decryptPayload(payloadDecryptionData, iv, omemoPayload));
-        }
-    });
-
-    return interface.future();
+            reportFinishedResult(interface, decryptPayload(payloadDecryptionData, omemoEnvelope.iv(), omemoPayload));
 #else
-    QFutureInterface<QByteArray> interface(QFutureInterfaceBase::Started);
-
-    auto future = extractPayloadDecryptionData(senderJid, senderDeviceId, omemoEnvelope, isMessageStanza);
-    await(future, q, [=](QCA::SecureArray payloadDecryptionData) mutable {
-        if (payloadDecryptionData.isEmpty()) {
-            warning("Data for decrypting OMEMO payload could not be extracted");
-            reportFinishedResult(interface, {});
-        } else {
-            reportFinishedResult(interface, decryptPayload(payloadDecryptionData, omemoPayload));
+            reportFinishedResult(interface, decryptPayload(payloadDecryptionData, omemoPayload));                
+#endif
         }
     });
 
     return interface.future();
-#endif
 }
 
 //
@@ -1815,8 +1761,9 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
 
 #if 1
 #else
-    session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
+        session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
+
     BufferSecurePtr payloadDecryptionDataBuffer;
 
     auto reportResult = [=](const BufferSecurePtr &buffer) mutable {
@@ -1841,21 +1788,25 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
         RefCountedPtr<pre_key_signal_message> omemoEnvelopeData;
         const auto serializedOmemoEnvelopeData = omemoEnvelope.data();
 
+        int retVal; 
 #if 1
-        if (pre_key_signal_message_deserialize(omemoEnvelopeData.ptrRef(),
+            retVal = pre_key_signal_message_deserialize(omemoEnvelopeData.ptrRef(),
                                                      reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()),
                                                      serializedOmemoEnvelopeData.size(),
-                                                     globalContext.get()) < 0) {
+                                                     globalContext.get()); 
 #else
-        if (pre_key_signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(),
-                                                     reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()),
-                                                     serializedOmemoEnvelopeData.size(),
-                                                     senderDeviceId,
-                                                     globalContext.get()) < 0) {
-            warning("OMEMO envelope data could not be deserialized");
+            retVal = pre_key_signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(),
+                                                         reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()),
+                                                         serializedOmemoEnvelopeData.size(),
+                                                         senderDeviceId,
+                                                         globalContext.get());
 #endif
+
+        if(retVal<0) {
+            warning("OMEMO envelope data could not be deserialized:");
             reportFinishedResult(interface, {});
-        } else {
+        }
+        else {
             BufferPtr publicIdentityKeyBuffer;
 
             if (ec_public_key_serialize(publicIdentityKeyBuffer.ptrRef(), pre_key_signal_message_get_identity_key(omemoEnvelopeData.get())) < 0) {
@@ -1875,9 +1826,7 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
                 }
 
                 // Decrypt the OMEMO envelope data and build a session.
-#if 1
-                qDebug() << "FIXME session_cipher_decrypt_pre_key_signal_message is blocking with locking functions are enabled" << endl;
-#endif
+                // "FIXME session_cipher_decrypt_pre_key_signal_message is blocking with locking functions are enabled" << endl;
                 switch (session_cipher_decrypt_pre_key_signal_message(sessionCipher.get(), omemoEnvelopeData.get(), nullptr, payloadDecryptionDataBuffer.ptrRef())) {
                 case SG_ERR_INVALID_MESSAGE:
                     warning("OMEMO envelope data for key exchange is not valid");
@@ -1944,15 +1893,17 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
         RefCountedPtr<signal_message> omemoEnvelopeData;
         const auto serializedOmemoEnvelopeData = omemoEnvelope.data();
 
+        int retVal;
 #if 1
-        if (signal_message_deserialize(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get()) < 0) {
-            warning("OMEMO envelope data could not be deserialized");
+        retVal = signal_message_deserialize(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get());
 #else
-        if (signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get()) < 0) {
-            warning("OMEMO envelope data could not be deserialized");
+        retVal = signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get());       
 #endif
+        if (retVal < 0) {
+            warning("OMEMO envelope data could not be deserialized");
             reportFinishedResult(interface, {});
-        } else {
+        }
+        else {  
             // Decrypt the OMEMO envelope data.
             switch (session_cipher_decrypt_signal_message(sessionCipher.get(), omemoEnvelopeData.get(), nullptr, payloadDecryptionDataBuffer.ptrRef())) {
             case SG_ERR_INVALID_MESSAGE:
@@ -1971,7 +1922,6 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
                 warning("Session for OMEMO envelope data could not be found");
                 reportFinishedResult(interface, {});
             case SG_SUCCESS:
-                qDebug() << "DEBUG session_cipher_decrypt_signal_message sucessful" << endl;
                 reportResult(payloadDecryptionDataBuffer);
             }
         }
@@ -1990,11 +1940,7 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
 //
 #if 1
 QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &iv, const QByteArray &payload) const
-#else
-QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const
-#endif
 {
-#if 1
     auto hkdfKey = QCA::SecureArray(payloadDecryptionData);
     hkdfKey.resize(32);
 
@@ -2006,9 +1952,6 @@ QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecrypt
     auto authenticationKey = QCA::SymmetricKey(16/*PAYLOAD_AUTHENTICATION_KEY_SIZE*/);
     const auto authenticationKeyOffset = hkdfKey.data() + 16; /*PAYLOAD_KEY_SIZE*/
     std::copy(authenticationKeyOffset, authenticationKeyOffset + 16 /*PAYLOAD_AUTHENTICATION_KEY_SIZE*/, authenticationKey.data());
-
-    qDebug() << "DEBUG decryptPayload " << " iv: " <<  iv.toBase64()  << endl; 
-
 
     QCA::Cipher reverseCipher(QStringLiteral("aes128"),
                               QCA::Cipher::GCM,
@@ -2026,7 +1969,11 @@ QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecrypt
     }
 
     return decryptedPayload.toByteArray();
-#else
+}
+#endif
+
+QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const
+{
     auto hkdfKey = QCA::SecureArray(payloadDecryptionData);
     hkdfKey.resize(HKDF_KEY_SIZE);
     const auto hkdfSalt = QCA::InitializationVector(QCA::SecureArray(HKDF_SALT_SIZE));
@@ -2072,7 +2019,6 @@ QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecrypt
     }
 
     return decryptedPayload.toByteArray();
-#endif
 }
 
 //
@@ -2120,17 +2066,10 @@ QFuture<bool> ManagerPrivate::publishOmemoData()
                         const auto isCreationSupported = pepServiceFeatures.contains(ns_pubsub_create_nodes);
                         const auto isConfigurationSupported = pepServiceFeatures.contains(ns_pubsub_config_node);
 
-                        qDebug() << "DEBUG isAutomaticCreationSupported:" << isAutomaticCreationSupported << endl;
-                        qDebug() << "DEBUG isCreationAndConfigurationSupported:" << isCreationAndConfigurationSupported << endl;
-                        qDebug() << "DEBUG isCreationSupported:" << isCreationSupported << endl;
-                        qDebug() << "DEBUG isConfigurationSupported:" << isConfigurationSupported << endl;
-
-
                         // The device bundle is published before the device data is published.
                         // That way, it ensures that other devices are notified about this new
                         // device only after the corresponding device bundle is published.
                         auto handleResult = [=, this](bool isPublished) mutable {
-                            qDebug() << "DEBUG isPublished:" << isPublished << endl;
                             if (isPublished) {
                                 publishDeviceElement(deviceListNodeExists,
                                                      arePublishOptionsSupported,
@@ -3574,8 +3513,6 @@ QFuture<bool> ManagerPrivate::buildSessionForNewDevice(const QString &jid, uint3
 QFuture<bool> ManagerPrivate::buildSessionWithDeviceBundle(const QString &jid, uint32_t deviceId, QXmppOmemoStorage::Device &device)
 {
     QFutureInterface<bool> interface(QFutureInterfaceBase::Started);
-
-qDebug() << "DEBUG - Build session with " << jid << " device: " << QString::number(deviceId) << endl;
 
     auto future = requestDeviceBundle(jid, deviceId);
     await(future, q, [=, &device](std::optional<QXmppOmemoDeviceBundle> optionalDeviceBundle) mutable {

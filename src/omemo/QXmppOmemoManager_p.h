@@ -209,16 +209,6 @@ public:
 
     QFuture<std::optional<QXmppMessage>> decryptMessage(QXmppMessage stanza);
     QFuture<std::optional<IqDecryptionResult>> decryptIq(const QDomElement &iqElement);
-#if 1
-    template<typename T>
-    QFuture<std::optional<DecryptionResult>> decryptStanza(T stanza,
-                                                           const QString &senderJid,
-                                                           uint32_t senderDeviceId,
-                                                           const QByteArray &iv,
-                                                           const QXmppOmemoEnvelope &omemoEnvelope,
-                                                           const QByteArray &omemoPayload,
-                                                           bool isMessageStanza = true);
-#else
     template<typename T>
     QFuture<std::optional<DecryptionResult>> decryptStanza(T stanza,
                                                            const QString &senderJid,
@@ -226,30 +216,19 @@ public:
                                                            const QXmppOmemoEnvelope &omemoEnvelope,
                                                            const QByteArray &omemoPayload,
                                                            bool isMessageStanza = true);
-#endif
-#if 1
-    QFuture<QByteArray> extractSceEnvelope(const QString &senderJid,
-                                           uint32_t senderDeviceId,
-                                           const QByteArray &iv,
-                                           const QXmppOmemoEnvelope &omemoEnvelope,
-                                           const QByteArray &omemoPayload,
-                                           bool isMessageStanza);
-#else
     QFuture<QByteArray> extractSceEnvelope(const QString &senderJid,
                                            uint32_t senderDeviceId,
                                            const QXmppOmemoEnvelope &omemoEnvelope,
                                            const QByteArray &omemoPayload,
                                            bool isMessageStanza);
-#endif
     QFuture<QCA::SecureArray> extractPayloadDecryptionData(const QString &senderJid,
                                                            uint32_t senderDeviceId,
                                                            const QXmppOmemoEnvelope &omemoEnvelope,
                                                            bool isMessageStanza = true);
 #if 1
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &iv, const QByteArray &payload) const;
-#else
-    QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
 #endif
+    QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
     QFuture<bool> publishOmemoData();
 
     template<typename Function>

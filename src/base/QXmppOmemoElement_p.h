@@ -28,6 +28,8 @@ public:
 #if 1
     QByteArray iv() const;
     void setIv(const QByteArray &iv);
+    QXmpp::EncryptionMethod encryptionMethod() const;
+    void setEncryptionMethod(QXmpp::EncryptionMethod method);
 #endif
 
     std::optional<QXmppOmemoEnvelope> searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const;
@@ -46,6 +48,7 @@ private:
     QMultiMap<QString, QXmppOmemoEnvelope> m_envelopes;
 #if 1
     QByteArray m_iv;
+    QXmpp::EncryptionMethod m_encryptionMethod = QXmpp::Omemo2;
 #endif
 };
 

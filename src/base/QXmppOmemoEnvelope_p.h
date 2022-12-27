@@ -23,6 +23,11 @@ public:
     QByteArray data() const;
     void setData(const QByteArray &data);
 
+#if 1
+    QByteArray iv() const;
+    void setIv(const QByteArray &iv);
+#endif
+
     /// \cond
     void parse(const QDomElement &element);
     void toXml(QXmlStreamWriter *writer) const;
@@ -34,6 +39,9 @@ private:
     uint32_t m_recipientDeviceId = 0;
     bool m_isUsedForKeyExchange = false;
     QByteArray m_data;
+#if 1
+    QByteArray m_iv;
+#endif
 };
 
 Q_DECLARE_TYPEINFO(QXmppOmemoEnvelope, Q_MOVABLE_TYPE);
