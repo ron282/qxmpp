@@ -1590,7 +1590,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             }
         }
 
-#if 1
+#if WITH_OMEMO_V03
         // XEP-0085: Chat State Notifications
         if (d->state > None && d->state <= Paused) {
             writer->writeStartElement(CHAT_STATES.at(d->state));
@@ -1599,7 +1599,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         }
 #endif
 
-#if 1
+#if WITH_OMEMO_V03
         // XEP-0184: Message Delivery Receipts
         // An ack message (message containing a "received" element) must not
         // include a receipt request ("request" element) in order to prevent
@@ -1616,7 +1616,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         }
 #endif
 
-#if 1
+#if WITH_OMEMO_V03
         // XEP-0333: Chat Markers
         if (d->markable) {
             writer->writeStartElement(QStringLiteral("markable"));
@@ -1728,7 +1728,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeEndElement();
             writer->writeEndElement();
         }
-#if 1
+#if WITH_OMEMO_V03
 #else
         // XEP-0085: Chat State Notifications
         if (d->state > None && d->state <= Paused) {
@@ -1755,7 +1755,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             }
         }
 
-#if 1
+#if WITH_OMEMO_V03
 #else
         // XEP-0184: Message Delivery Receipts
         // An ack message (message containing a "received" element) must not
@@ -1806,7 +1806,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeEndElement();
         }
 
-#if 1
+#if WITH_OMEMO_V03
 #else
         // XEP-0333: Chat Markers
         if (d->markable) {

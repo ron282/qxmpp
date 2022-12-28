@@ -25,11 +25,9 @@ public:
     QByteArray payload() const;
     void setPayload(const QByteArray &payload);
 
-#if 1
+#if WITH_OMEMO_V03
     QByteArray iv() const;
     void setIv(const QByteArray &iv);
-    QXmpp::EncryptionMethod encryptionMethod() const;
-    void setEncryptionMethod(QXmpp::EncryptionMethod method);
 #endif
 
     std::optional<QXmppOmemoEnvelope> searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const;
@@ -46,9 +44,8 @@ private:
     uint32_t m_senderDeviceId = 0;
     QByteArray m_payload;
     QMultiMap<QString, QXmppOmemoEnvelope> m_envelopes;
-#if 1
+#if WITH_OMEMO_V03
     QByteArray m_iv;
-    QXmpp::EncryptionMethod m_encryptionMethod = QXmpp::Omemo2;
 #endif
 };
 

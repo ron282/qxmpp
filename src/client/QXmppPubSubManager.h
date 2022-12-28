@@ -87,7 +87,7 @@ public:
     QFuture<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, const QString &itemId);
     template<typename T = QXmppPubSubItem>
     QFuture<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, StandardItemId itemId);
-#if 1
+#if WITH_OMEMO_V03
     template<typename T = QXmppPubSubItem>
     QFuture<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName);
 #endif
@@ -190,7 +190,7 @@ QFuture<QXmppPubSubManager::ItemResult<T>> QXmppPubSubManager::requestItem(const
                    });
 }
 
-#if 1
+#if WITH_OMEMO_V03
 ///
 /// Requests a specific item of an entity's node.
 ///

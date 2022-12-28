@@ -32,6 +32,7 @@ option(BUILD_INTERNAL_TESTS "Build internal tests." OFF)
 option(BUILD_DOCUMENTATION "Build API documentation." OFF)
 option(BUILD_EXAMPLES "Build examples." ON)
 option(BUILD_OMEMO "Build the OMEMO module" OFF)
+option(WITH_OMEMO_V03 "Comatibility with OMEMO v0.3" OFF)
 option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 option(WITH_QCA "Build with QCA for OMEMO or encrypted file sharing" ${Qca-qt${QT_VERSION_MAJOR}_FOUND})
 
@@ -53,6 +54,10 @@ if(BUILD_OMEMO)
     if(NOT WITH_QCA)
         message(FATAL_ERROR "OMEMO requires QCA (Qt Cryptographic Architecture)")
     endif()
+endif()
+
+if(WITH_OMEMO_V03)
+    add_definitions(-DWITH_OMEMO_V03)
 endif()
 
 if(WITH_QCA)

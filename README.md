@@ -71,6 +71,7 @@ You can pass the following arguments to CMake:
     BUILD_TESTS                   to build the unit tests (default: true)
     BUILD_INTERNAL_TESTS          to build the unit tests testing private parts of the API (default: false)
     BUILD_OMEMO                   to build the OMEMO module (default: false)
+    WITH_OMEMO_V03                to get compatibility with OMEMO v0.3  
     WITH_GSTREAMER                to enable audio/video over jingle (default: false)
 
 For building the OMEMO module [additional dependencies](src/omemo/README.md)

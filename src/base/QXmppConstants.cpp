@@ -188,15 +188,9 @@ const char *ns_omemo = "eu.siacs.conversations.axolotl";
 const char *ns_omemo_bundles = "eu.siacs.conversations.axolotl.bundles";
 const char *ns_omemo_devices = "eu.siacs.conversations.axolotl.devicelist";
 const char *ns_omemo_1 = "urn:xmpp:omemo:1";
-#if 1
-const char *ns_omemo_2 = "eu.siacs.conversations.axolotl";
-const char *ns_omemo_2_bundles = "eu.siacs.conversations.axolotl.bundles";
-const char *ns_omemo_2_devices = "eu.siacs.conversations.axolotl.devicelist";
-#else
 const char *ns_omemo_2 = "urn:xmpp:omemo:2";
 const char *ns_omemo_2_bundles = "urn:xmpp:omemo:2:bundles";
 const char *ns_omemo_2_devices = "urn:xmpp:omemo:2:devices";
-#endif
 // XEP-0405: Mediated Information eXchange (MIX): Participant Server Requirements
 const char *ns_mix_pam = "urn:xmpp:mix:pam:1";
 const char *ns_mix_roster = "urn:xmpp:mix:roster:0";

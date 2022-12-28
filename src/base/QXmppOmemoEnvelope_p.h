@@ -23,7 +23,7 @@ public:
     QByteArray data() const;
     void setData(const QByteArray &data);
 
-#if 1
+#if WITH_OMEMO_V03
     QByteArray iv() const;
     void setIv(const QByteArray &iv);
 #endif
@@ -39,7 +39,7 @@ private:
     uint32_t m_recipientDeviceId = 0;
     bool m_isUsedForKeyExchange = false;
     QByteArray m_data;
-#if 1
+#if WITH_OMEMO_V03
     QByteArray m_iv;
 #endif
 };

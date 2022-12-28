@@ -448,7 +448,11 @@ QFuture<bool> Manager::setUp()
 ///
 QFuture<QByteArray> Manager::ownKey()
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->ownKey(ns_omemo);
+#else
     return d->trustManager->ownKey(ns_omemo_2);
+#endif
 }
 
 ///
@@ -467,7 +471,11 @@ QFuture<QByteArray> Manager::ownKey()
 ///
 QFuture<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::keys(QXmpp::TrustLevels trustLevels)
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->keys(ns_omemo, trustLevels);
+#else
     return d->trustManager->keys(ns_omemo_2, trustLevels);
+#endif
 }
 
 ///
@@ -487,7 +495,11 @@ QFuture<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::keys
 ///
 QFuture<QHash<QString, QHash<QByteArray, QXmpp::TrustLevel>>> Manager::keys(const QList<QString> &jids, QXmpp::TrustLevels trustLevels)
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->keys(ns_omemo, jids, trustLevels);
+#else
     return d->trustManager->keys(ns_omemo_2, jids, trustLevels);
+#endif
 }
 
 ///
@@ -761,7 +773,11 @@ QFuture<QXmppPubSubManager::Result> Manager::removeContactDevices(const QString 
 
             auto future = d->omemoStorage->removeDevices(jid);
             await(future, this, [=]() mutable {
+#if WITH_OMEMO_V03
+                auto future = d->trustManager->removeKeys(ns_omemo, jid);
+#else
                 auto future = d->trustManager->removeKeys(ns_omemo_2, jid);
+#endif
                 await(future, this, [=]() mutable {
                     reportFinishedResult(interface, result);
                     emit devicesRemoved(jid);
@@ -948,7 +964,11 @@ QFuture<bool> Manager::resetAll()
 ///
 QFuture<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPolicy)
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->setSecurityPolicy(ns_omemo, securityPolicy);
+#else
     return d->trustManager->setSecurityPolicy(ns_omemo_2, securityPolicy);
+#endif
 }
 
 ///
@@ -960,7 +980,11 @@ QFuture<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPoli
 ///
 QFuture<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->securityPolicy(ns_omemo);
+#else
     return d->trustManager->securityPolicy(ns_omemo_2);
+#endif
 }
 
 ///
@@ -975,7 +999,11 @@ QFuture<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 ///
 QFuture<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &keyIds, QXmpp::TrustLevel trustLevel)
 {
+#if WITH_OMEMO_V03
+    return d->trustManager->setTrustLevel(ns_omemo, keyIds, trustLevel);
+#else
     return d->trustManager->setTrustLevel(ns_omemo_2, keyIds, trustLevel);
+#endif
 }
 
 ///
@@ -1092,7 +1120,7 @@ QFuture<QXmppE2eeExtension::IqDecryptResult> Manager::decryptIq(const QDomElemen
 
 QStringList Manager::discoveryFeatures() const
 {
-#if 1
+#if WITH_OMEMO_V03
     return {
         QString(ns_omemo_devices), 
         QString(ns_omemo_devices) % "+notify"
@@ -1215,7 +1243,12 @@ void Manager::setClient(QXmppClient *client)
     }
 
     connect(d->trustManager, &QXmppTrustManager::trustLevelsChanged, this, [=](const QHash<QString, QMultiHash<QString, QByteArray>> &modifiedKeys) {
+#if WITH_OMEMO_V03
+        const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo);
+#else
         const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo_2);
+#endif
+
         emit trustLevelsChanged(modifiedOmemoKeys);
 
         for (auto itr = modifiedOmemoKeys.cbegin(); itr != modifiedOmemoKeys.cend(); ++itr) {
@@ -1236,7 +1269,7 @@ void Manager::setClient(QXmppClient *client)
 
 bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSubService, const QString &nodeName)
 {
-#if 1    
+#if WITH_OMEMO_V03    
     if (nodeName == ns_omemo_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
 #else
     if (nodeName == ns_omemo_2_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
@@ -1262,15 +1295,15 @@ bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSu
                 // That is necessary because PubSub allows publishing without
                 // items leading to notification-only events.
                 if (!items.isEmpty()) {
-#if 0 
+#if WITH_OMEMO_V03 
+                    d->updateDevices(pubSubService, event.items().constFirst());
+#else
                     const auto &deviceListItem = items.constFirst();
                     if (deviceListItem.id() == QXmppPubSubManager::standardItemIdToString(QXmppPubSubManager::Current)) {
                         d->updateDevices(pubSubService, event.items().constFirst());
                     } else {
                         d->handleIrregularDeviceListChanges(pubSubService);
                     }
-#else
-                    d->updateDevices(pubSubService, event.items().constFirst());
 #endif
                 }
             }

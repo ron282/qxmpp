@@ -103,7 +103,7 @@ struct PayloadEncryptionResult
 {
     QCA::SecureArray decryptionData;
     QByteArray encryptedPayload;
-#if 1
+#if WITH_OMEMO_V03
     QByteArray iv;
 #endif
 };
@@ -225,7 +225,7 @@ public:
                                                            uint32_t senderDeviceId,
                                                            const QXmppOmemoEnvelope &omemoEnvelope,
                                                            bool isMessageStanza = true);
-#if 1
+#if WITH_OMEMO_V03
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &iv, const QByteArray &payload) const;
 #endif
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
