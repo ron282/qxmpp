@@ -22,6 +22,8 @@
 #include <protocol.h>
 
 #include "OmemoCryptoProvider.h"
+#include "QXmppDiscoveryIq.h"
+#include "QXmppDiscoveryManager.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
@@ -628,10 +630,49 @@ QFuture<bool> ManagerPrivate::setUpDeviceId()
     QFutureInterface<bool> interface(QFutureInterfaceBase::Started);
 
 #if WITH_OMEMO_V03
-    auto future = pubSubManager->requestPepItemIds(ns_omemo_bundles);
+    auto future = pubSubManager->requestPepItem<QXmppOmemoDeviceListItem>(ns_omemo_devices, QXmppPubSubManager::Current);
+
+    await(future, q, [=](QXmppPubSubManager::ItemResult<QXmppOmemoDeviceListItem> result) mutable {
+        QList<QXmppOmemoDeviceElement> deviceList;
+
+        if (const auto error = std::get_if<Error>(&result)) {
+            warning("Device list for JID '" % ownBareJid() %
+                    "' could not be retrieved and thus not updated" %
+                    errorToString(*error));
+        } else {
+            const auto &deviceListItem = std::get<QXmppOmemoDeviceListItem>(result);
+            deviceList = deviceListItem.deviceList();
+        }
+
+        while (true) {
+            uint32_t deviceId = 0;
+            bool deviceNotFound;
+
+            deviceNotFound = true;
+
+            if (signal_protocol_key_helper_generate_registration_id(&deviceId, 0, globalContext.get()) < 0) {
+                warning("Device ID could not be generated");
+                reportFinishedResult(interface, false);
+                break;
+            }
+
+            for (const auto &deviceElement : std::as_const(deviceList)) {
+                if (deviceId == deviceElement.id()) {
+                    deviceNotFound = false;
+                    break;
+                }
+            }
+
+            if(deviceNotFound) {
+                ownDevice.id = deviceId;
+                reportFinishedResult(interface, true);
+                break;
+            }
+        }
+    });
+
 #else
     auto future = pubSubManager->requestPepItemIds(ns_omemo_2_bundles);
-#endif
     await(future, q, [=](QXmppPubSubManager::ItemIdsResult result) mutable {
         if (auto error = std::get_if<Error>(&result)) {
             warning("Existing / Published device IDs could not be retrieved");
@@ -655,6 +696,7 @@ QFuture<bool> ManagerPrivate::setUpDeviceId()
             }
         }
     });
+#endif
 
     return interface.future();
 }
@@ -1478,7 +1520,7 @@ QByteArray ManagerPrivate::createOmemoEnvelopeData(const signal_protocol_address
     }
 
 #if WITH_OMEMO_V03
-    // When version is not set, v0.3 is used by default
+    session_cipher_set_version(sessionCipher.get(), 3);
 #else
     session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
@@ -1770,6 +1812,7 @@ QFuture<QCA::SecureArray> ManagerPrivate::extractPayloadDecryptionData(const QSt
     }
 
 #if WITH_OMEMO_V03
+        session_cipher_set_version(sessionCipher.get(), 3);
 #else
         session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
@@ -2109,7 +2152,7 @@ QFuture<bool> ManagerPrivate::publishOmemoData()
                             }
                         };
 #if WITH_OMEMO_V03
-                        publishDeviceBundle(nodes.contains(ns_omemo_bundles),
+                        publishDeviceBundle(nodes.contains(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id)),
                                             arePublishOptionsSupported,
                                             isAutomaticCreationSupported,
                                             isCreationAndConfigurationSupported,
@@ -2343,17 +2386,17 @@ void ManagerPrivate::createAndConfigureDeviceBundlesNode(bool isConfigNodeMaxSup
 {
 #if WITH_OMEMO_V03
     if (isConfigNodeMaxSupported) {
-        createNode(ns_omemo_bundles, deviceBundlesNodeConfig(), continuation);
+        createNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(), continuation);
     } else {
-        createNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isCreated) mutable {
+        createNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isCreated) mutable {
             if (isCreated) {
                 continuation(true);
             } else {
-                createNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isCreated) mutable {
+                createNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isCreated) mutable {
                     if (isCreated) {
                         continuation(true);
                     } else {
-                        createNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_3), continuation);
+                        createNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_3), continuation);
                     }
                 });
             }
@@ -2415,17 +2458,17 @@ void ManagerPrivate::configureDeviceBundlesNode(bool isConfigNodeMaxSupported, F
 {
 #if WITH_OMEMO_V03
     if (isConfigNodeMaxSupported) {
-        configureNode(ns_omemo_bundles, deviceBundlesNodeConfig(), continuation);
+        configureNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(), continuation);
     } else {
-        configureNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isConfigured) mutable {
+        configureNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isConfigured) mutable {
             if (isConfigured) {
                 continuation(true);
             } else {
-                configureNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isConfigured) mutable {
+                configureNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isConfigured) mutable {
                     if (isConfigured) {
                         continuation(true);
                     } else {
-                        configureNode(ns_omemo_bundles, deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_3), continuation);
+                        configureNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundlesNodeConfig(PUBSUB_NODE_MAX_ITEMS_3), continuation);
                     }
                 });
             }
@@ -2461,7 +2504,7 @@ template<typename Function>
 void ManagerPrivate::publishDeviceBundleItem(Function continuation)
 {
 #if WITH_OMEMO_V03
-    publishItem(ns_omemo_bundles, deviceBundleItem(), continuation);
+    publishItem(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundleItem(), continuation);
 #else
     publishItem(ns_omemo_2_bundles, deviceBundleItem(), continuation);
 #endif
@@ -2486,19 +2529,19 @@ template<typename Function>
 void ManagerPrivate::publishDeviceBundleItemWithOptions(Function continuation)
 {
 #if WITH_OMEMO_V03
-    publishItem(ns_omemo_bundles, deviceBundleItem(), deviceBundlesNodePublishOptions(), [=](bool isPublished) mutable {
+    publishItem(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundleItem(), deviceBundlesNodePublishOptions(), [=](bool isPublished) mutable {
         if (isPublished) {
             continuation(true);
         } else {
-            publishItem(ns_omemo_bundles, deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isPublished) mutable {
+            publishItem(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_1), [=](bool isPublished) mutable {
                 if (isPublished) {
                     continuation(true);
                 } else {
-                    publishItem(ns_omemo_bundles, deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isPublished) mutable {
+                    publishItem(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_2), [=](bool isPublished) mutable {
                         if (isPublished) {
                             continuation(true);
                         } else {
-                            publishItem(ns_omemo_bundles, deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_3), continuation);
+                            publishItem(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), deviceBundleItem(), deviceBundlesNodePublishOptions(PUBSUB_NODE_MAX_ITEMS_3), continuation);
                         }
                     });
                 }
@@ -2587,8 +2630,7 @@ template<typename Function>
 void ManagerPrivate::deleteDeviceBundle(Function continuation)
 {
 #if WITH_OMEMO_V03
-    deleteNode(QString(ns_omemo_bundles)+":"+ownDevice.id, continuation);
-    //FIXME Maybe something is missing here to delete otherOwnDevices
+    deleteNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), continuation);
 #else
     if (otherOwnDevices().isEmpty()) {
         deleteNode(QString(ns_omemo_2_bundles), continuation);
@@ -2995,6 +3037,10 @@ void ManagerPrivate::updateDevices(const QString &deviceOwnerJid, const QXmppOme
             } else {
                 deviceIds.append(deviceElementId);
 
+#if WITH_OMEMO_V03
+                //  Label is not always present, so skip this test
+                ++itr;
+#else
                 if (itr->id() == ownDevice.id) {
                     if (itr->label() != ownDevice.label) {
                         isOwnDeviceListIncorrect = true;
@@ -3004,6 +3050,7 @@ void ManagerPrivate::updateDevices(const QString &deviceOwnerJid, const QXmppOme
                 } else {
                     ++itr;
                 }
+#endif
             }
         }
     }
@@ -3115,21 +3162,15 @@ void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwner
         // item is removed, if their device list node is removed or if all
         // the node's items are removed.
 #if WITH_OMEMO_V03
-        auto future = pubSubManager->deletePepNode(ns_omemo_devices);
+        //FIX ME
+        q->info("handleIrregularDeviceListChanges: FIXME ");
 #else
         auto future = pubSubManager->deletePepNode(ns_omemo_2_devices);
-#endif
         await(future, q, [=](QXmppPubSubManager::Result result) {
             if (const auto error = std::get_if<Error>(&result)) {
-#if WITH_OMEMO_V03
-                warning("Node '" % QString(ns_omemo_devices) % "'  of JID '" % deviceOwnerJid %
-                        "' could not be deleted in order to recover from an inconsistent node" %
-                        errorToString(*error));
-#else
                 warning("Node '" % QString(ns_omemo_2_devices) % "'  of JID '" % deviceOwnerJid %
                         "' could not be deleted in order to recover from an inconsistent node" %
                         errorToString(*error));
-#endif
             } else {
                 auto future = pubSubManager->requestPepFeatures();
                 await(future, q, [=](QXmppPubSubManager::FeaturesResult result) {
@@ -3161,6 +3202,7 @@ void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwner
                 });
             }
         });
+#endif
     } else {
         auto &ownerDevices = this->devices[deviceOwnerJid];
 
@@ -3189,7 +3231,6 @@ template<typename Function>
 void ManagerPrivate::deleteDeviceElement(Function continuation)
 {
 #if WITH_OMEMO_V03
-    // FIXME Device bundles are in distinct nodes
     if (otherOwnDevices().isEmpty()) {
         deleteNode(ns_omemo_devices, std::move(continuation));
     } else {
@@ -3304,19 +3345,11 @@ void ManagerPrivate::deleteNode(const QString &node, Function continuation)
 template<typename T, typename Function>
 void ManagerPrivate::publishItem(const QString &node, const T &item, Function continuation)
 {
-#if WITH_OMEMO_V03
-        runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node+":"+QString::number(ownDevice.id), item),
-                                           "Item with ID '" % item.id() %
-                                               "' could not be published to node '" % node % "' of JID '" %
-                                               ownBareJid() % "'",
-                                           std::move(continuation));
-#else
-        runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node, item),
-                                       "Item with ID '" % item.id() %
-                                           "' could not be published to node '" % node % "' of JID '" %
-                                           ownBareJid() % "'",
-                                       std::move(continuation));
-#endif
+    runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node, item),
+                                   "Item with ID '" % item.id() %
+                                       "' could not be published to node '" % node % "' of JID '" %
+                                       ownBareJid() % "'",
+                                   std::move(continuation));
 }
 
 //
@@ -3330,15 +3363,9 @@ void ManagerPrivate::publishItem(const QString &node, const T &item, Function co
 template<typename T, typename Function>
 void ManagerPrivate::publishItem(const QString &node, const T &item, const QXmppPubSubPublishOptions &publishOptions, Function continuation)
 {
-#if WITH_OMEMO_V03
-        runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node+":"+QString::number(ownDevice.id), item, publishOptions),
-                                       "Item with ID '" % item.id() % "' could not be published to node '" % node % "' of JID '" % ownBareJid() % "'",
-                                       std::move(continuation));
-#else
-        runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node, item, publishOptions),
-                                   "Item with ID '" % item.id() % "' could not be published to node '" % node % "' of JID '" % ownBareJid() % "'",
-                                   std::move(continuation));
-#endif
+    runPubSubQueryWithContinuation(pubSubManager->publishPepItem(node, item, publishOptions),
+                               "Item with ID '" % item.id() % "' could not be published to node '" % node % "' of JID '" % ownBareJid() % "'",
+                               std::move(continuation));
 }
 
 //
@@ -3578,6 +3605,28 @@ QFuture<bool> ManagerPrivate::resetAll()
     isStarted = false;
 
 #if WITH_OMEMO_V03
+/*
+    QFutureInterface<bool> interface(QFutureInterfaceBase::Started);
+      QXmppDiscoveryManager* ext = q->client()->findExtension<QXmppDiscoveryManager>();
+
+        auto future = ext->requestDiscoItems(deviceOwnerJid);
+        await(future, q, [=](QXmppDiscoveryManager::ItemsResult result) {
+            if (const auto error = std::get_if<Error>(&result)) {
+                warning("List of nodes for '" % deviceOwnerJid %
+                        "' could not be retrieved" % errorToString(*error));
+            } else {
+                const auto &items = std::get<QList<QXmppDiscoveryIq::Item>>(result);
+
+                for (int i=0; i < items.size(); i++)
+                {
+                    deleteNode(items.at(i).node(), [this, interface](bool isNodeDeleted) mutable {
+                        qDebug() << "Delete node result:" << isNodeDeleted;
+                    });
+                }
+            }
+        });
+*/
+
     auto future = trustManager->resetAll(ns_omemo);
 #else
     auto future = trustManager->resetAll(ns_omemo_2);
@@ -3588,23 +3637,31 @@ QFuture<bool> ManagerPrivate::resetAll()
 #if WITH_OMEMO_V03
             deleteNode(ns_omemo_devices, [this, interface](bool isDevicesNodeDeleted) mutable {
                 if (isDevicesNodeDeleted) {
-                    deleteNode(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id), [this, interface](bool isBundlesNodeDeleted) mutable {
-                        if (isBundlesNodeDeleted) {
-                            ownDevice = {};
-                            preKeyPairs.clear();
-                            signedPreKeyPairs.clear();
-                            deviceBundle = {};
-                            devices.clear();
+                    auto ownDevices = otherOwnDevices();
 
-                            emit q->allDevicesRemoved();
-                        }
+                    // Add all remaining own devices to the device list.
+                    for(auto itr = ownDevices.cbegin(); itr != ownDevices.cend(); itr++) {
+                        const auto deviceId = itr.key();
 
-                        reportFinishedResult(interface, isBundlesNodeDeleted);
-                    });
-                } else {
-                    reportFinishedResult(interface, false);
+                        deleteNode(QString(ns_omemo_bundles)+":"+QString::number(deviceId), [this, interface](bool isBundleNodeDeleted) mutable {
+                            if(!isBundleNodeDeleted) {
+                                reportFinishedResult(interface, false);
+                            }
+                        });
+                    }
+
+                    //FIXME Improve error management
+
+                    ownDevice = {};
+                    preKeyPairs.clear();
+                    signedPreKeyPairs.clear();
+                    deviceBundle = {};
+                    devices.clear();
+
+                    emit q->allDevicesRemoved();
+                    reportFinishedResult(interface, true);
                 }
-           });
+            });
 #else
             deleteNode(ns_omemo_2_devices, [this, interface](bool isDevicesNodeDeleted) mutable {
                 if (isDevicesNodeDeleted) {
@@ -3758,6 +3815,7 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
     }
 
 #if WITH_OMEMO_V03
+    session_builder_set_version(sessionBuilder.get(), 3);
 #else
     session_builder_set_version(sessionBuilder.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif

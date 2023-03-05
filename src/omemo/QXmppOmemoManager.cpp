@@ -1295,16 +1295,12 @@ bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSu
                 // That is necessary because PubSub allows publishing without
                 // items leading to notification-only events.
                 if (!items.isEmpty()) {
-#if WITH_OMEMO_V03 
-                    d->updateDevices(pubSubService, event.items().constFirst());
-#else
                     const auto &deviceListItem = items.constFirst();
                     if (deviceListItem.id() == QXmppPubSubManager::standardItemIdToString(QXmppPubSubManager::Current)) {
                         d->updateDevices(pubSubService, event.items().constFirst());
                     } else {
                         d->handleIrregularDeviceListChanges(pubSubService);
                     }
-#endif
                 }
             }
 
