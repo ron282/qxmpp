@@ -1457,7 +1457,7 @@ QByteArray ManagerPrivate::createSceEnvelope(const T &stanza)
     QXmppSceEnvelopeWriter sceEnvelopeWriter(writer);
 
     if constexpr (std::is_same_v<T, QXmppMessage>) {
-            serializedSceEnvelope = stanza.body().toLatin1();
+            serializedSceEnvelope = stanza.body().toUtf8();
         } else {
             // If the IQ stanza contains an error (i.e., it is an error response), that error is
             // serialized instead of actual content.
