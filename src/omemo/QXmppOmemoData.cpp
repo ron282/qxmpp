@@ -3,18 +3,21 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
-#include "QXmppConstants_p.h"
 #include "QXmppOmemoDeviceBundle_p.h"
 #include "QXmppOmemoDeviceElement_p.h"
 #include "QXmppOmemoDeviceList_p.h"
 #include "QXmppOmemoElement_p.h"
-#include "QXmppOmemoEnvelope_p.h"
 #include "QXmppOmemoIq_p.h"
 #include "QXmppOmemoItems_p.h"
-#include "QXmppUtils.h"
 
 #include <QDomElement>
 #include <QHash>
+
+constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
+#if WITH_OMEMO_V03
+constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
+constexpr auto ns_pubsub = "http://jabber.org/protocol/pubsub";
+#endif
 
 /// \cond
 ///
@@ -492,7 +495,7 @@ void QXmppOmemoDeviceBundleItem::setDeviceBundle(const QXmppOmemoDeviceBundle &d
 
 bool QXmppOmemoDeviceBundleItem::isItem(const QDomElement &itemElement)
 {
-    return QXmppPubSubItem::isItem(itemElement, QXmppOmemoDeviceBundle::isOmemoDeviceBundle);
+    return QXmppPubSubBaseItem::isItem(itemElement, QXmppOmemoDeviceBundle::isOmemoDeviceBundle);
 }
 
 void QXmppOmemoDeviceBundleItem::parsePayload(const QDomElement &payloadElement)
@@ -517,7 +520,7 @@ void QXmppOmemoDeviceListItem::setDeviceList(const QXmppOmemoDeviceList &deviceL
 
 bool QXmppOmemoDeviceListItem::isItem(const QDomElement &itemElement)
 {
-    return QXmppPubSubItem::isItem(itemElement, QXmppOmemoDeviceList::isOmemoDeviceList);
+    return QXmppPubSubBaseItem::isItem(itemElement, QXmppOmemoDeviceList::isOmemoDeviceList);
 }
 
 void QXmppOmemoDeviceListItem::parsePayload(const QDomElement &payloadElement)

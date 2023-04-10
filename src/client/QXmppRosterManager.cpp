@@ -14,6 +14,8 @@
 
 #include <QDomElement>
 
+using namespace QXmpp::Private;
+
 ///
 /// \fn QXmppRosterManager::subscriptionRequestReceived
 ///
@@ -173,17 +175,17 @@ bool QXmppRosterManager::handleStanza(const QDomElement &element)
             if (item.subscriptionType() == QXmppRosterIq::Item::Remove) {
                 if (d->entries.remove(bareJid)) {
                     // notify the user that the item was removed
-                    emit itemRemoved(bareJid);
+                    Q_EMIT itemRemoved(bareJid);
                 }
             } else {
                 const bool added = !d->entries.contains(bareJid);
                 d->entries.insert(bareJid, item);
                 if (added) {
                     // notify the user that the item was added
-                    emit itemAdded(bareJid);
+                    Q_EMIT itemAdded(bareJid);
                 } else {
                     // notify the user that the item changed
-                    emit itemChanged(bareJid);
+                    Q_EMIT itemChanged(bareJid);
                 }
             }
         }
@@ -196,7 +198,7 @@ bool QXmppRosterManager::handleStanza(const QDomElement &element)
         }
         if (isInitial) {
             d->isRosterReceived = true;
-            emit rosterReceived();
+            Q_EMIT rosterReceived();
         }
         break;
     }
@@ -221,11 +223,11 @@ void QXmppRosterManager::_q_presenceReceived(const QXmppPresence &presence)
     switch (presence.type()) {
     case QXmppPresence::Available:
         d->presences[bareJid][resource] = presence;
-        emit presenceChanged(bareJid, resource);
+        Q_EMIT presenceChanged(bareJid, resource);
         break;
     case QXmppPresence::Unavailable:
         d->presences[bareJid].remove(resource);
-        emit presenceChanged(bareJid, resource);
+        Q_EMIT presenceChanged(bareJid, resource);
         break;
     case QXmppPresence::Subscribe:
         if (client()->configuration().autoAcceptSubscriptions()) {
@@ -235,8 +237,8 @@ void QXmppRosterManager::_q_presenceReceived(const QXmppPresence &presence)
             // ask for reciprocal subscription
             subscribe(bareJid);
         } else {
-            emit subscriptionReceived(bareJid);
-            emit subscriptionRequestReceived(bareJid, presence);
+            Q_EMIT subscriptionReceived(bareJid);
+            Q_EMIT subscriptionRequestReceived(bareJid, presence);
         }
         break;
     default:
@@ -256,7 +258,7 @@ void QXmppRosterManager::_q_presenceReceived(const QXmppPresence &presence)
 ///
 /// \since QXmpp 1.5
 ///
-QFuture<QXmppRosterManager::Result> QXmppRosterManager::addRosterItem(const QString &bareJid, const QString &name, const QSet<QString> &groups)
+QXmppTask<QXmppRosterManager::Result> QXmppRosterManager::addRosterItem(const QString &bareJid, const QString &name, const QSet<QString> &groups)
 {
     QXmppRosterIq::Item item;
     item.setBareJid(bareJid);
@@ -280,7 +282,7 @@ QFuture<QXmppRosterManager::Result> QXmppRosterManager::addRosterItem(const QStr
 ///
 /// \since QXmpp 1.5
 ///
-QFuture<QXmppRosterManager::Result> QXmppRosterManager::removeRosterItem(const QString &bareJid)
+QXmppTask<QXmppRosterManager::Result> QXmppRosterManager::removeRosterItem(const QString &bareJid)
 {
     QXmppRosterIq::Item item;
     item.setBareJid(bareJid);
@@ -303,13 +305,12 @@ QFuture<QXmppRosterManager::Result> QXmppRosterManager::removeRosterItem(const Q
 ///
 /// \since QXmpp 1.5
 ///
-QFuture<QXmppRosterManager::Result> QXmppRosterManager::renameRosterItem(const QString &bareJid, const QString &name)
+QXmppTask<QXmppRosterManager::Result> QXmppRosterManager::renameRosterItem(const QString &bareJid, const QString &name)
 {
     using Error = QXmppStanza::Error;
     if (!d->entries.contains(bareJid)) {
-        return QXmpp::Private::makeReadyFuture<Result>(
-            Error(Error::Modify, Error::ItemNotFound,
-                  QStringLiteral("The roster doesn't contain this user.")));
+        return makeReadyTask<Result>(
+            QXmppError { QStringLiteral("The roster doesn't contain this user."), {} });
     }
 
     auto item = d->entries.value(bareJid);
@@ -334,13 +335,13 @@ QFuture<QXmppRosterManager::Result> QXmppRosterManager::renameRosterItem(const Q
 ///
 /// \since QXmpp 1.5
 ///
-QFuture<QXmpp::SendResult> QXmppRosterManager::subscribeTo(const QString &bareJid, const QString &reason)
+QXmppTask<QXmpp::SendResult> QXmppRosterManager::subscribeTo(const QString &bareJid, const QString &reason)
 {
     QXmppPresence packet;
     packet.setTo(QXmppUtils::jidToBareJid(bareJid));
     packet.setType(QXmppPresence::Subscribe);
     packet.setStatusText(reason);
-    return client()->send(std::move(packet));
+    return client()->sendSensitive(std::move(packet));
 }
 
 ///
@@ -351,13 +352,13 @@ QFuture<QXmpp::SendResult> QXmppRosterManager::subscribeTo(const QString &bareJi
 ///
 /// \since QXmpp 1.5
 ///
-QFuture<QXmpp::SendResult> QXmppRosterManager::unsubscribeFrom(const QString &bareJid, const QString &reason)
+QXmppTask<QXmpp::SendResult> QXmppRosterManager::unsubscribeFrom(const QString &bareJid, const QString &reason)
 {
     QXmppPresence packet;
     packet.setTo(QXmppUtils::jidToBareJid(bareJid));
     packet.setType(QXmppPresence::Unsubscribe);
     packet.setStatusText(reason);
-    return client()->send(std::move(packet));
+    return client()->sendSensitive(std::move(packet));
 }
 
 ///
@@ -375,13 +376,13 @@ bool QXmppRosterManager::refuseSubscription(const QString &bareJid, const QStrin
 }
 
 ///
-/// Adds a new item to the roster without sending any subscription requests.
+/// Adds a new item  the roster without sending any subscription requests.
 ///
 /// As a result, the server will initiate a roster push, causing the
 /// itemAdded() or itemChanged() signal to be emitted.
 ///
 /// \param bareJid
-/// \param name Optional name for the item.
+/// \param name Optotional name for the item.
 /// \param groups Optional groups for the item.
 ///
 bool QXmppRosterManager::addItem(const QString &bareJid, const QString &name, const QSet<QString> &groups)

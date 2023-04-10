@@ -1,5 +1,5 @@
-Name:		qxmpp
-Summary:    qxmpp Library
+Name:		QXmpp
+Summary:    QXmpp Library
 Version:    1.5.0
 Release:    1
 Group:      Qt/Qt
@@ -53,16 +53,16 @@ popd
 
 %files 
 %defattr(-, root, root, -)
-%{_libdir}/libQXmppOmemo.so
-%{_libdir}/libQXmppOmemo.so.*
-%{_libdir}/libqxmpp.so
-%{_libdir}/libqxmpp.so.*
+%{_libdir}/lib%{name}OmemoQt5.so
+%{_libdir}/lib%{name}OmemoQt5.so.*
+%{_libdir}/lib%{name}Qt5.so
+%{_libdir}/lib%{name}Qt5.so.*
 
 %files devel
 %defattr(-, root, root, -)
-%{_libdir}/pkgconfig/%{name}.pc
-%{_libdir}/libqxmpp.so
-%{_libdir}/libqxmpp.so.*
+%{_libdir}/pkgconfig/*.pc
+%{_libdir}/lib%{name}Qt5.so
+%{_libdir}/lib%{name}Qt5.so.*
 %{_includedir}/*/*.h
 %{_includedir}/*/*.cpp
 %{_includedir}/*/*/*.h

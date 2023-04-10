@@ -14,13 +14,17 @@
 #include <QSharedDataPointer>
 
 class QXmppDataForm;
-class QXmppPubSubIqPrivate;
-class QXmppPubSubItem;
+class QXmppPubSubBaseItem;
 class QXmppPubSubSubscription;
 class QXmppPubSubAffiliation;
 class QXmppResultSetReply;
 
-class QXMPP_EXPORT QXmppPubSubIqBase : public QXmppIq
+namespace QXmpp {
+    namespace Private {
+
+class PubSubIqPrivate;
+
+class QXMPP_EXPORT PubSubIqBase : public QXmppIq
 {
 public:
     /// This enum is used to describe a publish-subscribe query type.
@@ -44,11 +48,11 @@ public:
         Unsubscribe,
     };
 
-    QXmppPubSubIqBase();
-    QXmppPubSubIqBase(const QXmppPubSubIqBase &other);
-    ~QXmppPubSubIqBase();
+    PubSubIqBase();
+    PubSubIqBase(const PubSubIqBase &other);
+    ~PubSubIqBase();
 
-    QXmppPubSubIqBase &operator=(const QXmppPubSubIqBase &other);
+    PubSubIqBase &operator=(const PubSubIqBase &other);
 
     QueryType queryType() const;
     void setQueryType(QueryType queryType);
@@ -98,11 +102,11 @@ private:
     static std::optional<QueryType> queryTypeFromDomElement(const QDomElement &element);
     static bool queryTypeIsOwnerIq(QueryType type);
 
-    QSharedDataPointer<QXmppPubSubIqPrivate> d;
+    QSharedDataPointer<PubSubIqPrivate> d;
 };
 
-template<typename T = QXmppPubSubItem>
-class QXmppPubSubIq : public QXmppPubSubIqBase
+template<typename T = QXmppPubSubBaseItem>
+class PubSubIq : public PubSubIqBase
 {
 public:
     QVector<T> items() const;
@@ -121,45 +125,48 @@ private:
 };
 
 template<typename T>
-QVector<T> QXmppPubSubIq<T>::items() const
+QVector<T> PubSubIq<T>::items() const
 {
     return m_items;
 }
 
 template<typename T>
-void QXmppPubSubIq<T>::setItems(const QVector<T> &items)
+void PubSubIq<T>::setItems(const QVector<T> &items)
 {
     m_items = items;
 }
 
 template<typename T>
-bool QXmppPubSubIq<T>::isPubSubIq(const QDomElement &element)
+bool PubSubIq<T>::isPubSubIq(const QDomElement &element)
 {
-    return QXmppPubSubIqBase::isPubSubIq(element, [](const QDomElement &item) -> bool {
+    return PubSubIqBase::isPubSubIq(element, [](const QDomElement &item) -> bool {
         return T::isItem(item);
     });
 }
 
 /// \cond
 template<typename T>
-void QXmppPubSubIq<T>::parseItems(const QDomElement &queryElement)
+void PubSubIq<T>::parseItems(const QDomElement &queryElement)
 {
     for (auto childElement = queryElement.firstChildElement(QStringLiteral("item"));
          !childElement.isNull();
          childElement = childElement.nextSiblingElement(QStringLiteral("item"))) {
         T item;
         item.parse(childElement);
-        m_items << std::move(item);
+        m_items.push_back(std::move(item));
     }
 }
 
 template<typename T>
-void QXmppPubSubIq<T>::serializeItems(QXmlStreamWriter *writer) const
+void PubSubIq<T>::serializeItems(QXmlStreamWriter *writer) const
 {
     for (const auto &item : std::as_const(m_items)) {
         item.toXml(writer);
     }
 }
 /// \endcond
+
+}  // namespace Private
+}  // namespace QXmpp
 
 #endif  // QXMPPPUBSUBIQ_H

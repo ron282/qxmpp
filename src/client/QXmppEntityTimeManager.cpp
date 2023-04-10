@@ -8,6 +8,7 @@
 #include "QXmppConstants_p.h"
 #include "QXmppEntityTimeIq.h"
 #include "QXmppFutureUtils_p.h"
+#include "QXmppIqHandling.h"
 #include "QXmppUtils.h"
 
 #include <QDateTime>
@@ -54,7 +55,7 @@ QString QXmppEntityTimeManager::requestTime(const QString &jid)
 ///
 /// \since QXmpp 1.5
 ///
-auto QXmppEntityTimeManager::requestEntityTime(const QString &jid) -> QFuture<EntityTimeResult>
+auto QXmppEntityTimeManager::requestEntityTime(const QString &jid) -> QXmppTask<EntityTimeResult>
 {
     QXmppEntityTimeIq iq;
     iq.setType(QXmppIq::Get);
@@ -71,31 +72,34 @@ QStringList QXmppEntityTimeManager::discoveryFeatures() const
 
 bool QXmppEntityTimeManager::handleStanza(const QDomElement &element)
 {
+    if (QXmpp::handleIqRequests<QXmppEntityTimeIq>(element, client(), this)) {
+        return true;
+    }
+
     if (element.tagName() == "iq" && QXmppEntityTimeIq::isEntityTimeIq(element)) {
         QXmppEntityTimeIq entityTime;
         entityTime.parse(element);
-
-        if (entityTime.type() == QXmppIq::Get) {
-            // respond to query
-            QXmppEntityTimeIq responseIq;
-            responseIq.setType(QXmppIq::Result);
-            responseIq.setId(entityTime.id());
-            responseIq.setTo(entityTime.from());
-
-            QDateTime currentTime = QDateTime::currentDateTime();
-            QDateTime utc = currentTime.toUTC();
-            responseIq.setUtc(utc);
-
-            currentTime.setTimeSpec(Qt::UTC);
-            responseIq.setTzo(utc.secsTo(currentTime));
-
-            client()->sendPacket(responseIq);
-        }
-
-        emit timeReceived(entityTime);
+        Q_EMIT timeReceived(entityTime);
         return true;
     }
 
     return false;
+}
+
+std::variant<QXmppEntityTimeIq, QXmppStanza::Error> QXmppEntityTimeManager::handleIq(QXmppEntityTimeIq iq)
+{
+    using Err = QXmppStanza::Error;
+    if (iq.type() != QXmppIq::Get) {
+        return Err(Err::Cancel, Err::BadRequest, QStringLiteral("Only IQ requests of type 'get' allowed."));
+    }
+
+    QXmppEntityTimeIq responseIq;
+    QDateTime currentTime = QDateTime::currentDateTime();
+    QDateTime utc = currentTime.toUTC();
+    responseIq.setUtc(utc);
+
+    currentTime.setTimeSpec(Qt::UTC);
+    responseIq.setTzo(utc.secsTo(currentTime));
+    return responseIq;
 }
 /// \endcond

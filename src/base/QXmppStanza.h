@@ -98,6 +98,7 @@ public:
         /// The error descriptions are not detailed in here. The exact meaning
         /// can be found in the particular protocols using them.
         enum Type {
+            NoType = -1,
             Cancel,    ///< The error is not temporary.
             Continue,  ///< The error was only a warning.
             Modify,    ///< The request needs to be changed and resent.
@@ -107,6 +108,7 @@ public:
 
         /// A detailed condition of the error
         enum Condition {
+            NoCondition = -1,
             BadRequest,             ///< The request does not contain a valid schema.
             Conflict,               ///< The request conflicts with another.
             FeatureNotImplemented,  ///< The feature is not implemented.
@@ -141,6 +143,9 @@ public:
         Error(Error &&);
         Error(Type type, Condition cond, const QString &text = QString());
         Error(const QString &type, const QString &cond, const QString &text = QString());
+        /// \cond
+        Error(QSharedDataPointer<QXmppStanzaErrorPrivate> d);
+        /// \endcond
         ~Error();
 
         Error &operator=(const Error &);
@@ -153,14 +158,10 @@ public:
         void setText(const QString &text);
 
         Condition condition() const;
-        std::optional<Condition> conditionOpt() const;
         void setCondition(Condition cond);
-        void setCondition(std::optional<Condition> cond);
 
         Type type() const;
-        std::optional<Type> typeOpt() const;
         void setType(Type type);
-        void setType(std::optional<Type> type);
 
         QString by() const;
         void setBy(const QString &by);
@@ -184,6 +185,8 @@ public:
         /// \endcond
 
     private:
+        friend class QXmppStanza;
+
         QSharedDataPointer<QXmppStanzaErrorPrivate> d;
     };
 
@@ -208,7 +211,9 @@ public:
     void setLang(const QString &);
 
     QXmppStanza::Error error() const;
+    std::optional<Error> errorOptional() const;
     void setError(const QXmppStanza::Error &error);
+    void setError(const std::optional<Error> &error);
 
     QXmppElementList extensions() const;
     void setExtensions(const QXmppElementList &elements);

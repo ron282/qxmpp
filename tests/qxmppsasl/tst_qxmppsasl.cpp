@@ -11,37 +11,38 @@ class tst_QXmppSasl : public QObject
 {
     Q_OBJECT
 
-private slots:
-    void testParsing();
-    void testAuth_data();
-    void testAuth();
-    void testChallenge_data();
-    void testChallenge();
-    void testFailure();
-    void testResponse_data();
-    void testResponse();
-    void testSuccess();
+private:
+    Q_SLOT void testParsing();
+    Q_SLOT void testAuth_data();
+    Q_SLOT void testAuth();
+    Q_SLOT void testChallenge_data();
+    Q_SLOT void testChallenge();
+    Q_SLOT void testFailure();
+    Q_SLOT void testResponse_data();
+    Q_SLOT void testResponse();
+    Q_SLOT void testSuccess();
 
     // client
-    void testClientAvailableMechanisms();
-    void testClientBadMechanism();
-    void testClientAnonymous();
-    void testClientDigestMd5();
-    void testClientDigestMd5_data();
-    void testClientFacebook();
-    void testClientGoogle();
-    void testClientPlain();
-    void testClientScramSha1();
-    void testClientScramSha1_bad();
-    void testClientScramSha256();
-    void testClientWindowsLive();
+    Q_SLOT void testClientAvailableMechanisms();
+    Q_SLOT void testClientBadMechanism();
+    Q_SLOT void testClientAnonymous();
+    Q_SLOT void testClientDigestMd5();
+    Q_SLOT void testClientDigestMd5_data();
+    Q_SLOT void testDigestMd5ParseMessage();
+    Q_SLOT void testClientFacebook();
+    Q_SLOT void testClientGoogle();
+    Q_SLOT void testClientPlain();
+    Q_SLOT void testClientScramSha1();
+    Q_SLOT void testClientScramSha1_bad();
+    Q_SLOT void testClientScramSha256();
+    Q_SLOT void testClientWindowsLive();
 
     // server
-    void testServerBadMechanism();
-    void testServerAnonymous();
-    void testServerDigestMd5();
-    void testServerPlain();
-    void testServerPlainChallenge();
+    Q_SLOT void testServerBadMechanism();
+    Q_SLOT void testServerAnonymous();
+    Q_SLOT void testServerDigestMd5();
+    Q_SLOT void testServerPlain();
+    Q_SLOT void testServerPlainChallenge();
 };
 
 void tst_QXmppSasl::testParsing()
@@ -218,6 +219,15 @@ void tst_QXmppSasl::testClientDigestMd5_data()
     QTest::newRow("qop-none") << QByteArray();
     QTest::newRow("qop-auth") << QByteArray(",qop=\"auth\"");
     QTest::newRow("qop-multi") << QByteArray(",qop=\"auth,auth-int\"");
+}
+
+void tst_QXmppSasl::testDigestMd5ParseMessage()
+{
+    auto result = QXmppSaslDigestMd5::parseMessage("charset=utf-8,digest-uri=\"xmpp/0.0.0.0\",nc=00000001,qop=auth,realm=0.0.0.0,response=9c3ee0a919d714c9d72853ff51c0a4f3,username=");
+    QCOMPARE(result["username"], QByteArray());
+
+    result = QXmppSaslDigestMd5::parseMessage("nc=00000001,username=,qop=auth,realm=0.0.0.0,response=9c3ee0a919d714c9d72853ff51c0a4f3");
+    QCOMPARE(result["username"], QByteArray());
 }
 
 void tst_QXmppSasl::testClientDigestMd5()

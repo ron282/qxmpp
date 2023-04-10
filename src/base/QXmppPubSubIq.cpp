@@ -3,16 +3,19 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
-#include "QXmppPubSubIq.h"
-
 #include "QXmppConstants_p.h"
 #include "QXmppDataForm.h"
 #include "QXmppPubSubAffiliation.h"
+#include "QXmppPubSubIq_p.h"
 #include "QXmppPubSubSubscription.h"
 #include "QXmppResultSet.h"
 #include "QXmppUtils.h"
 
 #include <QSharedData>
+
+using namespace QXmpp::Private;
+
+/// \cond
 
 ///
 /// \class QXmppPubSubIqBase
@@ -78,10 +81,12 @@ static const QStringList PUBSUB_QUERIES = {
     QStringLiteral("unsubscribe"),
 };
 
-class QXmppPubSubIqPrivate : public QSharedData
+namespace QXmpp::Private {
+
+class PubSubIqPrivate : public QSharedData
 {
 public:
-    QXmppPubSubIqBase::QueryType queryType = QXmppPubSubIqBase::Items;
+    PubSubIqBase::QueryType queryType = PubSubIqBase::Items;
     QString queryJid;
     QString queryNode;
     QString subscriptionId;
@@ -92,26 +97,28 @@ public:
     std::optional<QXmppResultSetReply> itemsContinuation;
 };
 
+}  // namespace QXmpp::Private
+
 ///
 /// Constructs a PubSub IQ.
 ///
-QXmppPubSubIqBase::QXmppPubSubIqBase()
-    : d(new QXmppPubSubIqPrivate)
+PubSubIqBase::PubSubIqBase()
+    : d(new PubSubIqPrivate)
 {
 }
 
 /// Default copy-constructor
-QXmppPubSubIqBase::QXmppPubSubIqBase(const QXmppPubSubIqBase &iq) = default;
+PubSubIqBase::PubSubIqBase(const PubSubIqBase &iq) = default;
 
-QXmppPubSubIqBase::~QXmppPubSubIqBase() = default;
+PubSubIqBase::~PubSubIqBase() = default;
 
 /// Default assignment operator
-QXmppPubSubIqBase &QXmppPubSubIqBase::operator=(const QXmppPubSubIqBase &iq) = default;
+PubSubIqBase &PubSubIqBase::operator=(const PubSubIqBase &iq) = default;
 
 ///
 /// Returns the PubSub query type for this IQ.
 ///
-QXmppPubSubIqBase::QueryType QXmppPubSubIqBase::queryType() const
+PubSubIqBase::QueryType PubSubIqBase::queryType() const
 {
     return d->queryType;
 }
@@ -121,7 +128,7 @@ QXmppPubSubIqBase::QueryType QXmppPubSubIqBase::queryType() const
 ///
 /// \param queryType
 ///
-void QXmppPubSubIqBase::setQueryType(QXmppPubSubIqBase::QueryType queryType)
+void PubSubIqBase::setQueryType(PubSubIqBase::QueryType queryType)
 {
     d->queryType = queryType;
 }
@@ -129,7 +136,7 @@ void QXmppPubSubIqBase::setQueryType(QXmppPubSubIqBase::QueryType queryType)
 ///
 /// Returns the JID being queried.
 ///
-QString QXmppPubSubIqBase::queryJid() const
+QString PubSubIqBase::queryJid() const
 {
     return d->queryJid;
 }
@@ -139,7 +146,7 @@ QString QXmppPubSubIqBase::queryJid() const
 ///
 /// \param queryJid
 ///
-void QXmppPubSubIqBase::setQueryJid(const QString &queryJid)
+void PubSubIqBase::setQueryJid(const QString &queryJid)
 {
     d->queryJid = queryJid;
 }
@@ -147,7 +154,7 @@ void QXmppPubSubIqBase::setQueryJid(const QString &queryJid)
 ///
 /// Returns the name of the node being queried.
 ///
-QString QXmppPubSubIqBase::queryNode() const
+QString PubSubIqBase::queryNode() const
 {
     return d->queryNode;
 }
@@ -157,7 +164,7 @@ QString QXmppPubSubIqBase::queryNode() const
 ///
 /// \param queryNodeName
 ///
-void QXmppPubSubIqBase::setQueryNode(const QString &queryNodeName)
+void PubSubIqBase::setQueryNode(const QString &queryNodeName)
 {
     d->queryNode = queryNodeName;
 }
@@ -167,7 +174,7 @@ void QXmppPubSubIqBase::setQueryNode(const QString &queryNodeName)
 ///
 /// This does not work for SubscriptionQuery IQs, use subscription() instead.
 ///
-QString QXmppPubSubIqBase::subscriptionId() const
+QString PubSubIqBase::subscriptionId() const
 {
     return d->subscriptionId;
 }
@@ -177,7 +184,7 @@ QString QXmppPubSubIqBase::subscriptionId() const
 ///
 /// This does not work for SubscriptionQuery IQs, use setSubscription() instead.
 ///
-void QXmppPubSubIqBase::setSubscriptionId(const QString &subscriptionId)
+void PubSubIqBase::setSubscriptionId(const QString &subscriptionId)
 {
     d->subscriptionId = subscriptionId;
 }
@@ -185,7 +192,7 @@ void QXmppPubSubIqBase::setSubscriptionId(const QString &subscriptionId)
 ///
 /// Returns the included subscriptions.
 ///
-QVector<QXmppPubSubSubscription> QXmppPubSubIqBase::subscriptions() const
+QVector<QXmppPubSubSubscription> PubSubIqBase::subscriptions() const
 {
     return d->subscriptions;
 }
@@ -193,7 +200,7 @@ QVector<QXmppPubSubSubscription> QXmppPubSubIqBase::subscriptions() const
 ///
 /// Sets the included subscriptions.
 ///
-void QXmppPubSubIqBase::setSubscriptions(const QVector<QXmppPubSubSubscription> &subscriptions)
+void PubSubIqBase::setSubscriptions(const QVector<QXmppPubSubSubscription> &subscriptions)
 {
     d->subscriptions = subscriptions;
 }
@@ -205,7 +212,7 @@ void QXmppPubSubIqBase::setSubscriptions(const QVector<QXmppPubSubSubscription> 
 /// subscription if existant. This can be used for both query types,
 /// Subscription and Subscriptions.
 ///
-std::optional<QXmppPubSubSubscription> QXmppPubSubIqBase::subscription() const
+std::optional<QXmppPubSubSubscription> PubSubIqBase::subscription() const
 {
     if (d->subscriptions.isEmpty()) {
         return std::nullopt;
@@ -219,7 +226,7 @@ std::optional<QXmppPubSubSubscription> QXmppPubSubIqBase::subscription() const
 /// This is a utility function for setSubscriptions(). It can be used for both
 /// query types, Subscription and Subscriptions.
 ///
-void QXmppPubSubIqBase::setSubscription(const std::optional<QXmppPubSubSubscription> &subscription)
+void PubSubIqBase::setSubscription(const std::optional<QXmppPubSubSubscription> &subscription)
 {
     if (subscription) {
         d->subscriptions = { *subscription };
@@ -231,7 +238,7 @@ void QXmppPubSubIqBase::setSubscription(const std::optional<QXmppPubSubSubscript
 ///
 /// Returns the included affiliations.
 ///
-QVector<QXmppPubSubAffiliation> QXmppPubSubIqBase::affiliations() const
+QVector<QXmppPubSubAffiliation> PubSubIqBase::affiliations() const
 {
     return d->affiliations;
 }
@@ -239,7 +246,7 @@ QVector<QXmppPubSubAffiliation> QXmppPubSubIqBase::affiliations() const
 ///
 /// Sets the included affiliations.
 ///
-void QXmppPubSubIqBase::setAffiliations(const QVector<QXmppPubSubAffiliation> &affiliations)
+void PubSubIqBase::setAffiliations(const QVector<QXmppPubSubAffiliation> &affiliations)
 {
     d->affiliations = affiliations;
 }
@@ -249,7 +256,7 @@ void QXmppPubSubIqBase::setAffiliations(const QVector<QXmppPubSubAffiliation> &a
 ///
 /// This is only used for queries with type ItemsQuery.
 ///
-std::optional<uint32_t> QXmppPubSubIqBase::maxItems() const
+std::optional<uint32_t> PubSubIqBase::maxItems() const
 {
     if (d->maxItems) {
         return d->maxItems;
@@ -262,7 +269,7 @@ std::optional<uint32_t> QXmppPubSubIqBase::maxItems() const
 ///
 /// This is only used for queries with type ItemsQuery.
 ///
-void QXmppPubSubIqBase::setMaxItems(std::optional<uint32_t> maxItems)
+void PubSubIqBase::setMaxItems(std::optional<uint32_t> maxItems)
 {
     d->maxItems = maxItems.value_or(0);
 }
@@ -270,7 +277,7 @@ void QXmppPubSubIqBase::setMaxItems(std::optional<uint32_t> maxItems)
 ///
 /// Returns a data form if the IQ contains one.
 ///
-std::optional<QXmppDataForm> QXmppPubSubIqBase::dataForm() const
+std::optional<QXmppDataForm> PubSubIqBase::dataForm() const
 {
     return d->dataForm;
 }
@@ -278,7 +285,7 @@ std::optional<QXmppDataForm> QXmppPubSubIqBase::dataForm() const
 ///
 /// Sets a data form (or clears it by setting std::nullopt).
 ///
-void QXmppPubSubIqBase::setDataForm(const std::optional<QXmppDataForm> &dataForm)
+void PubSubIqBase::setDataForm(const std::optional<QXmppDataForm> &dataForm)
 {
     d->dataForm = dataForm;
 }
@@ -288,7 +295,7 @@ void QXmppPubSubIqBase::setDataForm(const std::optional<QXmppDataForm> &dataForm
 ///
 /// If this value is set the results are incomplete.
 ///
-std::optional<QXmppResultSetReply> QXmppPubSubIqBase::itemsContinuation() const
+std::optional<QXmppResultSetReply> PubSubIqBase::itemsContinuation() const
 {
     return d->itemsContinuation;
 }
@@ -298,21 +305,20 @@ std::optional<QXmppResultSetReply> QXmppPubSubIqBase::itemsContinuation() const
 ///
 /// If this value is set the results are incomplete.
 ///
-void QXmppPubSubIqBase::setItemsContinuation(const std::optional<QXmppResultSetReply> &itemsContinuation)
+void PubSubIqBase::setItemsContinuation(const std::optional<QXmppResultSetReply> &itemsContinuation)
 {
     d->itemsContinuation = itemsContinuation;
 }
 
-/// \cond
-bool QXmppPubSubIqBase::isPubSubIq(const QDomElement &element)
+bool PubSubIqBase::isPubSubIq(const QDomElement &element)
 {
     // no special requirements for the item / it's payload
-    return QXmppPubSubIqBase::isPubSubIq(element, [](const QDomElement &) {
+    return PubSubIqBase::isPubSubIq(element, [](const QDomElement &) {
         return true;
     });
 }
 
-bool QXmppPubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemValid)(const QDomElement &))
+bool PubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemValid)(const QDomElement &))
 {
     // IQs must have only one direct child element.
     const auto pubSubElement = element.firstChildElement();
@@ -402,7 +408,7 @@ bool QXmppPubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemVali
     return true;
 }
 
-void QXmppPubSubIqBase::parseElementFromChild(const QDomElement &element)
+void PubSubIqBase::parseElementFromChild(const QDomElement &element)
 {
     const auto findChildElement = [](const QDomElement &element, const QString &tag, const QString &namespaceUri) {
         for (auto subElement = element.firstChildElement(tag);
@@ -535,7 +541,7 @@ void QXmppPubSubIqBase::parseElementFromChild(const QDomElement &element)
     }
 }
 
-void QXmppPubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
+void PubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
 {
     writer->writeStartElement(QStringLiteral("pubsub"));
     writer->writeDefaultNamespace(queryTypeIsOwnerIq(d->queryType) ? ns_pubsub_owner : ns_pubsub);
@@ -654,9 +660,8 @@ void QXmppPubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
     }
     writer->writeEndElement();  // pubsub
 }
-/// \endcond
 
-std::optional<QXmppPubSubIqBase::QueryType> QXmppPubSubIqBase::queryTypeFromDomElement(const QDomElement &element)
+std::optional<PubSubIqBase::QueryType> PubSubIqBase::queryTypeFromDomElement(const QDomElement &element)
 {
     QueryType type;
     if (auto index = PUBSUB_QUERIES.indexOf(element.tagName()); index != -1) {
@@ -685,7 +690,7 @@ std::optional<QXmppPubSubIqBase::QueryType> QXmppPubSubIqBase::queryTypeFromDomE
     }
 }
 
-bool QXmppPubSubIqBase::queryTypeIsOwnerIq(QueryType type)
+bool PubSubIqBase::queryTypeIsOwnerIq(QueryType type)
 {
     switch (type) {
     case OwnerAffiliations:
@@ -710,3 +715,5 @@ bool QXmppPubSubIqBase::queryTypeIsOwnerIq(QueryType type)
     }
     return false;
 }
+
+/// \endcond

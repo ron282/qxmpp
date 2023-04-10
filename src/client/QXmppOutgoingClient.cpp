@@ -15,10 +15,12 @@
 #include "QXmppSasl_p.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppStreamManagement_p.h"
+#include "QXmppTask.h"
 #include "QXmppUtils.h"
 
 #include <QCryptographicHash>
 #include <QDnsLookup>
+#include <QFuture>
 #include <QNetworkProxy>
 #include <QSslConfiguration>
 #include <QSslSocket>
@@ -318,6 +320,21 @@ bool QXmppOutgoingClient::isStreamResumed() const
     return d->streamResumed;
 }
 
+///
+/// Sends an IQ and reports the response asynchronously.
+///
+/// It makes sure that the to address is set so the stream can correctly check the reponse's
+/// sender.
+///
+/// \since QXmpp 1.5
+///
+QXmppTask<QXmppStream::IqResult> QXmppOutgoingClient::sendIq(QXmppIq &&iq)
+{
+    // If 'to' is empty the user's bare JID is meant implicitly (see RFC6120, section 10.3.3.).
+    auto to = iq.to();
+    return QXmppStream::sendIq(std::move(iq), to.isEmpty() ? d->config.jidBare() : to);
+}
+
 void QXmppOutgoingClient::_q_socketDisconnected()
 {
     debug("Socket disconnected");
@@ -327,7 +344,7 @@ void QXmppOutgoingClient::_q_socketDisconnected()
         d->redirectHost = QString();
         d->redirectPort = 0;
     } else {
-        emit disconnected();
+        Q_EMIT disconnected();
     }
 }
 
@@ -340,7 +357,7 @@ void QXmppOutgoingClient::socketSslErrors(const QList<QSslError> &errors)
     }
 
     // relay signal
-    emit sslErrors(errors);
+    Q_EMIT sslErrors(errors);
 
     // if configured, ignore the errors
     if (configuration().ignoreSslErrors()) {
@@ -356,7 +373,7 @@ void QXmppOutgoingClient::socketError(QAbstractSocket::SocketError socketError)
         // some network error occurred during startup -> try next available SRV record server
         d->connectToNextDNSHost();
     } else {
-        emit error(QXmppClient::SocketError);
+        Q_EMIT error(QXmppClient::SocketError);
     }
 }
 
@@ -421,7 +438,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
 
     // give client opportunity to handle stanza
     bool handled = false;
-    emit elementReceived(nodeRecv, handled);
+    Q_EMIT elementReceived(nodeRecv, handled);
     if (handled) {
         return;
     }
@@ -537,7 +554,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
 
         // otherwise we are done
         d->sessionStarted = true;
-        emit connected();
+        Q_EMIT connected();
     } else if (ns == ns_stream && nodeRecv.tagName() == "error") {
         // handle redirects
         const auto otherHost = nodeRecv.firstChildElement("see-other-host");
@@ -553,7 +570,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         } else {
             d->xmppStreamError = QXmppStanza::Error::UndefinedCondition;
         }
-        emit error(QXmppClient::XmppStreamError);
+        Q_EMIT error(QXmppClient::XmppStreamError);
     } else if (ns == ns_sasl) {
         if (!d->saslClient) {
             warning("SASL stanza received, but no mechanism selected");
@@ -586,7 +603,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
             } else {
                 d->xmppStreamError = QXmppStanza::Error::UndefinedCondition;
             }
-            emit error(QXmppClient::XmppStreamError);
+            Q_EMIT error(QXmppClient::XmppStreamError);
 
             warning("Authentication failure");
             disconnectFromHost();
@@ -610,7 +627,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
                     d->sendStreamManagementEnable();
                 } else {
                     // we are connected now
-                    emit connected();
+                    Q_EMIT connected();
                 }
             } else if (QXmppBindIq::isBindIq(nodeRecv) && id == d->bindId) {
                 QXmppBindIq bind;
@@ -639,12 +656,12 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
                             d->sendStreamManagementEnable();
                         } else {
                             // we are connected now
-                            emit connected();
+                            Q_EMIT connected();
                         }
                     }
                 } else if (bind.type() == QXmppIq::Error) {
                     d->xmppStreamError = bind.error().condition();
-                    emit error(QXmppClient::XmppStreamError);
+                    Q_EMIT error(QXmppClient::XmppStreamError);
                     warning("Resource binding error received: " + bind.error().text());
                     disconnectFromHost();
                 }
@@ -659,7 +676,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
 
                 // xmpp connection made
                 d->sessionStarted = true;
-                emit connected();
+                Q_EMIT connected();
             } else if (QXmppNonSASLAuthIq::isNonSASLAuthIq(nodeRecv)) {
                 if (type == "result") {
                     bool digest = !nodeRecv.firstChildElement("query").firstChildElement("digest").isNull();
@@ -709,7 +726,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
                     iq.setError(error);
                     sendPacket(iq);
                 } else {
-                    emit iqReceived(iqPacket);
+                    Q_EMIT iqReceived(iqPacket);
                 }
             }
         } else if (nodeRecv.tagName() == "presence") {
@@ -717,13 +734,13 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
             presence.parse(nodeRecv);
 
             // emit presence
-            emit presenceReceived(presence);
+            Q_EMIT presenceReceived(presence);
         } else if (nodeRecv.tagName() == "message") {
             QXmppMessage message;
             message.parse(nodeRecv);
 
             // emit message
-            emit messageReceived(message);
+            Q_EMIT messageReceived(message);
         }
     } else if (QXmppStreamManagementEnabled::isStreamManagementEnabled(nodeRecv)) {
         QXmppStreamManagementEnabled streamManagementEnabled;
@@ -737,7 +754,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         d->streamManagementEnabled = true;
         enableStreamManagement(true);
         // we are connected now
-        emit connected();
+        Q_EMIT connected();
     } else if (QXmppStreamManagementResumed::isStreamManagementResumed(nodeRecv)) {
         QXmppStreamManagementResumed streamManagementResumed;
         streamManagementResumed.parse(nodeRecv);
@@ -749,7 +766,7 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
         enableStreamManagement(false);
         // we are connected now
         // TODO: The stream was resumed. Therefore, we should not send presence information or request the roster.
-        emit connected();
+        Q_EMIT connected();
     } else if (QXmppStreamManagementFailed::isStreamManagementFailed(nodeRecv)) {
         if (d->isResuming) {
             // resuming failed. We can try to bind a resource now.
@@ -769,10 +786,10 @@ void QXmppOutgoingClient::handleStanza(const QDomElement &nodeRecv)
 
             // otherwise we are done
             d->sessionStarted = true;
-            emit connected();
+            Q_EMIT connected();
         } else {
             // we are connected now, but stream management is disabled
-            emit connected();
+            Q_EMIT connected();
         }
     }
 }
@@ -814,7 +831,7 @@ void QXmppOutgoingClient::pingTimeout()
 {
     warning("Ping timeout");
     QXmppStream::disconnectFromHost();
-    emit error(QXmppClient::KeepAliveError);
+    Q_EMIT error(QXmppClient::KeepAliveError);
 }
 
 bool QXmppOutgoingClient::setResumeAddress(const QString &address)

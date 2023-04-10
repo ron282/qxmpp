@@ -8,6 +8,8 @@
 #include "QXmppFutureUtils_p.h"
 #include "QXmppLogger.h"
 #include "QXmppMessage.h"
+#include "QXmppPromise.h"
+#include "QXmppRegisterIq.h"
 #include "QXmppRosterManager.h"
 #include "QXmppVCardManager.h"
 #include "QXmppVersionManager.h"
@@ -21,17 +23,16 @@ class tst_QXmppClient : public QObject
 {
     Q_OBJECT
 
-private slots:
-    void initTestCase();
-
-    void handleMessageSent(QXmppLogger::MessageType type, const QString &text) const;
-    void testSendMessage();
-
-    void testIndexOfExtension();
-
-    void testE2eeExtension();
-
 private:
+    Q_SLOT void initTestCase();
+
+    Q_SLOT void handleMessageSent(QXmppLogger::MessageType type, const QString &text) const;
+    Q_SLOT void testSendMessage();
+    Q_SLOT void testIndexOfExtension();
+    Q_SLOT void testE2eeExtension();
+    Q_SLOT void testTaskDirect();
+    Q_SLOT void testTaskStore();
+
     QXmppClient *client;
 };
 
@@ -97,22 +98,29 @@ public:
     bool messageCalled = false;
     bool iqCalled = false;
 
-    QFuture<MessageEncryptResult> encryptMessage(QXmppMessage &&, const std::optional<QXmppSendStanzaParams> &) override
+    QXmppTask<MessageEncryptResult> encryptMessage(QXmppMessage &&, const std::optional<QXmppSendStanzaParams> &) override
     {
         messageCalled = true;
-        return makeReadyFuture<MessageEncryptResult>(QXmpp::SendError { "it's only a test", QXmpp::SendError::EncryptionError });
+        return makeReadyTask<MessageEncryptResult>(QXmppError { "it's only a test", QXmpp::SendError::EncryptionError });
+    }
+    QXmppTask<MessageDecryptResult> decryptMessage(QXmppMessage &&) override
+    {
+        return makeReadyTask<MessageDecryptResult>(QXmppError { "it's only a test", QXmpp::SendError::EncryptionError });
     }
 
-    QFuture<IqEncryptResult> encryptIq(QXmppIq &&, const std::optional<QXmppSendStanzaParams> &) override
+    QXmppTask<IqEncryptResult> encryptIq(QXmppIq &&, const std::optional<QXmppSendStanzaParams> &) override
     {
         iqCalled = true;
-        return makeReadyFuture<IqEncryptResult>(QXmpp::SendError { "it's only a test", QXmpp::SendError::EncryptionError });
+        return makeReadyTask<IqEncryptResult>(QXmppError { "it's only a test", QXmpp::SendError::EncryptionError });
     }
 
-    QFuture<IqDecryptResult> decryptIq(const QDomElement &) override
+    QXmppTask<IqDecryptResult> decryptIq(const QDomElement &) override
     {
-        return makeReadyFuture<IqDecryptResult>(QXmpp::SendError { "it's only a test", QXmpp::SendError::EncryptionError });
+        return makeReadyTask<IqDecryptResult>(QXmppError { "it's only a test", QXmpp::SendError::EncryptionError });
     }
+
+    bool isEncrypted(const QDomElement &) override { return false; };
+    bool isEncrypted(const QXmppMessage &) override { return false; };
 };
 
 void tst_QXmppClient::testE2eeExtension()
@@ -121,14 +129,14 @@ void tst_QXmppClient::testE2eeExtension()
     EncryptionExtension encrypter;
     client.setEncryptionExtension(&encrypter);
 
-    auto result = client.send(QXmppMessage("me@qxmpp.org", "somebody@qxmpp.org", "Hello"));
+    auto result = client.sendSensitive(QXmppMessage("me@qxmpp.org", "somebody@qxmpp.org", "Hello"));
     QVERIFY(encrypter.messageCalled);
     QVERIFY(!encrypter.iqCalled);
     QCoreApplication::processEvents();
-    expectFutureVariant<QXmpp::SendError>(result);
+    expectFutureVariant<QXmppError>(result.toFuture(this));
 
     encrypter.messageCalled = false;
-    result = client.send(QXmppPresence(QXmppPresence::Available));
+    result = client.sendSensitive(QXmppPresence(QXmppPresence::Available));
     QVERIFY(!encrypter.messageCalled);
     QVERIFY(!encrypter.iqCalled);
 
@@ -140,11 +148,11 @@ void tst_QXmppClient::testE2eeExtension()
         return request;
     };
 
-    client.send(createRequest());
+    client.sendSensitive(createRequest());
     QVERIFY(encrypter.iqCalled);
     encrypter.iqCalled = false;
 
-    client.sendUnencrypted(createRequest());
+    client.send(createRequest());
     QVERIFY(!encrypter.iqCalled);
     encrypter.iqCalled = false;
 
@@ -155,6 +163,69 @@ void tst_QXmppClient::testE2eeExtension()
     client.sendSensitiveIq(createRequest());
     QVERIFY(encrypter.iqCalled);
     encrypter.iqCalled = false;
+}
+
+void tst_QXmppClient::testTaskDirect()
+{
+    QXmppPromise<QXmppIq> p;
+    QXmppRegisterIq iq;
+    iq.setUsername("username");
+
+    bool thenCalled = false;
+    p.task().then(this, [&thenCalled](QXmppIq &&iq) {
+        thenCalled = true;
+        // casting not supported
+        QVERIFY(!dynamic_cast<QXmppRegisterIq *>(&iq));
+    });
+    p.finish(std::move(iq));
+
+    QVERIFY(thenCalled);
+    QVERIFY(p.task().isFinished());
+    QVERIFY(!p.task().hasResult());
+}
+
+static QXmppTask<QXmppIq> generateRegisterIq()
+{
+    QXmppPromise<QXmppIq> p;
+    QXmppRegisterIq iq;
+    iq.setFrom("juliet");
+    iq.setUsername("username");
+    p.finish(std::move(iq));
+    return p.task();
+}
+
+void tst_QXmppClient::testTaskStore()
+{
+    auto task = generateRegisterIq();
+
+    bool thenCalled = false;
+    task.then(this, [&thenCalled](QXmppIq &&iq) {
+        thenCalled = true;
+
+        QCOMPARE(iq.from(), QStringLiteral("juliet"));
+        // casting not supported
+        QVERIFY(!dynamic_cast<QXmppRegisterIq *>(&iq));
+    });
+    QVERIFY(thenCalled);
+
+    QXmppPromise<QXmppIq> p;
+    QXmppRegisterIq iq;
+    iq.setUsername("username");
+    p.finish(std::move(iq));
+
+    QVERIFY(p.task().hasResult());
+    QVERIFY(p.task().isFinished());
+
+    thenCalled = false;
+    p.task().then(this, [&thenCalled](QXmppIq &&iq) {
+        thenCalled = true;
+        // casting not supported
+        QVERIFY(!dynamic_cast<QXmppRegisterIq *>(&iq));
+    });
+    QVERIFY(thenCalled);
+
+    QVERIFY(p.task().isFinished());
+    QVERIFY(!p.task().hasResult());
 }
 
 QTEST_MAIN(tst_QXmppClient)

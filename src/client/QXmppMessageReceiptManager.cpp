@@ -9,6 +9,7 @@
 #include "QXmppConstants_p.h"
 #include "QXmppE2eeMetadata.h"
 #include "QXmppMessage.h"
+#include "QXmppTask.h"
 #include "QXmppUtils.h"
 
 #include <QDomElement>
@@ -37,7 +38,7 @@ bool QXmppMessageReceiptManager::handleMessage(const QXmppMessage &message)
         // Buggy clients also mark carbon messages as received; to avoid this
         // we check whether sender and receiver have the same bare JID.
         if (QXmppUtils::jidToBareJid(message.from()) != QXmppUtils::jidToBareJid(message.to())) {
-            emit messageDelivered(message.from(), message.receiptId());
+            Q_EMIT messageDelivered(message.from(), message.receiptId());
         }
         return true;
     }

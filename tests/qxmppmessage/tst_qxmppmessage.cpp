@@ -8,6 +8,7 @@
 #include "QXmppBitsOfBinaryDataList.h"
 #include "QXmppEncryptedFileSource.h"
 #include "QXmppMessage.h"
+#include "QXmppMessageReaction.h"
 #include "QXmppMixInvitation.h"
 #include "QXmppOutOfBandUrl.h"
 #include "QXmppTrustMessageElement.h"
@@ -21,41 +22,42 @@ class tst_QXmppMessage : public QObject
 {
     Q_OBJECT
 
-private slots:
-    void testBasic_data();
-    void testBasic();
-    void testIsXmppStanza();
-    void testUnknownXExtension();
-    void testMessageAttention();
-    void testMessageReceipt();
-    void testDelay_data();
-    void testDelay();
-    void testDelayWithMultipleStamp();
-    void testExtendedAddresses();
-    void testMucInvitation();
-    void testState_data();
-    void testState();
-    void testXhtml();
-    void testSubextensions();
-    void testChatMarkers();
-    void testPrivateMessage();
-    void testOutOfBandUrl();
-    void testMessageCorrect();
-    void testMessageAttaching();
-    void testMix();
-    void testEme();
-    void testSpoiler();
-    void testProcessingHints();
-    void testBobData();
-    void testFallbackIndication();
-    void testStanzaIds();
-    void testSlashMe_data();
-    void testSlashMe();
-    void testMixInvitation();
-    void testTrustMessageElement();
-    void testE2eeFallbackBody();
-    void testFileSharing();
-    void testEncryptedFileSource();
+private:
+    Q_SLOT void testBasic_data();
+    Q_SLOT void testBasic();
+    Q_SLOT void testIsXmppStanza();
+    Q_SLOT void testUnknownXExtension();
+    Q_SLOT void testMessageAttention();
+    Q_SLOT void testMessageReceipt();
+    Q_SLOT void testDelay_data();
+    Q_SLOT void testDelay();
+    Q_SLOT void testDelayWithMultipleStamp();
+    Q_SLOT void testExtendedAddresses();
+    Q_SLOT void testMucInvitation();
+    Q_SLOT void testState_data();
+    Q_SLOT void testState();
+    Q_SLOT void testXhtml();
+    Q_SLOT void testSubextensions();
+    Q_SLOT void testChatMarkers();
+    Q_SLOT void testPrivateMessage();
+    Q_SLOT void testOutOfBandUrl();
+    Q_SLOT void testMessageCorrect();
+    Q_SLOT void testMessageAttaching();
+    Q_SLOT void testMix();
+    Q_SLOT void testEme();
+    Q_SLOT void testSpoiler();
+    Q_SLOT void testProcessingHints();
+    Q_SLOT void testBobData();
+    Q_SLOT void testFallbackIndication();
+    Q_SLOT void testStanzaIds();
+    Q_SLOT void testSlashMe_data();
+    Q_SLOT void testSlashMe();
+    Q_SLOT void testMixInvitation();
+    Q_SLOT void testTrustMessageElement();
+    Q_SLOT void testReaction();
+    Q_SLOT void testE2eeFallbackBody();
+    Q_SLOT void testFileSharing();
+    Q_SLOT void testEncryptedFileSource();
 };
 
 void tst_QXmppMessage::testBasic_data()
@@ -781,7 +783,7 @@ void tst_QXmppMessage::testEme()
     // test standard encryption: OMEMO
     const QByteArray xmlOmemo(
         "<message to=\"foo@example.com/QXmpp\" from=\"bar@example.com/QXmpp\" type=\"normal\">"
-        "<encryption xmlns=\"urn:xmpp:eme:0\" namespace=\"eu.siacs.conversations.axolotl\"/>"
+        "<encryption xmlns=\"urn:xmpp:eme:0\" namespace=\"eu.siacs.conversations.axolotl\" name=\"OMEMO\"/>"
         "<body>This message is encrypted with OMEMO, but your client doesn&apos;t seem to support that.</body>"
         "</message>");
 
@@ -1127,6 +1129,30 @@ void tst_QXmppMessage::testTrustMessageElement()
     QXmppMessage message2;
     message2.setTrustMessageElement(QXmppTrustMessageElement());
     QVERIFY(message2.trustMessageElement());
+}
+
+void tst_QXmppMessage::testReaction()
+{
+    const QByteArray xml(
+        "<message id=\"96d73204-a57a-11e9-88b8-4889e7820c76\" to=\"romeo@capulet.net/orchard\" type=\"chat\">"
+        "<store xmlns=\"urn:xmpp:hints\"/>"
+        "<reactions xmlns=\"urn:xmpp:reactions:0\" id=\"744f6e18-a57a-11e9-a656-4889e7820c76\">"
+        "<reaction>🐢</reaction>"
+        "<reaction>👋</reaction>"
+        "</reactions>"
+        "</message>");
+
+    QXmppMessage message1;
+    QVERIFY(!message1.reaction());
+
+    parsePacket(message1, xml);
+    QVERIFY(message1.reaction());
+    serializePacket(message1, xml);
+
+    QXmppMessage message2;
+    message2.addHint(QXmppMessage::Store);
+    message2.setReaction(QXmppMessageReaction());
+    QVERIFY(message2.reaction());
 }
 
 void tst_QXmppMessage::testE2eeFallbackBody()
