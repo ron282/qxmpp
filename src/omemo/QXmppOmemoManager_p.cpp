@@ -230,6 +230,10 @@ void ManagerPrivate::init()
     }
 }
 
+static void log(int level, const char *message, size_t len, void *user_data)
+{
+    qDebug() << QString(message);
+}
 
 //
 // Initializes the OMEMO library's global context.
@@ -245,6 +249,9 @@ bool ManagerPrivate::initGlobalContext()
         warning("Signal context could not be be created");
         return false;
     }
+
+    signal_context_set_log_function(globalContext.get(), log);
+
     return true;
 }
 
@@ -635,9 +642,7 @@ QXmppTask<bool> ManagerPrivate::setUpDeviceId()
 #if WITH_OMEMO_V03
     auto future = pubSubManager->requestItem<QXmppOmemoDeviceListItem>(pubSubManager->client()->configuration().jidBare(), ns_omemo_devices);
     return chain<bool>(std::move(future), q, [this](QXmppPubSubManager::ItemResult<QXmppOmemoDeviceListItem> result) mutable {
-        QList<QXmppOmemoDeviceElement> deviceList;
-
-        //FIX ME: TO CHECK IF RESULT IS CORRECT
+        QVector<QString> deviceIds;
 
         auto error = std::get_if<QXmppError>(&result);
         if (error) {
@@ -651,14 +656,14 @@ QXmppTask<bool> ManagerPrivate::setUpDeviceId()
             } else {
                 return false;
             }
-        } 
+        } else {
+            QList<QXmppOmemoDeviceElement> deviceList;
 
-        const auto &deviceListItem = std::get<QXmppOmemoDeviceListItem>(result);
-        deviceList = deviceListItem.deviceList();
-        QVector<QString> deviceIds;
-
-        for (int i = 0; i < deviceList.size(); ++i) {
-            deviceIds.append(QString::number(deviceList.at(i).id()));
+            const auto &deviceListItem = std::get<QXmppOmemoDeviceListItem>(result);
+            deviceList = deviceListItem.deviceList();
+            for (int i = 0; i < deviceList.size(); ++i) {
+                deviceIds.append(QString::number(deviceList.at(i).id()));
+            }
         }
 
         // The first generated device ID can be used if no device bundle node exists.
@@ -667,6 +672,7 @@ QXmppTask<bool> ManagerPrivate::setUpDeviceId()
         if (deviceId) {
             ownDevice.id = *deviceId;
         }
+
         return deviceId.has_value();
      });
 #else
@@ -1648,7 +1654,6 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
             if (sceEnvelopeReader.from() != senderJid) {
                 q->info("Sender '" % senderJid % "' of stanza does not match SCE 'from' affix element '" % sceEnvelopeReader.from() % "'");
             }
-
             if (const auto recipientJid = QXmppUtils::jidToBareJid(stanza.to()); isMessageStanza) {
                 if (const auto &message = dynamic_cast<const QXmppMessage &>(stanza); message.type() == QXmppMessage::GroupChat && (sceEnvelopeReader.to() != recipientJid)) {
                     warning("Recipient of group chat message does not match SCE affix element '<to/>'");
@@ -3120,15 +3125,22 @@ void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwner
         // item is removed, if their device list node is removed or if all
         // the node's items are removed.
 #if WITH_OMEMO_V03
-        //FIX ME
-        q->info("handleIrregularDeviceListChanges: FIXME ");
+        auto future = pubSubManager->deleteOwnPepNode(ns_omemo_devices);
 #else
         auto future = pubSubManager->deleteOwnPepNode(ns_omemo_2_devices);
+#endif
         future.then(q, [=](QXmppPubSubManager::Result result) {
             if (const auto error = std::get_if<QXmppError>(&result)) {
+#if WITH_OMEMO_V03
+                warning("Node '" % QString(ns_omemo_devices) % "' of JID '" % deviceOwnerJid %
+                        "' could not be deleted in order to recover from an inconsistent node: " %
+                        errorToString(*error));
+#else
                 warning("Node '" % QString(ns_omemo_2_devices) % "' of JID '" % deviceOwnerJid %
                         "' could not be deleted in order to recover from an inconsistent node: " %
                         errorToString(*error));
+#endif
+
             } else {
                 auto future = pubSubManager->requestOwnPepFeatures();
                 future.then(q, [=](QXmppPubSubManager::FeaturesResult result) {
@@ -3160,7 +3172,6 @@ void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwner
                 });
             }
         });
-#endif
     } else {
         auto &ownerDevices = devices[deviceOwnerJid];
 
@@ -3578,28 +3589,6 @@ QXmppTask<bool> ManagerPrivate::resetAll()
     isStarted = false;
 
 #if WITH_OMEMO_V03
-/*
-    QFutureInterface<bool> interface(QFutureInterfaceBase::Started);
-      QXmppDiscoveryManager* ext = q->client()->findExtension<QXmppDiscoveryManager>();
-
-        auto future = ext->requestDiscoItems(deviceOwnerJid);
-        await(future, q, [=](QXmppDiscoveryManager::ItemsResult result) {
-            if (const auto error = std::get_if<Error>(&result)) {
-                warning("List of nodes for '" % deviceOwnerJid %
-                        "' could not be retrieved" % errorToString(*error));
-            } else {
-                const auto &items = std::get<QList<QXmppDiscoveryIq::Item>>(result);
-
-                for (int i=0; i < items.size(); i++)
-                {
-                    deleteNode(items.at(i).node(), [this, interface](bool isNodeDeleted) mutable {
-                        qDebug() << "Delete node result:" << isNodeDeleted;
-                    });
-                }
-            }
-        });
-*/
-
     auto future = trustManager->resetAll(ns_omemo);
 #else
     auto future = trustManager->resetAll(ns_omemo_2);
