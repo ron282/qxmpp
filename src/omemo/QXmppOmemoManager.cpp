@@ -1140,7 +1140,11 @@ bool QXmppOmemoManager::isEncrypted(const QDomElement &el)
     for (auto subEl = el.firstChildElement();
          !subEl.isNull();
          subEl = subEl.nextSiblingElement()) {
+#if WITH_OMEMO_V03
+        if (subEl.tagName() == "encrypted" && subEl.namespaceURI() == ns_omemo) {
+#else
         if (subEl.tagName() == "encrypted" && subEl.namespaceURI() == ns_omemo_2) {
+#endif
             return true;
         }
     }

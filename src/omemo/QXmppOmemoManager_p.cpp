@@ -1645,7 +1645,7 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
             QDomDocument document;
 #if WITH_OMEMO_V03
             document.setContent(QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
-                                serializedSceEnvelope + QByteArray("</body></content></envelope>"), true);
+                                serializedSceEnvelope + QByteArray("</body></content><from jid='")+senderJid+QByteArray("' /></envelope>"), true);
 #else
             document.setContent(serializedSceEnvelope, true);
 #endif
