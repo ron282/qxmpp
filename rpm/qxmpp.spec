@@ -61,8 +61,6 @@ popd
 %files devel
 %defattr(-, root, root, -)
 %{_libdir}/pkgconfig/*.pc
-%{_libdir}/lib%{name}Qt5.so
-%{_libdir}/lib%{name}Qt5.so.*
 %{_includedir}/*/*.h
 %{_includedir}/*/*.cpp
 %{_includedir}/*/*/*.h
