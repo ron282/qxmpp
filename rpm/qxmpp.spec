@@ -1,7 +1,7 @@
 Name:		QXmpp
 Summary:    QXmpp Library
 Version:    1.5.0
-Release:    1
+Release:    2
 Group:      Qt/Qt
 Source:    	master.zip
 URL:        https://github.com/ron282/qxmpp.git
