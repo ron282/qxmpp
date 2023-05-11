@@ -7,6 +7,7 @@ Source:    	master.zip
 URL:        https://github.com/ron282/qxmpp.git
 License:    LICENSE
 BuildRequires: cmake qca-devel omemo-c-devel
+Requires: 	qca omemo-c
 
 Patch0:     sfos.diff
 
