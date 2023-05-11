@@ -887,8 +887,11 @@ bool ManagerPrivate::updateSignedPreKeyPair(ratchet_identity_key_pair *identityK
 
     deviceBundle.setSignedPublicPreKeyId(latestSignedPreKeyId);
     deviceBundle.setSignedPublicPreKey(signedPublicPreKeyByteArray);
+#if WITH_OMEMO_V03
+    deviceBundle.setSignedPublicPreKeySignature(QByteArray(reinterpret_cast<const char *>(session_signed_pre_key_get_signature(signedPreKeyPair.get())), session_signed_pre_key_get_signature_len(signedPreKeyPair.get())));
+#else
     deviceBundle.setSignedPublicPreKeySignature(QByteArray(reinterpret_cast<const char *>(session_signed_pre_key_get_signature_omemo(signedPreKeyPair.get())), session_signed_pre_key_get_signature_omemo_len(signedPreKeyPair.get())));
-
+#endif
     ownDevice.latestSignedPreKeyId = latestSignedPreKeyId;
 
     return true;
@@ -3925,7 +3928,11 @@ bool ManagerPrivate::deserializePublicIdentityKey(ec_public_key **publicIdentity
         return false;
     }
 
+#ifdef WITH_OMEMO_V03
+    if (curve_decode_point(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
+#else
     if (curve_decode_point_ed(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
+#endif
         warning("Public identity key could not be deserialized");
         return false;
     }
@@ -3950,7 +3957,11 @@ bool ManagerPrivate::deserializeSignedPublicPreKey(ec_public_key **signedPublicP
         return false;
     }
 
+#if WITH_OMEMO_V03
+    if (curve_decode_point(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#else
     if (curve_decode_point_mont(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#endif
         warning("Signed public pre key could not be deserialized");
         return false;
     }
@@ -3975,7 +3986,11 @@ bool ManagerPrivate::deserializePublicPreKey(ec_public_key **publicPreKey, const
         return false;
     }
 
+#if WITH_OMEMO_V03
+    if (curve_decode_point(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#else
     if (curve_decode_point_mont(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#endif
         warning("Public pre key could not be deserialized");
         return false;
     }
