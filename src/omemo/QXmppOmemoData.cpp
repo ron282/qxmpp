@@ -16,7 +16,6 @@
 constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
 #if WITH_OMEMO_V03
 constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
-constexpr auto ns_pubsub = "http://jabber.org/protocol/pubsub";
 #endif
 
 /// \cond
@@ -170,7 +169,7 @@ bool QXmppOmemoDeviceList::isOmemoDeviceList(const QDomElement &element)
 {
 #if WITH_OMEMO_V03
     return element.tagName() == QStringLiteral("list") &&
-        (element.namespaceURI() == ns_omemo || element.namespaceURI() == ns_pubsub);
+        element.namespaceURI() == ns_omemo;
 #else
     return element.tagName() == QStringLiteral("devices") &&
         element.namespaceURI() == ns_omemo_2;

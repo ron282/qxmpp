@@ -882,7 +882,16 @@ bool ManagerPrivate::updateSignedPreKeyPair(ratchet_identity_key_pair *identityK
     signedPreKeyPairs.insert(latestSignedPreKeyId, signedPreKeyPairForStorage);
     omemoStorage->addSignedPreKeyPair(latestSignedPreKeyId, signedPreKeyPairForStorage);
 
+#if WITH_OMEMO_V03
+    BufferPtr signedPublicPreKeyBuffer;
+    if(ec_public_key_serialize(signedPublicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get())))) {
+        warning("cannot serialized public pre key");
+        return false;
+    }
+#else
     BufferPtr signedPublicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get()))));
+#endif
+
     const auto signedPublicPreKeyByteArray = signedPublicPreKeyBuffer.toByteArray();
 
     deviceBundle.setSignedPublicPreKeyId(latestSignedPreKeyId);
@@ -980,7 +989,16 @@ bool ManagerPrivate::updatePreKeyPairs(uint32_t count)
 
         serializedPreKeyPairs.insert(preKeyId, preKeyPairBuffer.toByteArray());
 
+#ifdef WITH_OMEMO_V03
+        BufferPtr publicPreKeyBuffer;
+        if(ec_public_key_serialize(publicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair)))) {
+            warning("Cannot serialize public pre key");
+            return false;
+        }
+#else
         BufferPtr publicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair))));
+
+#endif
         const auto serializedPublicPreKey = publicPreKeyBuffer.toByteArray();
         deviceBundle.addPublicPreKey(preKeyId, serializedPublicPreKey);
     }
@@ -3828,13 +3846,25 @@ bool ManagerPrivate::createSessionBundle(session_pre_key_bundle **sessionBundle,
 {
     RefCountedPtr<ec_public_key> publicIdentityKey;
     RefCountedPtr<ec_public_key> signedPublicPreKey;
+#if WITH_OMEMO_V03
+    BufferPtr signedPublicPreKeySignature = BufferPtr::fromByteArray(serializedSignedPublicPreKeySignature);
+
+    if (!signedPublicPreKeySignature) {
+        warning("Buffer for serialized signed pre key signature could not be created");
+        return false;
+    }
+#else
     RefCountedPtr<const uint8_t> signedPublicPreKeySignature;
     int signedPublicPreKeySignatureSize;
+#endif
     RefCountedPtr<ec_public_key> publicPreKey;
 
     if (deserializePublicIdentityKey(publicIdentityKey.ptrRef(), serializedPublicIdentityKey) &&
         deserializeSignedPublicPreKey(signedPublicPreKey.ptrRef(), serializedSignedPublicPreKey) &&
+#ifdef WITH_OMEMO_V03
+#else
         (signedPublicPreKeySignatureSize = deserializeSignedPublicPreKeySignature(signedPublicPreKeySignature.ptrRef(), serializedSignedPublicPreKeySignature)) &&
+#endif
         deserializePublicPreKey(publicPreKey.ptrRef(), serializedPublicPreKey)) {
 
         // "0" is passed as "device_id" to the OMEMO library because it is not
@@ -3848,8 +3878,13 @@ bool ManagerPrivate::createSessionBundle(session_pre_key_bundle **sessionBundle,
                                           publicPreKey.get(),
                                           signedPublicPreKeyId,
                                           signedPublicPreKey.get(),
+#if WITH_OMEMO_V03
+                                          signal_buffer_data(signedPublicPreKeySignature.get()),
+                                          signal_buffer_len(signedPublicPreKeySignature.get()),
+#else
                                           signedPublicPreKeySignature.get(),
                                           signedPublicPreKeySignatureSize,
+#endif
                                           publicIdentityKey.get()) < 0) {
             return false;
         }
