@@ -175,7 +175,7 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QRecursiveMutex mutex;
 #else
-    QBasicMutex mutex;
+    QMutex mutex;
 #endif
     signal_crypto_provider cryptoProvider;
 

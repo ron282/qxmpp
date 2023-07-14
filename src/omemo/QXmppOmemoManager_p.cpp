@@ -213,6 +213,9 @@ QXmppOmemoManagerPrivate::QXmppOmemoManagerPrivate(Manager *parent, QXmppOmemoSt
       omemoStorage(omemoStorage),
       signedPreKeyPairsRenewalTimer(parent),
       deviceRemovalTimer(parent)
+#ifdef WITH_OMEMO_V03
+    ,mutex(QMutex::Recursive)
+#endif
 {
 }
 
@@ -263,23 +266,23 @@ bool ManagerPrivate::initGlobalContext()
 bool ManagerPrivate::initLocking()
 {
     const auto lock = [](void *user_data) {
-#if WITH_OMEMO_V03
-        //FIXME Blocking when mutex is used
-#else
+//#if WITH_OMEMO_V03
+//        //FIXME Blocking when mutex is used
+//#else
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
         d->mutex.lock();
-#endif
+//#endif
     };
 
     const auto unlock = [](void *user_data) {
-#if WITH_OMEMO_V03
-        //FIXME Blocking when mutex is used
-#else
+//#if WITH_OMEMO_V03
+//        //FIXME Blocking when mutex is used
+//#else
         const auto *manager = reinterpret_cast<Manager *>(user_data);
         auto *d = manager->d.get();
         d->mutex.unlock();
-#endif
+//#endif
     };
 
     if (signal_context_set_locking_functions(globalContext.get(), lock, unlock) < 0) {
