@@ -3846,25 +3846,13 @@ bool ManagerPrivate::createSessionBundle(session_pre_key_bundle **sessionBundle,
 {
     RefCountedPtr<ec_public_key> publicIdentityKey;
     RefCountedPtr<ec_public_key> signedPublicPreKey;
-#if WITH_OMEMO_V03
-    BufferPtr signedPublicPreKeySignature = BufferPtr::fromByteArray(serializedSignedPublicPreKeySignature);
-
-    if (!signedPublicPreKeySignature) {
-        warning("Buffer for serialized signed pre key signature could not be created");
-        return false;
-    }
-#else
     RefCountedPtr<const uint8_t> signedPublicPreKeySignature;
     int signedPublicPreKeySignatureSize;
-#endif
     RefCountedPtr<ec_public_key> publicPreKey;
 
     if (deserializePublicIdentityKey(publicIdentityKey.ptrRef(), serializedPublicIdentityKey) &&
         deserializeSignedPublicPreKey(signedPublicPreKey.ptrRef(), serializedSignedPublicPreKey) &&
-#ifdef WITH_OMEMO_V03
-#else
         (signedPublicPreKeySignatureSize = deserializeSignedPublicPreKeySignature(signedPublicPreKeySignature.ptrRef(), serializedSignedPublicPreKeySignature)) &&
-#endif
         deserializePublicPreKey(publicPreKey.ptrRef(), serializedPublicPreKey)) {
 
         // "0" is passed as "device_id" to the OMEMO library because it is not
@@ -3878,13 +3866,8 @@ bool ManagerPrivate::createSessionBundle(session_pre_key_bundle **sessionBundle,
                                           publicPreKey.get(),
                                           signedPublicPreKeyId,
                                           signedPublicPreKey.get(),
-#if WITH_OMEMO_V03
-                                          signal_buffer_data(signedPublicPreKeySignature.get()),
-                                          signal_buffer_len(signedPublicPreKeySignature.get()),
-#else
                                           signedPublicPreKeySignature.get(),
                                           signedPublicPreKeySignatureSize,
-#endif
                                           publicIdentityKey.get()) < 0) {
             return false;
         }
@@ -3964,7 +3947,7 @@ bool ManagerPrivate::deserializePublicIdentityKey(ec_public_key **publicIdentity
     }
 
 #ifdef WITH_OMEMO_V03
-    if (curve_decode_point(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
+    if (curve_decode_point_mont(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
 #else
     if (curve_decode_point_ed(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
 #endif
@@ -3992,11 +3975,7 @@ bool ManagerPrivate::deserializeSignedPublicPreKey(ec_public_key **signedPublicP
         return false;
     }
 
-#if WITH_OMEMO_V03
-    if (curve_decode_point(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
-#else
     if (curve_decode_point_mont(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
-#endif
         warning("Signed public pre key could not be deserialized");
         return false;
     }
@@ -4021,11 +4000,7 @@ bool ManagerPrivate::deserializePublicPreKey(ec_public_key **publicPreKey, const
         return false;
     }
 
-#if WITH_OMEMO_V03
-    if (curve_decode_point(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
-#else
     if (curve_decode_point_mont(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
-#endif
         warning("Public pre key could not be deserialized");
         return false;
     }
