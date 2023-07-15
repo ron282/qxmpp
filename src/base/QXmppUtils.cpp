@@ -109,11 +109,13 @@ QDateTime QXmppUtils::datetimeFromString(const QString &str)
 QString QXmppUtils::datetimeToString(const QDateTime &dt)
 {
     // https://stackoverflow.com/questions/9527960/how-do-i-construct-an-iso-8601-datetime-in-c
-#if 0
     if (dt.time().msec()) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+        return dt.toUTC().toString(Qt::ISODate)+QString().sprintf(".%03d", dt.time().msec());
+#else
         return dt.toUTC().toString(Qt::ISODateWithMs);
-    }
 #endif
+    }
     return dt.toUTC().toString(Qt::ISODate);
 }
 
