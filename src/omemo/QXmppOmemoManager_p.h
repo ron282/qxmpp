@@ -36,7 +36,11 @@ using namespace QXmpp;
 //using namespace std::chrono_literals;
 using namespace std::literals;
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+namespace QXmpp { namespace Omemo { namespace Private {
+#else
 namespace QXmpp::Omemo::Private {
+#endif
 
 // XMPP namespaces
 constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
@@ -132,7 +136,11 @@ struct IqDecryptionResult
     QXmppE2eeMetadata e2eeMetadata;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+}  /* namespace Private*/ }  /* namespace Omemo */  }  /* namespace QXmpp */
+#else
 }  // namespace QXmpp::Omemo::Private
+#endif
 
 using namespace QXmpp::Private;
 using namespace QXmpp::Omemo::Private;

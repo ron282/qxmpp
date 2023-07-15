@@ -13,8 +13,11 @@ namespace QCA {
 class Initializer;
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
-
+#endif
 // export required for tests
 class QXMPP_EXPORT QcaInitializer
 {
@@ -26,6 +29,10 @@ private:
     std::shared_ptr<QCA::Initializer> d;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+}  /* namespace Private*/ }  /*namespace QXmpp*/
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QCAINITIALIZER_P_H

@@ -6,7 +6,7 @@ Group:      Qt/Qt
 Source:    	master.zip
 URL:        https://github.com/ron282/qxmpp.git
 License:    LGPLv2+
-BuildRequires: cmake qca-devel omemo-c-devel
+BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel
 Requires: 	qca omemo-c
 
 %description
@@ -34,7 +34,7 @@ mkdir -p build
 pushd build
 
 %cmake .. \
--D BUILD_TESTS=FALSE \
+-D BUILD_TESTS=TRUE \
 -D BUILD_EXAMPLES=TRUE \
 -D BUILD_OMEMO=TRUE \
 -D QXMPP_LOGGABLE_TRACE=TRUE \

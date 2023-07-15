@@ -628,7 +628,11 @@ void tst_QXmppJingleIq::testContent()
     QCOMPARE(content1.descriptionMedia(), QStringLiteral("audio"));
     QCOMPARE(content1.descriptionSsrc(), quint32(0));
     QVERIFY(content1.isRtpMultiplexingSupported());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(content1.rtpEncryption().has_value());
+#else
     QVERIFY(content1.rtpEncryption());
+#endif
     QCOMPARE(content1.payloadTypes().size(), 2);
     QCOMPARE(content1.payloadTypes().at(0).id(), quint8(96));
     QCOMPARE(content1.payloadTypes().at(1).id(), quint8(97));
@@ -672,7 +676,11 @@ void tst_QXmppJingleIq::testContent()
     QCOMPARE(content2.descriptionMedia(), QStringLiteral("audio"));
     QCOMPARE(content2.descriptionSsrc(), quint32(0));
     QVERIFY(content2.isRtpMultiplexingSupported());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(content2.rtpEncryption().has_value());
+#else
     QVERIFY(content2.rtpEncryption());
+#endif
     QCOMPARE(content2.payloadTypes().size(), 2);
     QCOMPARE(content2.payloadTypes().at(0).id(), quint8(96));
     QCOMPARE(content2.payloadTypes().at(1).id(), quint8(97));

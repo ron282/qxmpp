@@ -109,7 +109,11 @@ void tst_QXmppAtmManager::testSendTrustMessage()
 
             const std::optional<QXmppTrustMessageElement> trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+            QVERIFY(trustMessageElement.has_value());
+#else
             QVERIFY(trustMessageElement);
+#endif
             QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
             QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1107,7 +1111,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeys()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1136,7 +1144,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeys()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1165,7 +1177,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeys()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1246,7 +1262,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpoints()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1275,7 +1295,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpoints()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1304,7 +1328,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpoints()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1383,7 +1411,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpointsWithAuthent
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1412,7 +1444,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpointsWithAuthent
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1441,7 +1477,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoOwnEndpointsWithAuthent
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1516,7 +1556,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoContactsWithAuthenticat
             if (message.to() == QStringLiteral("alice@example.org")) {
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1543,7 +1587,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsOwnKeysNoContactsWithAuthenticat
             if (message.to() == QStringLiteral("alice@example.org")) {
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1618,7 +1666,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsSoleOwnKeyDistrusted()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1645,7 +1697,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsSoleOwnKeyDistrusted()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1745,7 +1801,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsContactKeys()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1774,7 +1834,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsContactKeys()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1905,7 +1969,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsContactKeysNoOwnEndpointsWithAut
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 
@@ -1989,7 +2057,11 @@ void tst_QXmppAtmManager::testMakeTrustDecisionsSoleContactKeyDistrusted()
 
                 const auto trustMessageElement = message.trustMessageElement();
 
+#if defined(WITH_OMEMO_V03)
+                QVERIFY(trustMessageElement.has_value());
+#else
                 QVERIFY(trustMessageElement);
+#endif
                 QCOMPARE(trustMessageElement->usage(), QString(ns_atm));
                 QCOMPARE(trustMessageElement->encryption(), QString(ns_omemo));
 

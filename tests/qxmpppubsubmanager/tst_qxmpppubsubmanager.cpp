@@ -18,6 +18,10 @@
 #include "util.h"
 #include <QObject>
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+#define addRow(...) newRow(QString().sprintf(__VA_ARGS__).toLocal8Bit().data())
+#endif
+
 Q_DECLARE_METATYPE(QXmpp::Private::PubSubIq<>);
 Q_DECLARE_METATYPE(std::optional<QXmppPubSubPublishOptions>);
 
@@ -440,18 +444,30 @@ void tst_QXmppPubSubManager::testPublishItems_data()
     QXmppPubSubPublishOptions publishOptions;
     publishOptions.setAccessModel(QXmppPubSubPublishOptions::Presence);
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+    auto newRow = [&](const char *name, bool isPep, QString &&jid,
+                      QString &&node, const QVector<QXmppPubSubBaseItem> &items) {
+#else
     auto addRow = [&](const char *name, bool isPep, QString &&jid,
                       QString &&node, const QVector<QXmppPubSubBaseItem> &items) {
+#endif
         QTest::addRow("%s", name) << isPep << jid << node << items << OptionsOpt() << false;
         QTest::addRow("%s%s", name, "ReturnIds") << isPep << jid << node << items << OptionsOpt() << true;
         QTest::addRow("%s%s", name, "WithOptions") << isPep << jid << node << items << std::make_optional(publishOptions) << false;
         QTest::addRow("%s%s%s", name, "WithOptions", "ReturnIds") << isPep << jid << node << items << std::make_optional(publishOptions) << true;
     };
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+    newRow("publishItem", false, "pubsub.shakespeare.lit", "princely_musings", items1);
+    newRow("publishItems", false, "pubsub.shakespeare.lit", "princely_musings", items2);
+    newRow("publishPepItem", true, "juliet@capulet.lit", "urn:xmpp:omemo:1:bundles", items1);
+    newRow("publishPepItems", true, "juliet@capulet.lit", "urn:xmpp:omemo:1:bundles", items2);
+#else
     addRow("publishItem", false, "pubsub.shakespeare.lit", "princely_musings", items1);
     addRow("publishItems", false, "pubsub.shakespeare.lit", "princely_musings", items2);
     addRow("publishPepItem", true, "juliet@capulet.lit", "urn:xmpp:omemo:1:bundles", items1);
     addRow("publishPepItems", true, "juliet@capulet.lit", "urn:xmpp:omemo:1:bundles", items2);
+#endif
 }
 
 void tst_QXmppPubSubManager::testPublishItems()

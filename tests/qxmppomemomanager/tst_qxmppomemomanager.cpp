@@ -467,7 +467,11 @@ void tst_QXmppOmemoManager::testSendIq()
 
     m_alice1.client.connectToServer(config1);
 
+#if defined(WITH_OMEMO_V03)
+    QTRY_VERIFY_WITH_TIMEOUT(isFirstRequestSent, 20000);
+#else
     QTRY_VERIFY_WITH_TIMEOUT(isFirstRequestSent, 20'000);
+#endif
     QTRY_VERIFY(isErrorResponseReceived);
     QTRY_VERIFY(isSecondRequestSent);
     QTRY_VERIFY(isResultResponseReceived);

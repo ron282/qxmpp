@@ -16,7 +16,11 @@ class Cipher;
 class Initializer;
 }  // namespace QCA
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+namespace QXmpp { namespace Private { namespace Encryption {
+#else
 namespace QXmpp::Private::Encryption {
+#endif
 
 enum Direction {
     Encode,
@@ -69,7 +73,9 @@ private:
     std::unique_ptr<QIODevice> m_output;
     std::unique_ptr<QCA::Cipher> m_cipher;
 };
-
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+}  }  } // namespaces Encryption Private QXmpp
+#else
 }  // namespace QXmpp::Private::Encryption
-
+#endif
 #endif  // QXMPPFILEENCRYPTION_H

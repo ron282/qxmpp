@@ -35,6 +35,16 @@ void tst_QXmppOmemoMemoryStorage::testOwnDevice()
     future = m_omemoStorage.allData();
     QVERIFY(future.isFinished());
     optionalResult = future.result().ownDevice;
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(optionalResult.has_value());
+    auto result = optionalResult.value();
+    QCOMPARE(result.id, 0u);
+    QVERIFY(result.label.isEmpty());
+    QVERIFY(result.privateIdentityKey.isEmpty());
+    QVERIFY(result.publicIdentityKey.isEmpty());
+    QCOMPARE(result.latestSignedPreKeyId, 1u);
+    QCOMPARE(result.latestPreKeyId, 1u);
+#else
     QVERIFY(optionalResult);
     auto result = optionalResult.value();
     QCOMPARE(result.id, 0);
@@ -43,6 +53,7 @@ void tst_QXmppOmemoMemoryStorage::testOwnDevice()
     QVERIFY(result.publicIdentityKey.isEmpty());
     QCOMPARE(result.latestSignedPreKeyId, 1);
     QCOMPARE(result.latestPreKeyId, 1);
+#endif
 
     ownDevice.id = 1;
     ownDevice.label = QStringLiteral("Notebook");
@@ -57,6 +68,16 @@ void tst_QXmppOmemoMemoryStorage::testOwnDevice()
     future = m_omemoStorage.allData();
     QVERIFY(future.isFinished());
     optionalResult = future.result().ownDevice;
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(optionalResult.has_value());
+    result = optionalResult.value();
+    QCOMPARE(result.id, 1u);
+    QCOMPARE(result.label, QStringLiteral("Notebook"));
+    QCOMPARE(result.privateIdentityKey, QByteArray::fromBase64(QByteArrayLiteral("ZDVNZFdJeFFUa3N6ZWdSUG9scUdoQXFpWERGbHRsZTIK")));
+    QCOMPARE(result.publicIdentityKey, QByteArray::fromBase64(QByteArrayLiteral("dUsxSTJyM2tKVHE1TzNXbk1Xd0tpMGY0TnFleDRYUGkK")));
+    QCOMPARE(result.latestSignedPreKeyId, 2u);
+    QCOMPARE(result.latestPreKeyId, 100u);
+#else
     QVERIFY(optionalResult);
     result = optionalResult.value();
     QCOMPARE(result.id, 1);
@@ -65,6 +86,7 @@ void tst_QXmppOmemoMemoryStorage::testOwnDevice()
     QCOMPARE(result.publicIdentityKey, QByteArray::fromBase64(QByteArrayLiteral("dUsxSTJyM2tKVHE1TzNXbk1Xd0tpMGY0TnFleDRYUGkK")));
     QCOMPARE(result.latestSignedPreKeyId, 2);
     QCOMPARE(result.latestPreKeyId, 100);
+#endif
 }
 
 void tst_QXmppOmemoMemoryStorage::testSignedPreKeyPairs()
@@ -121,8 +143,13 @@ void tst_QXmppOmemoMemoryStorage::testPreKeyPairs()
     const QHash<uint32_t, QByteArray> preKeyPairs2 = { { 3, QByteArrayLiteral("LpLBVXejfU4d0qcPOJCRNDDg9IMbOujpV3UTYtZU9LTy") } };
 
     QHash<uint32_t, QByteArray> preKeyPairs;
+#if defined(WITH_OMEMO_V03)
+    preKeyPairs.unite(preKeyPairs1);
+    preKeyPairs.unite(preKeyPairs2);
+#else
     preKeyPairs.insert(preKeyPairs1);
     preKeyPairs.insert(preKeyPairs2);
+#endif
 
     m_omemoStorage.addPreKeyPairs(preKeyPairs1);
     m_omemoStorage.addPreKeyPairs(preKeyPairs2);
