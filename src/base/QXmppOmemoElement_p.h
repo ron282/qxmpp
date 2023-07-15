@@ -25,7 +25,7 @@ public:
     QByteArray payload() const;
     void setPayload(const QByteArray &payload);
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     QByteArray iv() const;
     void setIv(const QByteArray &iv);
 #endif
@@ -44,7 +44,7 @@ private:
     uint32_t m_senderDeviceId = 0;
     QByteArray m_payload;
     QMultiMap<QString, QXmppOmemoEnvelope> m_envelopes;
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     QByteArray m_iv;
 #endif
 };

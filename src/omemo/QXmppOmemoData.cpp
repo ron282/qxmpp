@@ -14,7 +14,7 @@
 #include <QHash>
 
 constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
 constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
 #endif
 
@@ -114,7 +114,7 @@ void QXmppOmemoDeviceElement::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoDeviceElement::isOmemoDeviceElement(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return element.tagName() == QStringLiteral("device") &&
         element.namespaceURI() == ns_omemo;
 #else
@@ -143,7 +143,7 @@ void QXmppOmemoDeviceList::parse(const QDomElement &element)
 
 void QXmppOmemoDeviceList::toXml(QXmlStreamWriter *writer) const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("list"));
     writer->writeDefaultNamespace(ns_omemo);
 #else
@@ -167,7 +167,7 @@ void QXmppOmemoDeviceList::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoDeviceList::isOmemoDeviceList(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return element.tagName() == QStringLiteral("list") &&
         element.namespaceURI() == ns_omemo;
 #else
@@ -314,7 +314,7 @@ void QXmppOmemoDeviceBundle::removePublicPreKey(uint32_t id)
 
 void QXmppOmemoDeviceBundle::parse(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     m_publicIdentityKey = QByteArray::fromBase64(element.firstChildElement(QStringLiteral("identityKey")).text().toLatin1());
 
     const auto signedPublicPreKeyElement = element.firstChildElement(QStringLiteral("signedPreKeyPublic"));
@@ -355,7 +355,7 @@ void QXmppOmemoDeviceBundle::parse(const QDomElement &element)
 
 void QXmppOmemoDeviceBundle::toXml(QXmlStreamWriter *writer) const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("bundle"));
     writer->writeDefaultNamespace(ns_omemo);
     writer->writeStartElement(QStringLiteral("identityKey"));
@@ -419,7 +419,7 @@ void QXmppOmemoDeviceBundle::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoDeviceBundle::isOmemoDeviceBundle(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return element.tagName() == QStringLiteral("bundle") &&
         element.namespaceURI() == ns_omemo;
 #else

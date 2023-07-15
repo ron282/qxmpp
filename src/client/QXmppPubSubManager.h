@@ -83,7 +83,7 @@ public:
     QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, const QString &itemId);
     template<typename T = QXmppPubSubBaseItem>
     QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, StandardItemId itemId);
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     template<typename T = QXmppPubSubBaseItem>
     QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName);
 #endif
@@ -188,7 +188,7 @@ QXmppTask<QXmppPubSubManager::ItemResult<T>> QXmppPubSubManager::requestItem(con
                    });
 }
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
 ///
 /// Requests a specific item of an entity's node.
 ///

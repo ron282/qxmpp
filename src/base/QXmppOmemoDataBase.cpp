@@ -94,7 +94,7 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
 {
     m_recipientDeviceId = element.attribute(QStringLiteral("rid")).toInt();
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     const auto isUsedForKeyExchange = element.attribute(QStringLiteral("prekey"));
     if (isUsedForKeyExchange == QStringLiteral("true") ||
         isUsedForKeyExchange == QStringLiteral("1")) {
@@ -116,7 +116,7 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
 
 void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("key"));
     writer->writeAttribute(QStringLiteral("rid"), QString::number(m_recipientDeviceId));
 
@@ -148,7 +148,7 @@ void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoEnvelope::isOmemoEnvelope(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return element.tagName() == QStringLiteral("key") &&
         (element.namespaceURI() == ns_omemo);    
 #else
@@ -157,7 +157,7 @@ bool QXmppOmemoEnvelope::isOmemoEnvelope(const QDomElement &element)
 #endif
 }
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
 QByteArray QXmppOmemoEnvelope::iv() const
 {
     return m_iv;
@@ -222,7 +222,7 @@ void QXmppOmemoElement::setPayload(const QByteArray &payload)
     m_payload = payload;
 }
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
 QByteArray QXmppOmemoElement::iv() const
 {
     return m_iv;
@@ -243,7 +243,7 @@ void QXmppOmemoElement::setIv(const QByteArray &iv)
 ///
 std::optional<QXmppOmemoEnvelope> QXmppOmemoElement::searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     for (auto itr = m_envelopes.constBegin();
          itr != m_envelopes.constEnd();
          ++itr) {
@@ -287,7 +287,7 @@ void QXmppOmemoElement::parse(const QDomElement &element)
 
     m_senderDeviceId = header.attribute(QStringLiteral("sid")).toInt();
 
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     auto iv = header.firstChildElement(QStringLiteral("iv"));
     if(!iv.isNull()) {
         m_iv = QByteArray::fromBase64(iv.text().toLatin1());;
@@ -321,7 +321,7 @@ void QXmppOmemoElement::parse(const QDomElement &element)
 
 void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("encrypted"));
     writer->writeDefaultNamespace(ns_omemo);
 
@@ -395,7 +395,7 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoElement::isOmemoElement(const QDomElement &element)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return element.tagName() == QStringLiteral("encrypted") &&
         (element.namespaceURI() == ns_omemo);
 #else

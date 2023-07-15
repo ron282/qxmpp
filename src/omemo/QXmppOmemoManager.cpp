@@ -440,7 +440,7 @@ QXmppTask<bool> Manager::setUp()
 ///
 QXmppTask<QByteArray> Manager::ownKey()
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->ownKey(ns_omemo);
 #else
     return d->trustManager->ownKey(ns_omemo_2);
@@ -463,7 +463,7 @@ QXmppTask<QByteArray> Manager::ownKey()
 ///
 QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::keys(QXmpp::TrustLevels trustLevels)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->keys(ns_omemo, trustLevels);
 #else
     return d->trustManager->keys(ns_omemo_2, trustLevels);
@@ -487,7 +487,7 @@ QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::ke
 ///
 QXmppTask<QHash<QString, QHash<QByteArray, QXmpp::TrustLevel>>> Manager::keys(const QList<QString> &jids, QXmpp::TrustLevels trustLevels)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->keys(ns_omemo, jids, trustLevels);
 #else
     return d->trustManager->keys(ns_omemo_2, jids, trustLevels);
@@ -780,7 +780,7 @@ QXmppTask<QXmppPubSubManager::Result> Manager::removeContactDevices(const QStrin
 
             auto future = d->omemoStorage->removeDevices(jid);
             future.then(this, [=]() mutable {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
                 auto future = d->trustManager->removeKeys(ns_omemo, jid);
 #else
                 auto future = d->trustManager->removeKeys(ns_omemo_2, jid);
@@ -968,7 +968,7 @@ QXmppTask<bool> Manager::resetAll()
 ///
 QXmppTask<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPolicy)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->setSecurityPolicy(ns_omemo, securityPolicy);
 #else
     return d->trustManager->setSecurityPolicy(ns_omemo_2, securityPolicy);
@@ -982,7 +982,7 @@ QXmppTask<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPo
 ///
 QXmppTask<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->securityPolicy(ns_omemo);
 #else
     return d->trustManager->securityPolicy(ns_omemo_2);
@@ -999,7 +999,7 @@ QXmppTask<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 ///
 QXmppTask<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &keyIds, QXmpp::TrustLevel trustLevel)
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return d->trustManager->setTrustLevel(ns_omemo, keyIds, trustLevel);
 #else
     return d->trustManager->setTrustLevel(ns_omemo_2, keyIds, trustLevel);
@@ -1140,7 +1140,7 @@ bool QXmppOmemoManager::isEncrypted(const QDomElement &el)
     for (auto subEl = el.firstChildElement();
          !subEl.isNull();
          subEl = subEl.nextSiblingElement()) {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
         if (subEl.tagName() == "encrypted" && subEl.namespaceURI() == ns_omemo) {
 #else
         if (subEl.tagName() == "encrypted" && subEl.namespaceURI() == ns_omemo_2) {
@@ -1158,7 +1158,7 @@ bool QXmppOmemoManager::isEncrypted(const QXmppMessage &message)
 
 QStringList Manager::discoveryFeatures() const
 {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     return {
         QString(ns_omemo_devices) % "+notify"
     };
@@ -1280,7 +1280,7 @@ void Manager::setClient(QXmppClient *client)
     }
 
     connect(d->trustManager, &QXmppTrustManager::trustLevelsChanged, this, [=](const QHash<QString, QMultiHash<QString, QByteArray>> &modifiedKeys) {
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
         const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo);
 #else
         const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo_2);
@@ -1314,7 +1314,7 @@ void Manager::setClient(QXmppClient *client)
 
 bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSubService, const QString &nodeName)
 {
-#if WITH_OMEMO_V03    
+#if defined(WITH_OMEMO_V03)    
     if (nodeName == ns_omemo_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
 #else
     if (nodeName == ns_omemo_2_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {

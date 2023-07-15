@@ -42,7 +42,7 @@ namespace QXmpp::Omemo::Private {
 constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
 constexpr auto ns_omemo_2_bundles = "urn:xmpp:omemo:2:bundles";
 constexpr auto ns_omemo_2_devices = "urn:xmpp:omemo:2:devices";
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
 constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
 constexpr auto ns_omemo_bundles = "eu.siacs.conversations.axolotl.bundles";
 constexpr auto ns_omemo_devices = "eu.siacs.conversations.axolotl.devicelist";
@@ -115,7 +115,7 @@ struct PayloadEncryptionResult
 {
     QCA::SecureArray decryptionData;
     QByteArray encryptedPayload;
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     QByteArray iv;
 #endif
 };
@@ -237,7 +237,7 @@ public:
                                                                             uint32_t senderDeviceId,
                                                                             const QXmppOmemoEnvelope &omemoEnvelope,
                                                                             bool isMessageStanza = true);
-#if WITH_OMEMO_V03
+#if defined(WITH_OMEMO_V03)
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &iv, const QByteArray &payload) const;
 #endif
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
