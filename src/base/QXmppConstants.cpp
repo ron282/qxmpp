@@ -120,6 +120,8 @@ const char *ns_ping = "urn:xmpp:ping";
 const char *ns_entity_time = "urn:xmpp:time";
 // XEP-0203: Delayed Delivery
 const char *ns_delayed_delivery = "urn:xmpp:delay";
+// XEP-0215: External Service Discovery
+const char *ns_external_service_discovery = "urn:xmpp:extdisco:2";
 // XEP-0220: Server Dialback
 const char *ns_server_dialback = "jabber:server:dialback";
 // XEP-0221: Data Forms Media Element
@@ -158,6 +160,8 @@ const char *ns_chat_markers = "urn:xmpp:chat-markers:0";
 const char *ns_message_processing_hints = "urn:xmpp:hints";
 // XEP-0352: Client State Indication
 const char *ns_csi = "urn:xmpp:csi:0";
+// XEP-0353: Jingle Message Initiation
+const char *ns_jingle_message_initiation = "urn:xmpp:jingle-message:0";
 // XEP-0357: Push Notifications
 const char *ns_push = "urn:xmpp:push:0";
 // XEP-0359: Unique and Stable Stanza IDs
@@ -209,3 +213,5 @@ const char *ns_sfs = "urn:xmpp:sfs:0";
 const char *ns_esfs = "urn:xmpp:esfs:0";
 // XEP-0450: Automatic Trust Management (ATM)
 const char *ns_atm = "urn:xmpp:atm:1";
+// XEP-0482: Call Invites
+const char *ns_call_invites = "urn:xmpp:call-invites:0";

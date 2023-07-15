@@ -9,15 +9,14 @@
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
 #include "QXmppPubSubAffiliation.h"
+#include "QXmppPubSubBaseItem.h"
 #include "QXmppPubSubEventHandler.h"
-#include "QXmppPubSubItem.h"
 #include "QXmppPubSubSubscribeOptions.h"
 #include "QXmppPubSubSubscription.h"
 #include "QXmppStanza.h"
 #include "QXmppUtils.h"
 
 #include <QDomElement>
-#include <QFutureInterface>
 
 using namespace QXmpp::Private;
 
@@ -196,6 +195,7 @@ QXmppPubSubManager::~QXmppPubSubManager()
 {
 }
 
+/// \cond
 ///
 /// Requests all features of a pubsub service and checks the identities via service discovery.
 ///
@@ -210,7 +210,7 @@ QXmppPubSubManager::~QXmppPubSubManager()
 /// \param serviceJid JID of the entity hosting the pubsub service
 /// \param serviceType type of service to retrieve features for
 ///
-QFuture<QXmppPubSubManager::FeaturesResult> QXmppPubSubManager::requestFeatures(const QString &serviceJid, ServiceType serviceType)
+QXmppTask<QXmppPubSubManager::FeaturesResult> QXmppPubSubManager::requestFeatures(const QString &serviceJid, ServiceType serviceType)
 {
     QXmppDiscoveryIq request;
     request.setType(QXmppIq::Get);
@@ -247,6 +247,7 @@ QFuture<QXmppPubSubManager::FeaturesResult> QXmppPubSubManager::requestFeatures(
         return InvalidServiceType();
     });
 }
+/// \endcond
 
 ///
 /// Requests all listed nodes of a pubsub service via service discovery.
@@ -257,7 +258,7 @@ QFuture<QXmppPubSubManager::FeaturesResult> QXmppPubSubManager::requestFeatures(
 /// \param jid Jabber ID of the entity hosting the pubsub service
 /// \return
 ///
-QFuture<QXmppPubSubManager::NodesResult> QXmppPubSubManager::fetchNodes(const QString &jid)
+QXmppTask<QXmppPubSubManager::NodesResult> QXmppPubSubManager::requestNodes(const QString &jid)
 {
     QXmppDiscoveryIq request;
     request.setType(QXmppIq::Get);
@@ -291,7 +292,7 @@ QFuture<QXmppPubSubManager::NodesResult> QXmppPubSubManager::fetchNodes(const QS
 /// \param nodeName the name of the node to be created
 /// \return
 ///
-auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName) -> QFuture<Result>
+auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName) -> QXmppTask<Result>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -314,7 +315,7 @@ auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName)
 /// \param config The configuration for the node
 /// \return
 ///
-auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName, const QXmppPubSubNodeConfig &config) -> QFuture<Result>
+auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName, const QXmppPubSubNodeConfig &config) -> QXmppTask<Result>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -335,7 +336,7 @@ auto QXmppPubSubManager::createNode(const QString &jid, const QString &nodeName,
 /// \param jid Jabber ID of the entity hosting the pubsub service
 /// \return
 ///
-QFuture<QXmppPubSubManager::InstantNodeResult> QXmppPubSubManager::createInstantNode(const QString &jid)
+QXmppTask<QXmppPubSubManager::InstantNodeResult> QXmppPubSubManager::createInstantNode(const QString &jid)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -358,7 +359,7 @@ QFuture<QXmppPubSubManager::InstantNodeResult> QXmppPubSubManager::createInstant
 /// \param config The configuration for the node
 /// \return
 ///
-auto QXmppPubSubManager::createInstantNode(const QString &jid, const QXmppPubSubNodeConfig &config) -> QFuture<InstantNodeResult>
+auto QXmppPubSubManager::createInstantNode(const QString &jid, const QXmppPubSubNodeConfig &config) -> QXmppTask<InstantNodeResult>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -379,7 +380,7 @@ auto QXmppPubSubManager::createInstantNode(const QString &jid, const QXmppPubSub
 /// \param nodeName the name of the node to delete along with all of its items
 /// \return
 ///
-auto QXmppPubSubManager::deleteNode(const QString &jid, const QString &nodeName) -> QFuture<Result>
+auto QXmppPubSubManager::deleteNode(const QString &jid, const QString &nodeName) -> QXmppTask<Result>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -401,7 +402,7 @@ auto QXmppPubSubManager::deleteNode(const QString &jid, const QString &nodeName)
 /// \param nodeName the name of the node whose items are requested
 /// \return
 ///
-QFuture<QXmppPubSubManager::ItemIdsResult> QXmppPubSubManager::requestItemIds(const QString &serviceJid, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::ItemIdsResult> QXmppPubSubManager::requestItemIds(const QString &serviceJid, const QString &nodeName)
 {
     QXmppDiscoveryIq request;
     request.setType(QXmppIq::Get);
@@ -428,13 +429,13 @@ QFuture<QXmppPubSubManager::ItemIdsResult> QXmppPubSubManager::requestItemIds(co
 /// \param itemId the ID of the item to delete
 /// \return
 ///
-auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName, const QString &itemId) -> QFuture<Result>
+auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName, const QString &itemId) -> QXmppTask<Result>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
     request.setQueryType(PubSubIq<>::Retract);
     request.setQueryNode(nodeName);
-    request.setItems({ QXmppPubSubItem(itemId) });
+    request.setItems({ QXmppPubSubBaseItem(itemId) });
     request.setTo(jid);
 
     return client()->sendGenericIq(std::move(request));
@@ -447,7 +448,7 @@ auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName
 /// \param nodeName the name of the node to delete the item from
 /// \param itemId the ID of the item to delete
 ///
-auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName, StandardItemId itemId) -> QFuture<Result>
+auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName, StandardItemId itemId) -> QXmppTask<Result>
 {
     return retractItem(jid, nodeName, standardItemIdToString(itemId));
 }
@@ -460,7 +461,7 @@ auto QXmppPubSubManager::retractItem(const QString &jid, const QString &nodeName
 /// items
 /// \return
 ///
-auto QXmppPubSubManager::purgeItems(const QString &jid, const QString &nodeName) -> QFuture<Result>
+auto QXmppPubSubManager::purgeItems(const QString &jid, const QString &nodeName) -> QXmppTask<Result>
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -477,7 +478,7 @@ auto QXmppPubSubManager::purgeItems(const QString &jid, const QString &nodeName)
 /// \param jid JID of the pubsub service
 /// \return
 ///
-QFuture<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubscriptions(const QString &jid)
+QXmppTask<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubscriptions(const QString &jid)
 {
     return requestSubscriptions(jid, {});
 }
@@ -489,7 +490,7 @@ QFuture<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubs
 /// \param nodeName Name of the node on the pubsub service
 /// \return
 ///
-QFuture<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubscriptions(const QString &jid, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubscriptions(const QString &jid, const QString &nodeName)
 {
     PubSubIq request;
     request.setType(QXmppIq::Get);
@@ -513,7 +514,7 @@ QFuture<QXmppPubSubManager::SubscriptionsResult> QXmppPubSubManager::requestSubs
 /// \param nodeName Name of the pubsub node on the service.
 /// \return
 ///
-QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestNodeAffiliations(const QString &jid, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestNodeAffiliations(const QString &jid, const QString &nodeName)
 {
     PubSubIq request;
     request.setType(QXmppIq::Get);
@@ -533,7 +534,7 @@ QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestNodeA
 /// \param jid JID of the pubsub service
 /// \return
 ///
-QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffiliations(const QString &jid)
+QXmppTask<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffiliations(const QString &jid)
 {
     return requestAffiliations(jid, {});
 }
@@ -545,7 +546,7 @@ QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffil
 /// \param nodeName Name of the pubsub node on the service.
 /// \return
 ///
-QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffiliations(const QString &jid, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffiliations(const QString &jid, const QString &nodeName)
 {
     PubSubIq request;
     request.setType(QXmppIq::Get);
@@ -566,7 +567,7 @@ QFuture<QXmppPubSubManager::AffiliationsResult> QXmppPubSubManager::requestAffil
 /// \param nodeName Name of the pubsub node on the service.
 /// \return
 ///
-QFuture<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeOptions(const QString &service, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeOptions(const QString &service, const QString &nodeName)
 {
     return requestSubscribeOptions(service, nodeName, client()->configuration().jidBare());
 }
@@ -579,7 +580,7 @@ QFuture<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeO
 /// \param subscriberJid JID of the user to request the options for
 /// \return
 ///
-QFuture<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeOptions(const QString &service, const QString &nodeName, const QString &subscriberJid)
+QXmppTask<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeOptions(const QString &service, const QString &nodeName, const QString &subscriberJid)
 {
     PubSubIq request;
     request.setType(QXmppIq::Get);
@@ -595,12 +596,7 @@ QFuture<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeO
                                return *options;
                            }
                        }
-
-                       // "real" stanza errors are already handled
-                       using Error = QXmppStanza::Error;
-                       return Error(Error::Cancel,
-                                    Error::Condition::InternalServerError,
-                                    QStringLiteral("Server returned invalid data form."));
+                       return QXmppError { QStringLiteral("Server returned invalid data form."), {} };
                    });
 }
 
@@ -612,7 +608,7 @@ QFuture<QXmppPubSubManager::OptionsResult> QXmppPubSubManager::requestSubscribeO
 /// \param options The new options to be set
 /// \return
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(const QString &service, const QString &nodeName, const QXmppPubSubSubscribeOptions &options)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(const QString &service, const QString &nodeName, const QXmppPubSubSubscribeOptions &options)
 {
     return setSubscribeOptions(service, nodeName, options, client()->configuration().jidBare());
 }
@@ -626,7 +622,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(cons
 /// \param subscriberJid The JID of the user
 /// \return
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(const QString &service, const QString &nodeName, const QXmppPubSubSubscribeOptions &options, const QString &subscriberJid)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(const QString &service, const QString &nodeName, const QXmppPubSubSubscribeOptions &options, const QString &subscriberJid)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -652,10 +648,8 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::setSubscribeOptions(cons
 /// \sa configureNode()
 /// \sa cancelNodeConfiguration()
 ///
-QFuture<QXmppPubSubManager::NodeConfigResult> QXmppPubSubManager::requestNodeConfiguration(const QString &service, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::NodeConfigResult> QXmppPubSubManager::requestNodeConfiguration(const QString &service, const QString &nodeName)
 {
-    using Error = QXmppStanza::Error;
-
     PubSubIq request;
     request.setType(QXmppIq::Get);
     request.setTo(service);
@@ -668,9 +662,9 @@ QFuture<QXmppPubSubManager::NodeConfigResult> QXmppPubSubManager::requestNodeCon
                            if (const auto config = QXmppPubSubNodeConfig::fromDataForm(*dataForm)) {
                                return *config;
                            }
-                           return Error(Error::Cancel, Error::UndefinedCondition, QStringLiteral("Server returned invalid data form."));
+                           return QXmppError { QStringLiteral("Server returned invalid data form."), {} };
                        }
-                       return Error(Error::Cancel, Error::UndefinedCondition, QStringLiteral("Server returned no data form."));
+                       return QXmppError { QStringLiteral("Server returned no data form."), {} };
                    });
 }
 
@@ -687,7 +681,7 @@ QFuture<QXmppPubSubManager::NodeConfigResult> QXmppPubSubManager::requestNodeCon
 ///
 /// \sa requestNodeConfiguration()
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::configureNode(const QString &service, const QString &nodeName, const QXmppPubSubNodeConfig &config)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::configureNode(const QString &service, const QString &nodeName, const QXmppPubSubNodeConfig &config)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -708,7 +702,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::configureNode(const QStr
 ///
 /// \sa requestNodeConfiguration()
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::cancelNodeConfiguration(const QString &service, const QString &nodeName)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::cancelNodeConfiguration(const QString &service, const QString &nodeName)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -728,7 +722,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::cancelNodeConfiguration(
 /// \param nodeName name of the pubsub node being subscribed
 /// \param subscriberJid bare or full JID of the subscriber
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::subscribeToNode(const QString &serviceJid, const QString &nodeName, const QString &subscriberJid)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::subscribeToNode(const QString &serviceJid, const QString &nodeName, const QString &subscriberJid)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -748,7 +742,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::subscribeToNode(const QS
 /// \param nodeName name of the pubsub node being subscribed
 /// \param subscriberJid bare or full JID of the subscriber
 ///
-QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(const QString &serviceJid, const QString &nodeName, const QString &subscriberJid)
+QXmppTask<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(const QString &serviceJid, const QString &nodeName, const QString &subscriberJid)
 {
     PubSubIq request;
     request.setType(QXmppIq::Set);
@@ -759,8 +753,9 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
     return client()->sendGenericIq(std::move(request));
 }
 
+/// \cond
 ///
-/// \fn QXmppPubSubManager::requestPepFeatures()
+/// \fn QXmppPubSubManager::requestOwnPepFeatures()
 ///
 /// Requests all features of the own PEP service via service discovery.
 ///
@@ -769,10 +764,11 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 /// \warning THIS API IS NOT FINALIZED YET!
 ///
+/// \endcond
 
 ///
 ///
-/// \fn QXmppPubSubManager::fetchPepNodes()
+/// \fn QXmppPubSubManager::requestOwnPepNodes()
 ///
 /// Requests all listed nodes of the own PEP service via service discovery.
 ///
@@ -781,14 +777,14 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QFuture<Result> QXmppPubSubManager::createPepNode(const QString &nodeName)
+/// \fn QXmppTask<Result> QXmppPubSubManager::createOwnPepNode(const QString &nodeName)
 ///
 /// Creates an empty PEP node with the default configuration.
 ///
 /// This is a convenience method equivalent to calling
 /// QXmppPubSubManager::createNode on the current account's bare JID.
 ///
-/// Calling this before QXmppPubSubManager::publishPepItems is usually not
+/// Calling this before QXmppPubSubManager::publishOwnPepItems is usually not
 /// necessary when publishing to a node for the first time if the service
 /// suppports the auto-create feature (Section 7.1.4 of \xep{0060}).
 ///
@@ -797,14 +793,14 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QFuture<Result> QXmppPubSubManager::createPepNode(const QString &nodeName, const QXmppPubSubNodeConfig &config)
+/// \fn QXmppTask<Result> QXmppPubSubManager::createOwnPepNode(const QString &nodeName, const QXmppPubSubNodeConfig &config)
 ///
 /// Creates an empty PEP node with a custom configuration.
 ///
 /// This is a convenience method equivalent to calling
 /// QXmppPubSubManager::createNode on the current account's bare JID.
 ///
-/// Calling this before QXmppPubSubManager::publishPepItems is usually not
+/// Calling this before QXmppPubSubManager::publishOwnPepItems is usually not
 /// necessary when publishing to a node for the first time if the service
 /// suppports the auto-create feature (Section 7.1.4 of \xep{0060}).
 ///
@@ -814,7 +810,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::deletePepNode
+/// \fn QXmppPubSubManager::deleteOwnPepNode
 ///
 /// Deletes a PEP node.
 ///
@@ -827,7 +823,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::requestPepItem(const QString &nodeName, const QString &itemId)
+/// \fn QXmppPubSubManager::requestOwnPepItem(const QString &nodeName, const QString &itemId)
 ///
 /// Requests a specific item of a PEP node.
 ///
@@ -839,7 +835,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::requestPepItem(const QString &nodeName, StandardItemId itemId)
+/// \fn QXmppPubSubManager::requestOwnPepItem(const QString &nodeName, StandardItemId itemId)
 ///
 /// Requests a specific item of a PEP node.
 ///
@@ -851,7 +847,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::requestPepItems(const QString &nodeName)
+/// \fn QXmppPubSubManager::requestOwnPepItems(const QString &nodeName)
 ///
 /// Requests all items of a PEP node.
 ///
@@ -862,7 +858,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::requestPepItemIds(const QString &nodeName)
+/// \fn QXmppPubSubManager::requestOwnPepItemIds(const QString &nodeName)
 ///
 /// Requests the IDs of all items of a pubsub service node via service
 /// discovery.
@@ -874,7 +870,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::retractPepItem(const QString &nodeName, const QString &itemId)
+/// \fn QXmppPubSubManager::retractOwnPepItem(const QString &nodeName, const QString &itemId)
 ///
 /// Deletes an item from a PEP node.
 ///
@@ -886,7 +882,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::retractPepItem(const QString &nodeName, StandardItemId itemId)
+/// \fn QXmppPubSubManager::retractOwnPepItem(const QString &nodeName, StandardItemId itemId)
 ///
 /// Deletes an item from a PEP node.
 ///
@@ -898,7 +894,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::purgePepItems
+/// \fn QXmppPubSubManager::purgeOwnPepItems
 ///
 /// Purges all items from a PEP node.
 ///
@@ -911,7 +907,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 ///
 
 ///
-/// \fn QXmppPubSubManager::requestPepNodeConfiguration
+/// \fn QXmppPubSubManager::requestOwnPepNodeConfiguration
 ///
 /// Requests the node configuration and starts the configuration process.
 ///
@@ -921,12 +917,12 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 /// \param nodeName Name of the pubsub node on the service
 /// \return
 ///
-/// \sa configurePepNode()
-/// \sa cancelPepNodeConfiguration()
+/// \sa configureOwnPepNode()
+/// \sa cancelOwnPepNodeConfiguration()
 ///
 
 ///
-/// \fn QXmppPubSubManager::configurePepNode
+/// \fn QXmppPubSubManager::configureOwnPepNode
 ///
 /// Sets a node configuration.
 ///
@@ -937,11 +933,11 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 /// \param config
 /// \return
 ///
-/// \sa requestPepNodeConfiguration()
+/// \sa requestOwnPepNodeConfiguration()
 ///
 
 ///
-/// \fn QXmppPubSubManager::cancelPepNodeConfiguration
+/// \fn QXmppPubSubManager::cancelOwnPepNodeConfiguration
 ///
 /// This is a convenience method equivalent to calling cancelNodeConfiguration()
 /// the current account's bare JID.
@@ -949,7 +945,7 @@ QFuture<QXmppPubSubManager::Result> QXmppPubSubManager::unsubscribeFromNode(cons
 /// \param nodeName Name of the pubsub node on the service
 /// \return
 ///
-/// \sa requestPepNodeConfiguration()
+/// \sa requestOwnPepNodeConfiguration()
 ///
 
 ///
@@ -1010,17 +1006,17 @@ PubSubIq<> QXmppPubSubManager::requestItemsIq(const QString &jid, const QString 
     request.setQueryNode(nodeName);
 
     if (!itemIds.isEmpty()) {
-        QVector<QXmppPubSubItem> items;
+        QVector<QXmppPubSubBaseItem> items;
         items.reserve(itemIds.size());
         for (const auto &id : itemIds) {
-            items << QXmppPubSubItem(id);
+            items << QXmppPubSubBaseItem(id);
         }
         request.setItems(items);
     }
     return request;
 }
 
-auto QXmppPubSubManager::publishItem(PubSubIqBase &&request) -> QFuture<PublishItemResult>
+auto QXmppPubSubManager::publishItem(PubSubIqBase &&request) -> QXmppTask<PublishItemResult>
 {
     request.setType(QXmppIq::Set);
     request.setQueryType(PubSubIqBase::Publish);
@@ -1035,14 +1031,14 @@ auto QXmppPubSubManager::publishItem(PubSubIqBase &&request) -> QFuture<PublishI
                    });
 }
 
-auto QXmppPubSubManager::publishItems(PubSubIqBase &&request) -> QFuture<PublishItemsResult>
+auto QXmppPubSubManager::publishItems(PubSubIqBase &&request) -> QXmppTask<PublishItemsResult>
 {
     request.setType(QXmppIq::Set);
     request.setQueryType(PubSubIqBase::Publish);
 
     return chainIq(client()->sendIq(std::move(request)), this,
                    [](const PubSubIq<> &iq) -> PublishItemsResult {
-                       const auto itemToId = [](const QXmppPubSubItem &item) {
+                       const auto itemToId = [](const QXmppPubSubBaseItem &item) {
                            return item.id();
                        };
 

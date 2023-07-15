@@ -8,6 +8,7 @@
 #define TESTS_UTIL_H
 
 #include "QXmppPasswordChecker.h"
+#include "QXmppTask.h"
 
 #include <memory>
 #include <variant>
@@ -24,7 +25,11 @@ template<typename String>
 inline QDomElement xmlToDom(const String &xml)
 {
     QDomDocument doc;
-    QVERIFY_RV(doc.setContent(xml, true), "XML is not valid");
+    if constexpr (std::is_same_v<String, QString> || std::is_same_v<String, QByteArray>) {
+        QVERIFY_RV(doc.setContent(xml, true), "XML is not valid");
+    } else {
+        QVERIFY_RV(doc.setContent(QString(xml), true), "XML is not valid");
+    }
     return doc.documentElement();
 }
 
@@ -93,6 +98,18 @@ T expectFutureVariant(const QFuture<Input> &future)
     [&]() {
         QVERIFY(future.isFinished());
     }();
+    return expectVariant<T>(future.result());
+}
+
+template<typename T, typename Input>
+T expectFutureVariant(QXmppTask<Input> &future)
+{
+#define return \
+    return     \
+    {          \
+    }
+    QVERIFY(future.isFinished());
+#undef return
     return expectVariant<T>(future.result());
 }
 

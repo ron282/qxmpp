@@ -2,26 +2,9 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-option(BUILD_SHARED "Build SHARED library" ON)
-
-add_definitions(-DQXMPP_BUILD)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/base)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/client)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/server)
-
-# Configure QXmppBuildConstants.h.in
-if(BUILD_SHARED)
-    set(QXMPP_BUILD_SHARED true)
-else()
-    set(QXMPP_BUILD_SHARED false)
-endif()
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/base/QXmppBuildConstants.h.in ${CMAKE_CURRENT_BINARY_DIR}/base/QXmppBuildConstants.h @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/base)
+include(GenerateExportHeader)
 
 set(INSTALL_HEADER_FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/base/QXmppBuildConstants.h
-
     # Base
     base/QXmppArchiveIq.h
     base/QXmppBindIq.h
@@ -40,6 +23,8 @@ set(INSTALL_HEADER_FILES
     base/QXmppEntityTimeIq.h
     base/QXmppError.h
     base/QXmppExtension.h
+    base/QXmppExternalService.h
+    base/QXmppExternalServiceDiscoveryIq.h
     base/QXmppFileMetadata.h
     base/QXmppFileShare.h
     base/QXmppFutureUtils_p.h
@@ -51,6 +36,7 @@ set(INSTALL_HEADER_FILES
     base/QXmppIbbIq.h
     base/QXmppIq.h
     base/QXmppJingleIq.h
+    base/QXmppJingleData.h
     base/QXmppLogger.h
     base/QXmppMamIq.h
     base/QXmppMessage.h
@@ -65,10 +51,11 @@ set(INSTALL_HEADER_FILES
     base/QXmppOutOfBandUrl.h
     base/QXmppPingIq.h
     base/QXmppPresence.h
+    base/QXmppPromise.h
     base/QXmppPubSubAffiliation.h
     base/QXmppPubSubEvent.h
     base/QXmppPubSubIq_p.h
-    base/QXmppPubSubItem.h
+    base/QXmppPubSubBaseItem.h
     base/QXmppPubSubMetadata.h
     base/QXmppPubSubNodeConfig.h
     base/QXmppPubSubPublishOptions.h
@@ -88,14 +75,17 @@ set(INSTALL_HEADER_FILES
     base/QXmppStream.h
     base/QXmppStreamFeatures.h
     base/QXmppStun.h
+    base/QXmppTask.h
     base/QXmppThumbnail.h
     base/QXmppTrustMessageElement.h
     base/QXmppTrustMessageKeyOwner.h
     base/QXmppTrustMessages.h
-    base/QXmppTuneItem.h
+    base/QXmppUserTuneItem.h
     base/QXmppUtils.h
     base/QXmppVCardIq.h
     base/QXmppVersionIq.h
+    base/compat/QXmppPubSubIq.h
+    base/compat/QXmppPubSubItem.h
 
     # Client
     client/QXmppArchiveManager.h
@@ -104,6 +94,7 @@ set(INSTALL_HEADER_FILES
     client/QXmppAtmTrustStorage.h
     client/QXmppAttentionManager.h
     client/QXmppBookmarkManager.h
+    client/QXmppCallInviteManager.h
     client/QXmppCarbonManager.h
     client/QXmppCarbonManagerV2.h
     client/QXmppClient.h
@@ -112,12 +103,14 @@ set(INSTALL_HEADER_FILES
     client/QXmppDiscoveryManager.h
     client/QXmppE2eeExtension.h
     client/QXmppEntityTimeManager.h
+    client/QXmppExternalServiceDiscoveryManager.h
     client/QXmppFileSharingManager.h
     client/QXmppFileSharingProvider.h
     client/QXmppHttpFileSharingProvider.h
     client/QXmppHttpUploadManager.h
     client/QXmppInvokable.h
     client/QXmppIqHandling.h
+    client/QXmppJingleMessageInitiationManager.h
     client/QXmppMamManager.h
     client/QXmppMessageHandler.h
     client/QXmppMessageReceiptManager.h
@@ -171,6 +164,7 @@ set(SOURCE_FILES
     base/QXmppEncryptedFileSource.cpp
     base/QXmppEntityTimeIq.cpp
     base/QXmppError.cpp
+    base/QXmppExternalServiceDiscoveryIq.cpp
     base/QXmppFileMetadata.cpp
     base/QXmppFileShare.cpp
     base/QXmppGeolocItem.cpp
@@ -181,7 +175,7 @@ set(SOURCE_FILES
     base/QXmppHttpUploadIq.cpp
     base/QXmppIbbIq.cpp
     base/QXmppIq.cpp
-    base/QXmppJingleIq.cpp
+    base/QXmppJingleData.cpp
     base/QXmppLogger.cpp
     base/QXmppMamIq.cpp
     base/QXmppMessage.cpp
@@ -199,7 +193,7 @@ set(SOURCE_FILES
     base/QXmppPubSubAffiliation.cpp
     base/QXmppPubSubEvent.cpp
     base/QXmppPubSubIq.cpp
-    base/QXmppPubSubItem.cpp
+    base/QXmppPubSubBaseItem.cpp
     base/QXmppPubSubMetadata.cpp
     base/QXmppPubSubNodeConfig.cpp
     base/QXmppPubSubSubscribeOptions.cpp
@@ -220,12 +214,15 @@ set(SOURCE_FILES
     base/QXmppStreamInitiationIq.cpp
     base/QXmppStreamManagement.cpp
     base/QXmppStun.cpp
+    base/QXmppTask.cpp
     base/QXmppThumbnail.cpp
     base/QXmppTrustMessages.cpp
-    base/QXmppTuneItem.cpp
+    base/QXmppUserTuneItem.cpp
     base/QXmppUtils.cpp
     base/QXmppVCardIq.cpp
     base/QXmppVersionIq.cpp
+    base/compat/QXmppPubSubIq.cpp
+    base/compat/QXmppPubSubItem.cpp
 
     # Client
     client/QXmppArchiveManager.cpp
@@ -234,6 +231,7 @@ set(SOURCE_FILES
     client/QXmppAtmTrustStorage.cpp
     client/QXmppAttentionManager.cpp
     client/QXmppBookmarkManager.cpp
+    client/QXmppCallInviteManager.cpp
     client/QXmppCarbonManager.cpp
     client/QXmppCarbonManagerV2.cpp
     client/QXmppClient.cpp
@@ -242,12 +240,14 @@ set(SOURCE_FILES
     client/QXmppDiscoveryManager.cpp
     client/QXmppE2eeExtension.cpp
     client/QXmppEntityTimeManager.cpp
+    client/QXmppExternalServiceDiscoveryManager.cpp
     client/QXmppFileSharingManager.cpp
     client/QXmppHttpFileSharingProvider.cpp
     client/QXmppHttpUploadManager.cpp
     client/QXmppInternalClientExtension.cpp
     client/QXmppInvokable.cpp
     client/QXmppIqHandling.cpp
+    client/QXmppJingleMessageInitiationManager.cpp
     client/QXmppMamManager.cpp
     client/QXmppMessageReceiptManager.cpp
     client/QXmppMucManager.cpp
@@ -280,10 +280,34 @@ set(SOURCE_FILES
     server/QXmppServerPlugin.cpp
 )
 
-if(BUILD_OMEMO)
-    # required to be used in QXmppMessage
-    set(SOURCE_FILES ${SOURCE_FILES} base/QXmppOmemoDataBase.cpp)
+if(BUILD_SHARED)
+    add_library(${QXMPP_TARGET} SHARED ${SOURCE_FILES})
+else()
+    add_library(${QXMPP_TARGET} STATIC ${SOURCE_FILES})
 endif()
+
+set_target_properties(${QXMPP_TARGET} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${SO_VERSION}
+    EXPORT_NAME QXmpp
+)
+
+target_include_directories(${QXMPP_TARGET}
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/base>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/client>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/server>
+    $<INSTALL_INTERFACE:include/${QXMPP_TARGET}>
+    PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+target_link_libraries(${QXMPP_TARGET}
+    PUBLIC
+    Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Network
+    Qt${QT_VERSION_MAJOR}::Xml
+)
 
 if(WITH_GSTREAMER)
     find_package(GStreamer REQUIRED)
@@ -297,85 +321,85 @@ if(WITH_GSTREAMER)
         client/QXmppCallStream.h
     )
 
-    set(SOURCE_FILES
-        ${SOURCE_FILES}
+    target_sources(${QXMPP_TARGET}
+        PRIVATE
         client/QXmppCall.cpp
         client/QXmppCallManager.cpp
         client/QXmppCallStream.cpp
     )
-endif()
 
-if(BUILD_SHARED)
-    add_library(qxmpp SHARED ${SOURCE_FILES})
-else()
-    add_library(qxmpp STATIC ${SOURCE_FILES})
-endif()
-
-set_target_properties(qxmpp PROPERTIES
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${SO_VERSION}
-    EXPORT_NAME QXmpp
-)
-
-target_include_directories(qxmpp
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/base>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/client>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/server>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/base>
-    $<INSTALL_INTERFACE:include/qxmpp>
-    ${GLIB2_INCLUDE_DIR}
-    ${GOBJECT_INCLUDE_DIR}
-    ${GSTREAMER_INCLUDE_DIRS}
-)
-
-target_link_libraries(qxmpp
-    PUBLIC
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Network
-    Qt${QT_VERSION_MAJOR}::Xml
-)
-
-if(WITH_GSTREAMER)
-    target_link_libraries(qxmpp
+    target_link_libraries(${QXMPP_TARGET}
         PRIVATE
         ${GLIB2_LIBRARIES}
         ${GOBJECT_LIBRARIES}
         ${GSTREAMER_LIBRARY}
     )
+
+    target_include_directories(${QXMPP_TARGET}
+        PRIVATE
+        ${GLIB2_INCLUDE_DIR}
+        ${GOBJECT_INCLUDE_DIR}
+        ${GSTREAMER_INCLUDE_DIRS}
+    )
+endif()
+
+if(BUILD_OMEMO)
+    # required to be used in QXmppMessage
+    target_sources(${QXMPP_TARGET} PRIVATE base/QXmppOmemoDataBase.cpp)
 endif()
 
 if(WITH_QCA)
-    target_sources(qxmpp PRIVATE client/QXmppEncryptedFileSharingProvider.cpp client/QXmppFileEncryption.cpp client/QcaInitializer.cpp)
+    target_sources(${QXMPP_TARGET} PRIVATE client/QXmppEncryptedFileSharingProvider.cpp client/QXmppFileEncryption.cpp client/QcaInitializer.cpp)
     set(INSTALL_HEADER_FILES ${INSTALL_HEADER_FILES} client/QXmppEncryptedFileSharingProvider.h)
-    target_link_libraries(qxmpp PRIVATE qca-qt${QT_VERSION_MAJOR})
-    target_compile_definitions(qxmpp PRIVATE -DWITH_QCA)
+    target_link_libraries(${QXMPP_TARGET} PRIVATE qca-qt${QT_VERSION_MAJOR})
 endif()
 
+# qxmpp_export.h generation
+if(BUILD_SHARED)
+    set(QXMPP_BUILD_SHARED true)
+else()
+    set(QXMPP_BUILD_SHARED false)
+endif()
+
+set(QXMPP_CUSTOM_EXPORT_CONTENT "
+#define QXMPP_BUILD_SHARED ${QXMPP_BUILD_SHARED}
+#define QXMPP_VERSION_MAJOR ${PROJECT_VERSION_MAJOR}
+#define QXMPP_VERSION_MINOR ${PROJECT_VERSION_MINOR}
+#define QXMPP_VERSION_PATCH ${PROJECT_VERSION_PATCH}
+")
+
+generate_export_header(${QXMPP_TARGET}
+    BASE_NAME qxmpp
+    CUSTOM_CONTENT_FROM_VARIABLE QXMPP_CUSTOM_EXPORT_CONTENT
+)
+
 install(
-    TARGETS qxmpp
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    TARGETS ${QXMPP_TARGET}
     EXPORT QXmppTarget
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 install(
     EXPORT QXmppTarget
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/qxmpp"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${QXMPP_TARGET}"
     FILE QXmpp.cmake
     NAMESPACE QXmpp::
     COMPONENT Devel
 )
 
 export(
-    TARGETS qxmpp
+    TARGETS ${QXMPP_TARGET}
     FILE QXmpp.cmake
 )
 
 install(
-    FILES ${INSTALL_HEADER_FILES}
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/qxmpp"
+    FILES ${INSTALL_HEADER_FILES} ${CMAKE_CURRENT_BINARY_DIR}/qxmpp_export.h
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${QXMPP_TARGET}"
 )
 
+# submodules
 if(BUILD_OMEMO)
     add_subdirectory(omemo)
 endif()

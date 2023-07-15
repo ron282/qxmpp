@@ -22,6 +22,8 @@ namespace Private {
                                   const std::optional<QXmppE2eeMetadata> &e2eeMetadata,
                                   QXmppIq &&iq);
 
+    QXMPP_EXPORT std::tuple<bool, QString, QString> checkIsIqRequest(const QDomElement &el);
+
     template<typename... VariantTypes>
     void processHandleIqResult(QXmppClient *client,
                                const QString &requestId,
@@ -53,9 +55,9 @@ namespace Private {
                                const QString &requestId,
                                const QString &requestFrom,
                                const std::optional<QXmppE2eeMetadata> &e2eeMetadata,
-                               QFuture<T> future)
+                               QXmppTask<T> future)
     {
-        Private::await(future, client, [client, requestId, requestFrom, e2eeMetadata](T result) {
+        future.then(client, [client, requestId, requestFrom, e2eeMetadata](T result) {
             processHandleIqResult(client, requestId, requestFrom, e2eeMetadata, result);
         });
     }
@@ -93,11 +95,10 @@ namespace Private {
             iq.parse(element);
             iq.setE2eeMetadata(e2eeMetadata);
 
-            processHandleIqResult(
-                client,
-                iq.id(),
-                iq.from(),
-                invokeIqHandler(std::forward<Handler>(handler), std::move(iq)));
+            auto id = iq.id(), from = iq.from();
+
+            processHandleIqResult(client, id, from, e2eeMetadata,
+                                  invokeIqHandler(std::forward<Handler>(handler), std::move(iq)));
             return true;
         }
         return false;
@@ -162,7 +163,7 @@ namespace Private {
 /// The return type of the handler function can be:
 ///  1. an QXmppIq based type
 ///  2. a std::variant of QXmppIq based types (multiple are possible) and optionally also QXmppStanza::Error
-///  3. a QFuture of 1. or 2.
+///  3. a QXmppTask of 1. or 2.
 ///
 /// You don't need to set the values for id or the to address on the IQ result because that's done
 /// automatically. Unless you want to return an error IQ you also don't need to set the IQ type.
@@ -187,11 +188,7 @@ bool handleIqRequests(const QDomElement &element,
                       QXmppClient *client,
                       Handler handler)
 {
-    if (element.tagName() == "iq") {
-        auto queryElement = element.firstChildElement();
-        auto tagName = queryElement.tagName();
-        auto xmlns = queryElement.namespaceURI();
-
+    if (auto [isRequest, tagName, xmlns] = Private::checkIsIqRequest(element); isRequest) {
         return (Private::handleIqType<IqTypes>(handler, client, element, e2eeMetadata, tagName, xmlns) || ...);
     }
     return false;
@@ -254,7 +251,7 @@ bool handleIqRequests(const QDomElement &element,
 /// The return type of the handler function can be:
 ///  1. an QXmppIq based type
 ///  2. a std::variant of QXmppIq based types (multiple are possible) and optionally also QXmppStanza::Error
-///  3. a QFuture of 1. or 2.
+///  3. a QXmppTask of 1. or 2.
 ///
 /// You don't need to set the values for id or the to address on the IQ result because that's done
 /// automatically. Unless you want to return an error IQ you also don't need to set the IQ type.
@@ -271,7 +268,7 @@ bool handleIqRequests(const QDomElement &element,
 template<typename... IqTypes, typename Handler>
 bool handleIqRequests(const QDomElement &element, QXmppClient *client, Handler handler)
 {
-    return handleIqRequests(element, std::nullopt, client, std::forward<Handler>(handler));
+    return handleIqRequests<IqTypes...>(element, std::nullopt, client, std::forward<Handler>(handler));
 }
 
 }  // namespace QXmpp

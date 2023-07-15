@@ -132,6 +132,8 @@ extern const char *ns_ping;
 extern const char *ns_entity_time;
 // XEP-0203: Delayed Delivery
 extern const char *ns_delayed_delivery;
+// XEP-0215: External Service Discovery
+extern const char *ns_external_service_discovery;
 // XEP-0220: Server Dialback
 extern const char *ns_server_dialback;
 // XEP-0221: Data Forms Media Element
@@ -170,6 +172,8 @@ extern const char *ns_chat_markers;
 extern const char *ns_message_processing_hints;
 // XEP-0352: Client State Indication
 extern const char *ns_csi;
+// XEP-0353: Jingle Message Initiation
+extern const char *ns_jingle_message_initiation;
 // XEP-0357: Push Notifications
 extern const char *ns_push;
 // XEP-0359: Unique and Stable Stanza IDs
@@ -221,5 +225,7 @@ extern const char *ns_sfs;
 extern const char *ns_esfs;
 // XEP-0450: Automatic Trust Management (ATM)
 extern const char *ns_atm;
+// XEP-0482: Call Invites
+extern const char *ns_call_invites;
 
 #endif  // QXMPPCONSTANTS_H

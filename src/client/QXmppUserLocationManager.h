@@ -7,12 +7,13 @@
 #define QXMPPUSERLOCATIONMANAGER_H
 
 #include "QXmppClientExtension.h"
+#include "QXmppError.h"
 #include "QXmppPubSubEventHandler.h"
 
 #include <variant>
 
 template<typename T>
-class QFuture;
+class QXmppTask;
 class QXmppGeolocItem;
 
 class QXMPP_EXPORT QXmppUserLocationManager : public QXmppClientExtension, public QXmppPubSubEventHandler
@@ -21,15 +22,15 @@ class QXMPP_EXPORT QXmppUserLocationManager : public QXmppClientExtension, publi
 
 public:
     using Item = QXmppGeolocItem;
-    using GetResult = std::variant<Item, QXmppStanza::Error>;
-    using PublishResult = std::variant<QString, QXmppStanza::Error>;
+    using GetResult = std::variant<Item, QXmppError>;
+    using PublishResult = std::variant<QString, QXmppError>;
 
     QXmppUserLocationManager();
 
     QStringList discoveryFeatures() const override;
 
-    QFuture<GetResult> request(const QString &jid);
-    QFuture<PublishResult> publish(const Item &);
+    QXmppTask<GetResult> request(const QString &jid);
+    QXmppTask<PublishResult> publish(const Item &);
 
     Q_SIGNAL void itemReceived(const QString &jid, const QXmppGeolocItem &);
 

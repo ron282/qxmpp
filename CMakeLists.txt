@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-cmake_minimum_required(VERSION 3.3)
-project(qxmpp VERSION 1.5.0)
+cmake_minimum_required(VERSION 3.7)
+project(qxmpp VERSION 1.6.0)
 
 set(SO_VERSION 4)
 
@@ -12,21 +12,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules")
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network Xml)
-find_package(Qt${QT_VERSION_MAJOR} 5.9.2 REQUIRED COMPONENTS Core Network Xml)
+# Qt
+if(NOT DEFINED QT_VERSION_MAJOR)
+    find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Network Xml)
+endif()
+message("-- Choosing Qt ${QT_VERSION_MAJOR}")
+find_package(Qt${QT_VERSION_MAJOR} 5.15.0 REQUIRED COMPONENTS Core Network Xml)
+
 # QCA (optional)
 find_package(Qca-qt${QT_VERSION_MAJOR} QUIET)
 if(${QT_VERSION_MAJOR} EQUAL 6)
     find_package(Qt6Core5Compat)
 endif()
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-
 include(GNUInstallDirs)
 
+option(BUILD_SHARED "Build shared library" ON)
 option(BUILD_TESTS "Build tests." ON)
 option(BUILD_INTERNAL_TESTS "Build internal tests." OFF)
 option(BUILD_DOCUMENTATION "Build API documentation." OFF)
@@ -34,6 +40,9 @@ option(BUILD_EXAMPLES "Build examples." ON)
 option(BUILD_OMEMO "Build the OMEMO module" OFF)
 option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 option(WITH_QCA "Build with QCA for OMEMO or encrypted file sharing" ${Qca-qt${QT_VERSION_MAJOR}_FOUND})
+
+set(QXMPP_TARGET QXmppQt${QT_VERSION_MAJOR})
+set(QXMPPOMEMO_TARGET QXmppOmemoQt${QT_VERSION_MAJOR})
 
 add_definitions(
     -DQT_DISABLE_DEPRECATED_BEFORE=0x050F00
@@ -77,30 +86,60 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
+# Normal QXmppQt5/6 package
 configure_package_config_file(
     QXmppConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfig.cmake
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/qxmpp"
+    ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}Config.cmake
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${QXMPP_TARGET}"
 )
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}ConfigVersion.cmake
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfig.cmake
-          ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfigVersion.cmake
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/qxmpp"
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}Config.cmake
+          ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}ConfigVersion.cmake
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${QXMPP_TARGET}"
     COMPONENT Devel
 )
 
-# Generate qxmpp.pc
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc @ONLY)
+# QXmpp package with Qt version autodetect
+configure_package_config_file(
+    cmake/QXmppQtAutoConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfig.cmake
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/QXmpp"
+)
+
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/QXmppConfig.cmake
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/QXmpp"
+    COMPONENT Devel
+)
+install(
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/QXmppQtAutoConfigVersion.cmake
+    RENAME QXmppConfigVersion.cmake
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/QXmpp"
+    COMPONENT Devel
+)
+
+# Generate QXmppQt5/6.pc
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}.pc @ONLY)
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}.pc
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
     COMPONENT Devel
 )
+
+# "qxmpp.pc" for backwards-compatibility
+if(QT_VERSION_MAJOR EQUAL 5)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp_legacy.pc.in ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc @ONLY)
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+        COMPONENT Devel
+    )
+endif()
 

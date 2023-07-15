@@ -15,7 +15,7 @@
 #include <QDateTime>
 
 template<typename T>
-class QFuture;
+class QXmppTask;
 class QXmppMessage;
 class QXmppMamManagerPrivate;
 
@@ -40,7 +40,7 @@ class QXMPP_EXPORT QXmppMamManager : public QXmppClientExtension
     Q_OBJECT
 
 public:
-    struct RetrievedMessages
+    struct QXMPP_EXPORT RetrievedMessages
     {
         QXmppMamResultIq result;
         QVector<QXmppMessage> messages;
@@ -57,12 +57,12 @@ public:
                                      const QDateTime &start = QDateTime(),
                                      const QDateTime &end = QDateTime(),
                                      const QXmppResultSetQuery &resultSetQuery = QXmppResultSetQuery());
-    QFuture<RetrieveResult> retrieveMessages(const QString &to = QString(),
-                                             const QString &node = QString(),
-                                             const QString &jid = QString(),
-                                             const QDateTime &start = QDateTime(),
-                                             const QDateTime &end = QDateTime(),
-                                             const QXmppResultSetQuery &resultSetQuery = QXmppResultSetQuery());
+    QXmppTask<RetrieveResult> retrieveMessages(const QString &to = QString(),
+                                               const QString &node = QString(),
+                                               const QString &jid = QString(),
+                                               const QDateTime &start = QDateTime(),
+                                               const QDateTime &end = QDateTime(),
+                                               const QXmppResultSetQuery &resultSetQuery = QXmppResultSetQuery());
 
     /// \cond
     QStringList discoveryFeatures() const override;

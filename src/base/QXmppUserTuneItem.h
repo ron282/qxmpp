@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
-#ifndef QXMPPTUNEITEM_H
-#define QXMPPTUNEITEM_H
+#ifndef QXMPPUSERTUNEITEM_H
+#define QXMPPUSERTUNEITEM_H
 
-#include "QXmppPubSubItem.h"
+#include "QXmppPubSubBaseItem.h"
 
 #include <chrono>
 #include <optional>
@@ -16,7 +16,7 @@
 class QXmppTuneItemPrivate;
 class QUrl;
 
-class QXMPP_EXPORT QXmppTuneItem : public QXmppPubSubItem
+class QXMPP_EXPORT QXmppTuneItem : public QXmppPubSubBaseItem
 {
 public:
     QXmppTuneItem();
@@ -90,4 +90,4 @@ private:
 
 Q_DECLARE_METATYPE(QXmppTuneItem)
 
-#endif  // QXMPPTUNEITEM_H
+#endif  // QXMPPUSERTUNEITEM_H

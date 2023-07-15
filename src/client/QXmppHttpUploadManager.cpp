@@ -5,8 +5,8 @@
 #include "QXmppHttpUploadManager.h"
 
 #include "QXmppClient.h"
-#include "QXmppFutureUtils_p.h"
 #include "QXmppHttpUploadIq.h"
+#include "QXmppTask.h"
 #include "QXmppUploadRequestManager.h"
 #include "QXmppUtils_p.h"
 
@@ -299,19 +299,16 @@ std::shared_ptr<QXmppHttpUpload> QXmppHttpUploadManager::uploadFile(std::unique_
     }
 
     auto future = client()->findExtension<QXmppUploadRequestManager>()->requestSlot(filename, fileSize, mimeType, uploadServiceJid);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    await(future, this, [this, upload, data = std::move(data)](SlotResult result) mutable {
-#else
-    await(future, this, [this, upload, rawSourceDevice = data.release()](SlotResult result) mutable {
-#endif
+    // TODO: rawSourceDevice: could this lead to a memory leak if the "then lambda" is never executed?
+    future.then(this, [this, upload, rawSourceDevice = data.release()](SlotResult result) mutable {
         // first check whether upload was cancelled in the meantime
         if (upload->d->cancelled) {
             upload->d->reportFinished();
             return;
         }
 
-        if (std::holds_alternative<QXmppStanza::Error>(result)) {
-            upload->d->reportError(std::get<QXmppStanza::Error>(std::move(result)));
+        if (std::holds_alternative<QXmppError>(result)) {
+            upload->d->reportError(std::get<QXmppError>(std::move(result)));
             upload->d->reportFinished();
         } else {
             auto slot = std::get<QXmppHttpUploadSlotIq>(std::move(result));
@@ -331,11 +328,6 @@ std::shared_ptr<QXmppHttpUpload> QXmppHttpUploadManager::uploadFile(std::unique_
                 request.setRawHeader(itr.key().toUtf8(), itr.value().toUtf8());
             }
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-            auto *rawSourceDevice = data.release();
-#else
-            // already defined in lambda capture
-#endif
             auto *reply = d->netManager->put(request, rawSourceDevice);
             rawSourceDevice->setParent(reply);
             upload->d->reply = reply;
@@ -347,11 +339,7 @@ std::shared_ptr<QXmppHttpUpload> QXmppHttpUploadManager::uploadFile(std::unique_
                 reply->deleteLater();
             });
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
             connect(reply, &QNetworkReply::errorOccurred, this,
-#else
-            connect(reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this,
-#endif
                     [upload, reply](QNetworkReply::NetworkError error) {
                         upload->d->reportError({ reply->errorString(), error });
                         upload->d->reportFinished();

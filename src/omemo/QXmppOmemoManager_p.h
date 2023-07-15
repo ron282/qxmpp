@@ -10,12 +10,15 @@
 #include "QXmppOmemoDeviceBundle_p.h"
 #include "QXmppOmemoManager.h"
 #include "QXmppOmemoStorage.h"
+#include "QXmppPubSubManager.h"
 
 #include "OmemoLibWrappers.h"
 #include "QcaInitializer_p.h"
 #include <QDomElement>
 #include <QTimer>
 #include <QtCrypto>
+
+#undef max
 
 class QXmppTrustManager;
 class QXmppOmemoManager;
@@ -32,6 +35,11 @@ using namespace QXmpp;
 using namespace std::chrono_literals;
 
 namespace QXmpp::Omemo::Private {
+
+// XMPP namespaces
+constexpr auto ns_omemo_2 = "urn:xmpp:omemo:2";
+constexpr auto ns_omemo_2_bundles = "urn:xmpp:omemo:2:bundles";
+constexpr auto ns_omemo_2_devices = "urn:xmpp:omemo:2:devices";
 
 // default possible trust levels a key must have to be used for encryption
 // The class documentation must be adapted if the trust levels are modified.
@@ -83,14 +91,14 @@ constexpr QCA::Cipher::Padding PAYLOAD_CIPHER_PADDING = QCA::Cipher::PKCS7;
 constexpr auto HKDF_INFO = "OMEMO Payload";
 constexpr int HKDF_KEY_SIZE = 32;
 constexpr int HKDF_SALT_SIZE = 32;
-constexpr int HKDF_OUTPUT_SIZE = 60;
+constexpr int HKDF_OUTPUT_SIZE = 80;
 
 extern const QString PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE;
 constexpr uint32_t PAYLOAD_MESSAGE_AUTHENTICATION_CODE_SIZE = 16;
 
 constexpr int PAYLOAD_KEY_SIZE = 32;
 constexpr uint32_t PAYLOAD_INITIALIZATION_VECTOR_SIZE = 16;
-constexpr uint32_t PAYLOAD_AUTHENTICATION_KEY_SIZE = 16;
+constexpr uint32_t PAYLOAD_AUTHENTICATION_KEY_SIZE = 32;
 
 // boundaries for the count of characters in SCE's <rpad/> element
 constexpr uint32_t SCE_RPAD_SIZE_MIN = 0;
@@ -114,8 +122,6 @@ struct IqDecryptionResult
     QXmppE2eeMetadata e2eeMetadata;
 };
 
-QByteArray createKeyId(const QByteArray &key);
-
 }  // namespace QXmpp::Omemo::Private
 
 using namespace QXmpp::Private;
@@ -124,7 +130,7 @@ using namespace QXmpp::Omemo::Private;
 class QXmppOmemoManagerPrivate
 {
 public:
-    using Result = std::variant<QXmpp::Success, QXmppStanza::Error>;
+    using Result = std::variant<QXmpp::Success, QXmppError>;
 
     QXmppOmemoManager *q;
 
@@ -167,9 +173,10 @@ public:
     QXmppOmemoManagerPrivate(QXmppOmemoManager *parent, QXmppOmemoStorage *omemoStorage);
 
     void init();
-    bool initGlobalContext();
-    bool initLocking();
-    bool initCryptoProvider();
+    // exports for unit tests
+    QXMPP_EXPORT bool initGlobalContext();
+    QXMPP_EXPORT bool initLocking();
+    QXMPP_EXPORT bool initCryptoProvider();
     void initStores();
 
     signal_protocol_identity_key_store createIdentityKeyStore() const;
@@ -177,7 +184,7 @@ public:
     signal_protocol_pre_key_store createPreKeyStore() const;
     signal_protocol_session_store createSessionStore() const;
 
-    QFuture<bool> setUpDeviceId();
+    QXmppTask<bool> setUpDeviceId();
     std::optional<uint32_t> generateDeviceId();
     std::optional<uint32_t> generateDeviceId(const QVector<QString> &existingIds);
     bool setUpIdentityKeyPair(ratchet_identity_key_pair **identityKeyPair);
@@ -187,39 +194,38 @@ public:
     bool renewPreKeyPairs(uint32_t keyPairBeingRenewed);
     bool updatePreKeyPairs(uint32_t count = 1);
     void removeDevicesRemovedFromServer();
-    bool generateIdentityKeyPair(ratchet_identity_key_pair **identityKeyPair) const;
 
-    QFuture<QXmppE2eeExtension::MessageEncryptResult> encryptMessageForRecipients(QXmppMessage &&message,
-                                                                                  QVector<QString> recipientJids,
-                                                                                  TrustLevels acceptedTrustLevels);
+    QXmppTask<QXmppE2eeExtension::MessageEncryptResult> encryptMessageForRecipients(QXmppMessage &&message,
+                                                                                    QVector<QString> recipientJids,
+                                                                                    TrustLevels acceptedTrustLevels);
     template<typename T>
-    QFuture<std::optional<QXmppOmemoElement>> encryptStanza(const T &stanza, const QVector<QString> &recipientJids, TrustLevels acceptedTrustLevels);
+    QXmppTask<std::optional<QXmppOmemoElement>> encryptStanza(const T &stanza, const QVector<QString> &recipientJids, TrustLevels acceptedTrustLevels);
     std::optional<PayloadEncryptionResult> encryptPayload(const QByteArray &payload) const;
     template<typename T>
     QByteArray createSceEnvelope(const T &stanza);
     QByteArray createOmemoEnvelopeData(const signal_protocol_address &address, const QCA::SecureArray &payloadDecryptionData) const;
 
-    QFuture<std::optional<QXmppMessage>> decryptMessage(QXmppMessage stanza);
-    QFuture<std::optional<IqDecryptionResult>> decryptIq(const QDomElement &iqElement);
+    QXmppTask<std::optional<QXmppMessage>> decryptMessage(QXmppMessage stanza);
+    QXmppTask<std::optional<IqDecryptionResult>> decryptIq(const QDomElement &iqElement);
     template<typename T>
-    QFuture<std::optional<DecryptionResult>> decryptStanza(T stanza,
-                                                           const QString &senderJid,
-                                                           uint32_t senderDeviceId,
-                                                           const QXmppOmemoEnvelope &omemoEnvelope,
-                                                           const QByteArray &omemoPayload,
-                                                           bool isMessageStanza = true);
-    QFuture<QByteArray> extractSceEnvelope(const QString &senderJid,
-                                           uint32_t senderDeviceId,
-                                           const QXmppOmemoEnvelope &omemoEnvelope,
-                                           const QByteArray &omemoPayload,
-                                           bool isMessageStanza);
-    QFuture<QCA::SecureArray> extractPayloadDecryptionData(const QString &senderJid,
-                                                           uint32_t senderDeviceId,
-                                                           const QXmppOmemoEnvelope &omemoEnvelope,
-                                                           bool isMessageStanza = true);
+    QXmppTask<std::optional<DecryptionResult>> decryptStanza(T stanza,
+                                                             const QString &senderJid,
+                                                             uint32_t senderDeviceId,
+                                                             const QXmppOmemoEnvelope &omemoEnvelope,
+                                                             const QByteArray &omemoPayload,
+                                                             bool isMessageStanza = true);
+    QXmppTask<QByteArray> extractSceEnvelope(const QString &senderJid,
+                                             uint32_t senderDeviceId,
+                                             const QXmppOmemoEnvelope &omemoEnvelope,
+                                             const QByteArray &omemoPayload,
+                                             bool isMessageStanza);
+    QXmppTask<std::optional<QCA::SecureArray>> extractPayloadDecryptionData(const QString &senderJid,
+                                                                            uint32_t senderDeviceId,
+                                                                            const QXmppOmemoEnvelope &omemoEnvelope,
+                                                                            bool isMessageStanza = true);
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
 
-    QFuture<bool> publishOmemoData();
+    QXmppTask<bool> publishOmemoData();
 
     template<typename Function>
     void publishDeviceBundle(bool isDeviceBundlesNodeExistent,
@@ -250,7 +256,7 @@ public:
     template<typename Function>
     void publishDeviceBundleItemWithOptions(Function continuation);
     QXmppOmemoDeviceBundleItem deviceBundleItem() const;
-    QFuture<std::optional<QXmppOmemoDeviceBundle>> requestDeviceBundle(const QString &deviceOwnerJid, uint32_t deviceId) const;
+    QXmppTask<std::optional<QXmppOmemoDeviceBundle>> requestDeviceBundle(const QString &deviceOwnerJid, uint32_t deviceId) const;
     template<typename Function>
     void deleteDeviceBundle(Function continuation);
 
@@ -283,6 +289,7 @@ public:
     QXmppOmemoDeviceListItem deviceListItem(bool addOwnDevice = true);
     template<typename Function>
     void updateOwnDevicesLocally(bool isDeviceListNodeExistent, Function continuation);
+    std::optional<QXmppOmemoDeviceListItem> updateContactDevices(const QString &deviceOwnerJid, const QVector<QXmppOmemoDeviceListItem> &deviceListItems);
     void updateDevices(const QString &deviceOwnerJid, const QXmppOmemoDeviceListItem &deviceListItem);
     void handleIrregularDeviceListChanges(const QString &deviceOwnerJid);
     template<typename Function>
@@ -305,21 +312,21 @@ public:
     void publishItem(const QString &node, const T &item, const QXmppPubSubPublishOptions &publishOptions, Function continuation);
 
     template<typename T, typename Function>
-    void runPubSubQueryWithContinuation(QFuture<T> future, const QString &errorMessage, Function continuation);
+    void runPubSubQueryWithContinuation(QXmppTask<T> future, const QString &errorMessage, Function continuation);
 
-    QFuture<bool> changeDeviceLabel(const QString &deviceLabel);
+    QXmppTask<bool> changeDeviceLabel(const QString &deviceLabel);
 
-    QFuture<QXmppPubSubManager::ItemResult<QXmppOmemoDeviceListItem>> requestDeviceList(const QString &jid);
+    QXmppTask<QXmppPubSubManager::ItemResult<QXmppOmemoDeviceListItem>> requestDeviceList(const QString &jid);
     void subscribeToNewDeviceLists(const QString &jid, uint32_t deviceId);
-    QFuture<Result> subscribeToDeviceList(const QString &jid);
-    QFuture<QXmppOmemoManager::DevicesResult> unsubscribeFromDeviceLists(const QList<QString> &jids);
-    QFuture<Result> unsubscribeFromDeviceList(const QString &jid);
+    QXmppTask<Result> subscribeToDeviceList(const QString &jid);
+    QXmppTask<QVector<QXmppOmemoManager::DevicesResult>> unsubscribeFromDeviceLists(const QList<QString> &jids);
+    QXmppTask<Result> unsubscribeFromDeviceList(const QString &jid);
 
-    QFuture<bool> resetOwnDevice();
-    QFuture<bool> resetAll();
+    QXmppTask<bool> resetOwnDevice();
+    QXmppTask<bool> resetAll();
 
-    QFuture<bool> buildSessionForNewDevice(const QString &jid, uint32_t deviceId, QXmppOmemoStorage::Device &device);
-    QFuture<bool> buildSessionWithDeviceBundle(const QString &jid, uint32_t deviceId, QXmppOmemoStorage::Device &device);
+    QXmppTask<bool> buildSessionForNewDevice(const QString &jid, uint32_t deviceId, QXmppOmemoStorage::Device &device);
+    QXmppTask<bool> buildSessionWithDeviceBundle(const QString &jid, uint32_t deviceId, QXmppOmemoStorage::Device &device);
     bool buildSession(signal_protocol_address address, const QXmppOmemoDeviceBundle &deviceBundle);
     bool createSessionBundle(session_pre_key_bundle **sessionBundle,
                              const QByteArray &serializedPublicIdentityKey,
@@ -328,14 +335,17 @@ public:
                              const QByteArray &serializedSignedPublicPreKeySignature,
                              const QByteArray &serializedPublicPreKey,
                              uint32_t publicPreKeyId);
+
+    bool deserializeIdentityKeyPair(ratchet_identity_key_pair **identityKeyPair) const;
+    bool deserializePrivateIdentityKey(ec_private_key **privateIdentityKey, const QByteArray &serializedPrivateIdentityKey) const;
     bool deserializePublicIdentityKey(ec_public_key **publicIdentityKey, const QByteArray &serializedPublicIdentityKey) const;
     bool deserializeSignedPublicPreKey(ec_public_key **signedPublicPreKey, const QByteArray &serializedSignedPublicPreKey) const;
     bool deserializePublicPreKey(ec_public_key **publicPreKey, const QByteArray &serializedPublicPreKey) const;
 
-    QFuture<QXmpp::SendResult> sendEmptyMessage(const QString &recipientJid, uint32_t recipientDeviceId, bool isKeyExchange = false) const;
-    QFuture<void> storeOwnKey() const;
-    QFuture<TrustLevel> storeKeyDependingOnSecurityPolicy(const QString &keyOwnerJid, const QByteArray &key);
-    QFuture<TrustLevel> storeKey(const QString &keyOwnerJid, const QByteArray &key, TrustLevel trustLevel = TrustLevel::AutomaticallyDistrusted) const;
+    QXmppTask<QXmpp::SendResult> sendEmptyMessage(const QString &recipientJid, uint32_t recipientDeviceId, bool isKeyExchange = false) const;
+    QXmppTask<void> storeOwnKey() const;
+    QXmppTask<TrustLevel> storeKeyDependingOnSecurityPolicy(const QString &keyOwnerJid, const QByteArray &key);
+    QXmppTask<TrustLevel> storeKey(const QString &keyOwnerJid, const QByteArray &key, TrustLevel trustLevel = TrustLevel::AutomaticallyDistrusted) const;
     QString ownBareJid() const;
     QString ownFullJid() const;
     QHash<uint32_t, QXmppOmemoStorage::Device> otherOwnDevices();

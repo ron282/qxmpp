@@ -7,7 +7,6 @@ PROJECT_NUMBER         = "Version: @PROJECT_VERSION@"
 INPUT                  = @PROJECT_SOURCE_DIR@/doc/index.doc \
                          @PROJECT_SOURCE_DIR@/doc/using.doc \
                          @PROJECT_SOURCE_DIR@/doc/xep.doc \
-                         @CMAKE_BINARY_DIR@/src/base/QXmppBuildConstants.h \
                          @PROJECT_SOURCE_DIR@/src
 HTML_EXTRA_FILES       = @PROJECT_SOURCE_DIR@/doc/doap.xml \
                          @PROJECT_SOURCE_DIR@/doc/doap-rendering/doap.xsl \
@@ -26,4 +25,4 @@ RECURSIVE              = YES
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
-PREDEFINED             = "QXMPP_DEPRECATED_SINCE(major, minor)=1" "QT_DEPRECATED_X(msg)="
+PREDEFINED             = "QXMPP_DEPRECATED_SINCE(major, minor)=1" "QT_DEPRECATED_X(msg)=" "QXMPP_DOC"

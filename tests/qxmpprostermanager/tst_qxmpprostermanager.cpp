@@ -113,6 +113,7 @@ void tst_QXmppRosterManager::subscriptionRequestReceived()
 void tst_QXmppRosterManager::testAddItem()
 {
     TestClient test;
+    test.configuration().setJid(QStringLiteral("juliet@capulet.lit"));
     auto *rosterManager = test.addNewExtension<QXmppRosterManager>(&test);
 
     auto future = rosterManager->addRosterItem("contact@example.org");
@@ -129,7 +130,8 @@ void tst_QXmppRosterManager::testAddItem()
         <text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>This is not allowed</text>
     </error>
 </iq>)");
-    auto error = expectFutureVariant<QXmppStanza::Error>(future);
+    auto err = expectFutureVariant<QXmppError>(future);
+    auto error = err.value<QXmppStanza::Error>().value();
     QCOMPARE(error.type(), QXmppStanza::Error::Modify);
     QCOMPARE(error.text(), QStringLiteral("This is not allowed"));
 }
@@ -137,6 +139,7 @@ void tst_QXmppRosterManager::testAddItem()
 void tst_QXmppRosterManager::testRemoveItem()
 {
     TestClient test;
+    test.configuration().setJid(QStringLiteral("juliet@capulet.lit"));
     auto *rosterManager = test.addNewExtension<QXmppRosterManager>(&test);
 
     auto future = rosterManager->removeRosterItem("contact@example.org");
@@ -153,7 +156,8 @@ void tst_QXmppRosterManager::testRemoveItem()
         <text xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>Not found</text>
     </error>
 </iq>)");
-    auto error = expectFutureVariant<QXmppStanza::Error>(future);
+    auto err = expectFutureVariant<QXmppError>(future);
+    auto error = err.value<QXmppStanza::Error>().value();
     QCOMPARE(error.type(), QXmppStanza::Error::Cancel);
     QCOMPARE(error.text(), QStringLiteral("Not found"));
 }

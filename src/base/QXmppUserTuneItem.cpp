@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
-#include "QXmppTuneItem.h"
+#include "QXmppUserTuneItem.h"
 
 #include "QXmppConstants_p.h"
 #include "QXmppUtils.h"
@@ -224,7 +224,7 @@ bool QXmppTuneItem::isItem(const QDomElement &itemElement)
             payload.namespaceURI() == ns_tune;
     };
 
-    return QXmppPubSubItem::isItem(itemElement, isPayloadValid);
+    return QXmppPubSubBaseItem::isItem(itemElement, isPayloadValid);
 }
 
 /// \cond

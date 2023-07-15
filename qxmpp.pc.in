@@ -5,13 +5,13 @@
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
 libdir=@CMAKE_INSTALL_FULL_LIBDIR@
-includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@/qxmpp
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@/@QXMPP_TARGET@
 
 
-Name: Qxmpp
+Name: @QXMPP_TARGET@
 Description: QXmpp Library
 Version: @PROJECT_VERSION@
-Libs: -lqxmpp
-Libs.private: -lQt5Network -lQt5Xml -lQt5Core
+Libs: -l@QXMPP_TARGET@
+Libs.private: -lQt@QT_VERSION_MAJOR@Network -lQt@QT_VERSION_MAJOR@Xml -lQt@QT_VERSION_MAJOR@Core
 Cflags: -I${includedir}
 

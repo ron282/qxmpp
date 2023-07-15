@@ -14,13 +14,14 @@
 #include <QSharedDataPointer>
 
 class QXmppDataForm;
-class QXmppPubSubIqPrivate;
-class QXmppPubSubItem;
+class QXmppPubSubBaseItem;
 class QXmppPubSubSubscription;
 class QXmppPubSubAffiliation;
 class QXmppResultSetReply;
 
 namespace QXmpp::Private {
+
+class PubSubIqPrivate;
 
 class QXMPP_EXPORT PubSubIqBase : public QXmppIq
 {
@@ -100,10 +101,10 @@ private:
     static std::optional<QueryType> queryTypeFromDomElement(const QDomElement &element);
     static bool queryTypeIsOwnerIq(QueryType type);
 
-    QSharedDataPointer<QXmppPubSubIqPrivate> d;
+    QSharedDataPointer<PubSubIqPrivate> d;
 };
 
-template<typename T = QXmppPubSubItem>
+template<typename T = QXmppPubSubBaseItem>
 class PubSubIq : public PubSubIqBase
 {
 public:
@@ -151,7 +152,7 @@ void PubSubIq<T>::parseItems(const QDomElement &queryElement)
          childElement = childElement.nextSiblingElement(QStringLiteral("item"))) {
         T item;
         item.parse(childElement);
-        m_items << std::move(item);
+        m_items.push_back(std::move(item));
     }
 }
 

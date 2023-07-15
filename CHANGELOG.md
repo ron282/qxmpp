@@ -4,10 +4,99 @@ SPDX-FileCopyrightText: 2010 Jeremy Lainé <jeremy.laine@m4x.org>
 SPDX-License-Identifier: CC0-1.0
 -->
 
-QXmpp 1.5.0 (UNRELEASED)
+QXmpp 1.6.0 (UNRELEASED)
 ------------------------
 
 *under development*
+
+QXmpp 1.5.5 (Apr 30, 2023)
+--------------------------
+
+Fixes:
+ - Fix dependencies in generated pkg-config files (@krop)
+ - Fix compilation with android/clang (@lnjX)
+
+QXmpp 1.5.4 (Apr 07, 2023)
+--------------------------
+
+Fixes:
+ - OMEMO fixes (@melvo)
+ - Fix use-after-move in EntityTimeManager (@lnjX)
+ - EME: Always send encryption name text (@melvo)
+ - Fix interpretation of empty to/from address in the client (@lnjX)
+ - MSVC related build fixes (@JBBgameich)
+
+Misc:
+ - Support installing QXmpp with Qt 5 and Qt 6 in parallel (@lnjX)
+ - Support building QXmppOmemo statically (@lnjX)
+
+QXmpp 1.5.3 (Mar 11, 2023)
+--------------------------
+
+Fixes:
+ - MAM: Fix task is never finished when none of the messages is encrypted but
+   e2ee is enabled (@lnjX)
+ - SaslDigestMd5: Fix undefined behaviour with Qt 6 when parsing empty property
+   at the end of the input (@lnjX)
+ - CarbonManagerV2: Fix enable IQ sending (@melvo)
+ - Fix various OMEMO issues and update to libomemo-c 0.5 (@melvo)
+ - Fix compilation (inclunding omemo module) with MSVC 2019 (@JBBgameich)
+ - Fix library files installation directory on windows (@lnjX)
+
+Misc:
+ - Add CMake option to manually specify Qt major version (@TheBluestBird)
+ - Readd old PubSubIq and PubSubItem after justified complaints (@lnjX)
+
+QXmpp 1.5.2 (Feb 23, 2023)
+--------------------------
+
+Fixes:
+ - Fix undefined behaviour in OmemoManager and FileSharingManager (@lnjX)
+ - STUN: Fix nonce attribute is not padded (@Choochmeque)
+
+QXmpp 1.5.1 (Feb 01, 2023)
+--------------------------
+
+Fixes:
+ - Fix build with clang (usage of auto in template argument) (@lnjX)
+
+QXmpp 1.5.0 (Jan 31, 2023)
+--------------------------
+
+New features:
+ - New asynchronous APIs:
+   - New QXmppTask/Promise for asynchronous APIs (@lnjX, @JBBgameich)
+   - Packet sending result reporting (sent, stream management acks) (@lnjX)
+   - IQ response recognition and mapping to requests via QXmppTask (@lnjX)
+   - Add QXmppTask-based APIs to most of the managers (@lnjX)
+ - PubSub:
+   - Implement XEP-0060: Publish-Subscribe (nearly complete) (@lnjX)
+   - Implement XEP-0118: User Tune (@lnjX)
+   - Implement XEP-0080: User Location (@lnjX, @c-cesar)
+   - Rewrite MIX items with new PubSubItem (@lnjX)
+   - Add specified data forms parsing utilities (@lnjX)
+ - Encryption:
+   - Implement XEP-0384: OMEMO Encryption (@melvo)
+   - Implement XEP-0434: Trust Messages (TM) (@melvo)
+   - Implement XEP-0450: Automatic Trust Management (ATM) (@melvo)
+   - Implement XEP-0420: Stanza Content Encryption (@lnjX)
+   - Add new Message Carbons manager capable of end-to-end-encryption (@lnjX)
+   - Adapt QXmppClient to support end-to-end-encryptions (@lnjX)
+ - File sharing:
+   - Implement XEP-0446: File metadata element (@JBBgameich)
+   - Implement XEP-0300: Use of Cryptographic Hash Functions in XMPP (@lnjX)
+   - Implement XEP-0264: Jingle Content Thumbnails (@lnjX)
+   - Implement XEP-0447: Stateless file sharing (@lnjX, @JBBgameich)
+   - Implement XEP-0448: Encryption for stateless file sharing (@lnjX, @JBBgameich)
+   - Add new HTTP File Upload Manager for slot requesting and uploading (@lnjX, @JBBgameich)
+ - Implement stanza parsing for modern audio-video calls (@melvo)
+ - Implement XEP-0444: Message Reactions (@melvo)
+ - Add QXmppNonza as base for stanzas and nonzas (@lnjX)
+ - RosterManager: Add subscription request signal with full presence (#346, @melvo)
+
+Breaking changes:
+ - Removed old unused MIX items
+ - Removed old unfinished PubSubIq
 
 QXmpp 1.4.0 (Mar 15, 2021)
 --------------------------

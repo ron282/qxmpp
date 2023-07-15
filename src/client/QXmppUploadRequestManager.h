@@ -5,7 +5,8 @@
 #ifndef QXMPPUPLOADREQUESTMANAGER_H
 #define QXMPPUPLOADREQUESTMANAGER_H
 
-#include <QXmppClientExtension.h>
+#include "QXmppClientExtension.h"
+#include "QXmppError.h"
 
 #include <variant>
 
@@ -13,17 +14,18 @@
 
 class QFileInfo;
 template<typename T>
-class QFuture;
+class QXmppTask;
 class QMimeType;
 class QXmppHttpUploadRequestIq;
 class QXmppHttpUploadSlotIq;
 class QXmppUploadServicePrivate;
 class QXmppUploadRequestManagerPrivate;
 
+///
 /// \brief QXmppUploadService represents an HTTP File Upload service.
 ///
 /// It is used to store the JID and maximum file size for uploads.
-
+///
 class QXMPP_EXPORT QXmppUploadService
 {
 public:
@@ -97,16 +99,16 @@ public:
                               const QMimeType &mimeType,
                               const QString &uploadService = QString());
 
-    using SlotResult = std::variant<QXmppHttpUploadSlotIq, QXmppStanza::Error>;
-    QFuture<SlotResult> requestSlot(const QFileInfo &file,
-                                    const QString &uploadService = {});
-    QFuture<SlotResult> requestSlot(const QFileInfo &file,
-                                    const QString &customFileName,
-                                    const QString &uploadService = {});
-    QFuture<SlotResult> requestSlot(const QString &fileName,
-                                    qint64 fileSize,
-                                    const QMimeType &mimeType,
-                                    const QString &uploadService = {});
+    using SlotResult = std::variant<QXmppHttpUploadSlotIq, QXmppError>;
+    QXmppTask<SlotResult> requestSlot(const QFileInfo &file,
+                                      const QString &uploadService = {});
+    QXmppTask<SlotResult> requestSlot(const QFileInfo &file,
+                                      const QString &customFileName,
+                                      const QString &uploadService = {});
+    QXmppTask<SlotResult> requestSlot(const QString &fileName,
+                                      qint64 fileSize,
+                                      const QMimeType &mimeType,
+                                      const QString &uploadService = {});
 
     bool serviceFound() const;
 

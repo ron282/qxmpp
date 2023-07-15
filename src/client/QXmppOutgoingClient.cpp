@@ -15,10 +15,12 @@
 #include "QXmppSasl_p.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppStreamManagement_p.h"
+#include "QXmppTask.h"
 #include "QXmppUtils.h"
 
 #include <QCryptographicHash>
 #include <QDnsLookup>
+#include <QFuture>
 #include <QNetworkProxy>
 #include <QSslConfiguration>
 #include <QSslSocket>
@@ -174,11 +176,7 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
 
     connect(socket, &QAbstractSocket::disconnected, this, &QXmppOutgoingClient::_q_socketDisconnected);
     connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingClient::socketSslErrors);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(socket, &QSslSocket::errorOccurred, this, &QXmppOutgoingClient::socketError);
-#else
-    connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppOutgoingClient::socketError);
-#endif
 
     // DNS lookups
     connect(&d->dns, &QDnsLookup::finished, this, &QXmppOutgoingClient::_q_dnsLookupFinished);
@@ -314,6 +312,21 @@ bool QXmppOutgoingClient::isStreamManagementEnabled() const
 bool QXmppOutgoingClient::isStreamResumed() const
 {
     return d->streamResumed;
+}
+
+///
+/// Sends an IQ and reports the response asynchronously.
+///
+/// It makes sure that the to address is set so the stream can correctly check the reponse's
+/// sender.
+///
+/// \since QXmpp 1.5
+///
+QXmppTask<QXmppStream::IqResult> QXmppOutgoingClient::sendIq(QXmppIq &&iq)
+{
+    // If 'to' is empty the user's bare JID is meant implicitly (see RFC6120, section 10.3.3.).
+    auto to = iq.to();
+    return QXmppStream::sendIq(std::move(iq), to.isEmpty() ? d->config.jidBare() : to);
 }
 
 void QXmppOutgoingClient::_q_socketDisconnected()

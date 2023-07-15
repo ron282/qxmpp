@@ -3,14 +3,16 @@ SPDX-FileCopyrightText: 2009 Manjeet Dahiya <manjeetdahiya@gmail.com>
 
 SPDX-License-Identifier: CC0-1.0
 -->
-
 <h1 align="center">
-    QXmpp
+<picture>
+    <img alt="QXmpp logo" src="./logo.svg" height="150">
+</picture>
+</h1>
+<p align="center">
     <a href="https://xmpp.org/extensions/xep-0459.html">
         <img alt="XMPP:2022 Client IM Mobile+ Compliance Badge" src="https://img.shields.io/badge/XMPP%3A2022%20Client-Core%20IM%20Mobile%2B-green">
     </a>
-</h1>
-
+</p>
 <p align="center">
     <a href="https://github.com/qxmpp-project/qxmpp/actions">
         <img alt="Build Status" src="https://github.com/qxmpp-project/qxmpp/workflows/tests/badge.svg">
@@ -53,7 +55,7 @@ version 2.1 or later.
 Building QXmpp
 ==============
 
-QXmpp requires Qt 5.9 or higher with SSL enabled.
+QXmpp requires Qt 5.15 or Qt 6.0 or higher with SSL enabled.
 It uses CMake as build system.
 
 Build from command line:
@@ -66,12 +68,13 @@ Build from command line:
 You can pass the following arguments to CMake:
 
     BUILD_SHARED                  to build with shared type library, otherwise static (default: true)
-    BUILD_DOCUMENTATION           to build the documentation (default: false)
+    BUILD_DOCUMENTATION           to build the documentation, requires Doxygen (default: false)
     BUILD_EXAMPLES                to build the examples (default: true)
     BUILD_TESTS                   to build the unit tests (default: true)
     BUILD_INTERNAL_TESTS          to build the unit tests testing private parts of the API (default: false)
     BUILD_OMEMO                   to build the OMEMO module (default: false)
     WITH_GSTREAMER                to enable audio/video over jingle (default: false)
+    QT_VERSION_MAJOR=5/6          to build with a specific Qt major version (default behaviour: prefer 6)
 
 For building the OMEMO module [additional dependencies](src/omemo/README.md)
 are required.
