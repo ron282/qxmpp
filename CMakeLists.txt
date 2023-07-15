@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 cmake_minimum_required(VERSION 3.7)
-project(qxmpp VERSION 1.5.4)
+project(qxmpp VERSION 1.5.5)
 
 set(SO_VERSION 4)
 
@@ -131,16 +131,16 @@ install(
 )
 
 # Generate QXmppQt5/6.pc
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}.pc @ONLY)
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc
-    RENAME QXmppQt${QT_VERSION_MAJOR}.pc
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/${QXMPP_TARGET}.pc
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
     COMPONENT Devel
 )
 
 # "qxmpp.pc" for backwards-compatibility
 if(QT_VERSION_MAJOR EQUAL 5)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qxmpp_legacy.pc.in ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc @ONLY)
     install(
         FILES ${CMAKE_CURRENT_BINARY_DIR}/qxmpp.pc
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
