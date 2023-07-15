@@ -1724,6 +1724,25 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         }
 #endif
 
+#if defined(WITH_OMEMO_V03)
+        // XEP-0091: Legacy Delayed Delivery | XEP-0203: Delayed Delivery
+        if (d->stamp.isValid()) {
+            QDateTime utcStamp = d->stamp.toUTC();
+            if (d->stampType == DelayedDelivery) {
+                // XEP-0203: Delayed Delivery
+                writer->writeStartElement(QStringLiteral("delay"));
+                writer->writeDefaultNamespace(ns_delayed_delivery);
+                helperToXmlAddAttribute(writer, QStringLiteral("stamp"), QXmppUtils::datetimeToString(utcStamp));
+                writer->writeEndElement();
+            } else {
+                // XEP-0091: Legacy Delayed Delivery
+                writer->writeStartElement(QStringLiteral("x"));
+                writer->writeDefaultNamespace(ns_legacy_delayed_delivery);
+                helperToXmlAddAttribute(writer, QStringLiteral("stamp"), utcStamp.toString(QStringLiteral("yyyyMMddThh:mm:ss")));
+                writer->writeEndElement();
+            }
+        }
+#endif
 
         // XEP-0359: Unique and Stable Stanza IDs
         if (!d->stanzaId.isNull()) {
@@ -1827,6 +1846,9 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             writer->writeEndElement();
         }
 #endif
+
+#if defined(WITH_OMEMO_V03)
+#else
         // XEP-0091: Legacy Delayed Delivery | XEP-0203: Delayed Delivery
         if (d->stamp.isValid()) {
             QDateTime utcStamp = d->stamp.toUTC();
@@ -1844,6 +1866,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
                 writer->writeEndElement();
             }
         }
+#endif
 
 #if defined(WITH_OMEMO_V03)
 #else
