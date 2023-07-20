@@ -1,7 +1,7 @@
 Name:		QXmpp
 Summary:    QXmpp Library
-Version:    1.5.0
-Release:    4%{?dist}
+Version:    1.5.5
+Release:    1%{?dist}
 Group:      Qt/Qt
 Source:    	master.zip
 URL:        https://github.com/ron282/qxmpp.git
@@ -37,7 +37,7 @@ pushd build
 -D BUILD_TESTS=TRUE \
 -D BUILD_EXAMPLES=TRUE \
 -D BUILD_OMEMO=TRUE \
--D QXMPP_LOGGABLE_TRACE=TRUE \
+-D QXMPP_LOGGABLE_TRACE=FALSE \
 -D WITH_OMEMO_V03=TRUE
 
 %make_build 
