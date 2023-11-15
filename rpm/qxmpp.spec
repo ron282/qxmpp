@@ -1,13 +1,13 @@
-Name:		QXmpp
+Name:       QXmpp
 Summary:    QXmpp Library
 Version:    1.5.5
-Release:    1%{?dist}
+Release:    2
 Group:      Qt/Qt
-Source:    	master.zip
+Source:     master.zip
 URL:        https://github.com/ron282/qxmpp.git
 License:    LGPLv2+
 BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel
-Requires: 	qca omemo-c
+Requires:   qca omemo-c
 
 %description
 QXmpp is a cross-platform C++ XMPP client and server library. It is written in C++ and uses Qt framework.
@@ -20,14 +20,14 @@ Qt is the only third party library which is required to build QXmpp, but librari
 
 %package devel
 Summary:        Development package of %{name}
-Requires:       %{name} = %{version}
-Provides:		%{name}-devel
+Requires:       %{name} = %{version}-%{release}
+Provides:	%{name}-devel
 
 %description devel
 Contains files needed to development with %{name}.
 
 %prep
-#%autosetup -p1 -n %{name}-%{version}/%{name}
+%autosetup -p1 -n %{name}-%{version}/%{name}
 
 %build
 mkdir -p build
@@ -69,3 +69,4 @@ popd
 %{_includedir}/*/*.cpp
 %{_includedir}/*/*/*.h
 %{_libdir}/cmake/*/*.cmake
+

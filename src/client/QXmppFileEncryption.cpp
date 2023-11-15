@@ -7,6 +7,10 @@
 #include <QByteArray>
 #include <QtCrypto>
 
+#if defined (WITH_OMEMO_V03)
+#include <QDebug>
+#endif
+
 #undef min
 
 using namespace QCA;

@@ -3016,10 +3016,6 @@ void ManagerPrivate::updateDevices(const QString &deviceOwnerJid, const QXmppOme
             } else {
                 deviceIds.append(deviceElementId);
 
-#if defined(WITH_OMEMO_V03)
-                //  Label is not always present, so skip this test
-                ++itr;
-#else
                 if (itr->id() == ownDevice.id) {
                     if (itr->label() != ownDevice.label) {
                         isOwnDeviceListIncorrect = true;
@@ -3029,7 +3025,6 @@ void ManagerPrivate::updateDevices(const QString &deviceOwnerJid, const QXmppOme
                 } else {
                     ++itr;
                 }
-#endif
             }
         }
     }
@@ -3780,7 +3775,7 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
     const auto publicPreKeyIndex = QRandomGenerator::system()->bounded(publicPreKeyIds.size());
 #else
-    const auto publicPreKeyIndex = qrand() % publicPreKeyIds.size();
+    const auto publicPreKeyIndex = std::min(qrand() % publicPreKeyIds.size(), publicPreKeyIds.size());
 #endif
     const auto publicPreKeyId = publicPreKeyIds.at(publicPreKeyIndex);
     const auto publicPreKey = publicPreKeys.value(publicPreKeyId);
@@ -3790,14 +3785,12 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
         warning("Session builder could not be created");
         return false;
     }
-
 #if defined(WITH_OMEMO_V03)
     session_builder_set_version(sessionBuilder.get(), 3);
 #else
     session_builder_set_version(sessionBuilder.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
     RefCountedPtr<session_pre_key_bundle> sessionBundle;
-
     if (!createSessionBundle(sessionBundle.ptrRef(),
                              deviceBundle.publicIdentityKey(),
                              deviceBundle.signedPublicPreKey(),

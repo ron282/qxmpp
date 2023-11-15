@@ -82,7 +82,11 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
                                                    std::function<void(UploadResult)> reportFinished)
     -> std::shared_ptr<Upload>
 {
+#if defined(WITH_OMEMO_V03)
+    auto cipher = Aes256GcmNoPad;
+#else
     auto cipher = Aes256CbcPkcs7;
+#endif
     auto key = Encryption::generateKey(cipher);
     auto iv = Encryption::generateInitializationVector(cipher);
 

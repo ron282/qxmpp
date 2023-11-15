@@ -895,6 +895,7 @@ QXmppTask<void> Manager::buildMissingSessions(const QList<QString> &jids)
         for (const auto &jid : jids) {
             auto &processedDevices = devices[jid];
 
+
             for (auto itr = processedDevices.begin(); itr != processedDevices.end(); ++itr) {
                 const auto &deviceId = itr.key();
                 auto &device = itr.value();
