@@ -1723,7 +1723,6 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
 QXmppTask<QByteArray> ManagerPrivate::extractSceEnvelope(const QString &senderJid, uint32_t senderDeviceId, const QXmppOmemoEnvelope &omemoEnvelope, const QByteArray &omemoPayload, bool isMessageStanza)
 {
     QXmppPromise<QByteArray> interface;
-
     auto future = extractPayloadDecryptionData(senderJid, senderDeviceId, omemoEnvelope, isMessageStanza);
     future.then(q, [=](std::optional<QCA::SecureArray> payloadDecryptionData) mutable {
         if (!payloadDecryptionData) {
@@ -3701,7 +3700,6 @@ QXmppTask<bool> ManagerPrivate::buildSessionWithDeviceBundle(const QString &jid,
         if (optionalDeviceBundle) {
             const auto &deviceBundle = *optionalDeviceBundle;
             device.keyId = deviceBundle.publicIdentityKey();
-
             auto future = q->trustLevel(jid, device.keyId);
             future.then(q, [=](TrustLevel trustLevel) mutable {
                 auto buildSessionDependingOnTrustLevel = [=](TrustLevel trustLevel) mutable {
@@ -3775,7 +3773,7 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
     const auto publicPreKeyIndex = QRandomGenerator::system()->bounded(publicPreKeyIds.size());
 #else
-    const auto publicPreKeyIndex = std::min(qrand() % publicPreKeyIds.size(), publicPreKeyIds.size());
+    const auto publicPreKeyIndex = publicPreKeyIds.size() > 0 ? rand() % publicPreKeyIds.size() : 0;
 #endif
     const auto publicPreKeyId = publicPreKeyIds.at(publicPreKeyIndex);
     const auto publicPreKey = publicPreKeys.value(publicPreKeyId);
