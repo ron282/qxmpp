@@ -235,7 +235,7 @@ void ManagerPrivate::init()
 
 static void log(int level, const char *message, size_t len, void *user_data)
 {
-    qDebug() << QString(message);
+//    qDebug() << QString(message);
 }
 
 //
@@ -1659,12 +1659,13 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
             interface.finish(std::nullopt);
         } else {
             QDomDocument document;
-#if defined(WITH_OMEMO_V03)
-            document.setContent(QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
-                                serializedSceEnvelope + QByteArray("</body></content><from jid='")+senderJid+QByteArray("' /></envelope>"), true);
-#else
-            document.setContent(serializedSceEnvelope, true);
+#if defined(WITH_OMEMO_V03) 
+            QByteArray serializedBody;
+            QXmlStreamWriter(&serializedBody).writeCharacters(serializedSceEnvelope);
+            serializedSceEnvelope =  QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
+                    serializedBody + QByteArray("</body></content><from jid='")+senderJid.toUtf8()+QByteArray("' /></envelope>");
 #endif
+            document.setContent(serializedSceEnvelope, true);
             QXmppSceEnvelopeReader sceEnvelopeReader(document.documentElement());
 
             if (sceEnvelopeReader.from() != senderJid) {
@@ -1694,7 +1695,11 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
 
             QXmppE2eeMetadata e2eeMetadata;
             e2eeMetadata.setSceTimestamp(sceEnvelopeReader.timestamp());
+#if defined(WITH_OMEMO_V03)
+            e2eeMetadata.setEncryption(QXmpp::Omemo0);
+#else
             e2eeMetadata.setEncryption(QXmpp::Omemo2);
+#endif
             const auto &senderDevice = devices.value(senderJid).value(senderDeviceId);
             e2eeMetadata.setSenderKey(senderDevice.keyId);
 
@@ -3129,7 +3134,6 @@ void ManagerPrivate::updateDevices(const QString &deviceOwnerJid, const QXmppOme
 void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwnerJid)
 {
     const auto isOwnDeviceListNode = ownBareJid() == deviceOwnerJid;
-
     if (isOwnDeviceListNode) {
         // Publish a new device list for the own devices if their device list
         // item is removed, if their device list node is removed or if all
