@@ -1018,7 +1018,11 @@ QXmppTask<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &ke
 ///
 QXmppTask<QXmpp::TrustLevel> Manager::trustLevel(const QString &keyOwnerJid, const QByteArray &keyId)
 {
+#if defined(WITH_OMEMO_V03)
+    return d->trustManager->trustLevel(ns_omemo, keyOwnerJid, keyId);
+#else
     return d->trustManager->trustLevel(ns_omemo_2, keyOwnerJid, keyId);
+#endif
 }
 
 /// \cond
@@ -1314,7 +1318,7 @@ void Manager::setClient(QXmppClient *client)
 
 bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSubService, const QString &nodeName)
 {
-#if defined(WITH_OMEMO_V03)    
+#if defined(WITH_OMEMO_V03)
     if (nodeName == ns_omemo_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
 #else
     if (nodeName == ns_omemo_2_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {

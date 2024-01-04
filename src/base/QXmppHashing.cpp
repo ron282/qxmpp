@@ -474,7 +474,7 @@ QFuture<HashVerificationResultPtr> QXmpp::Private::verifyHashes(std::unique_ptr<
     }
 
     std::sort(hashes.begin(), hashes.end(), [](const auto &a, const auto &b) {
-        return hashPriority(a.algorithm()) > hashPriority(b.algorithm());
+        return hashPriority(a.algorithm()) < hashPriority(b.algorithm());
     });
 
     auto expected = hashes.back();

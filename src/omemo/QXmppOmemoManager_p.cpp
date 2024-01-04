@@ -1444,9 +1444,6 @@ QByteArray ManagerPrivate::createSceEnvelope(const T &stanza)
 #if defined(WITH_OMEMO_V03)
     QByteArray serializedSceEnvelope;
     QXmlStreamWriter writer(&serializedSceEnvelope);
-
-    QXmppSceEnvelopeWriter sceEnvelopeWriter(writer);
-
     if constexpr (std::is_same_v<T, QXmppMessage>) {
             serializedSceEnvelope = stanza.body().toUtf8();
         } else {
@@ -3779,6 +3776,9 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
 #else
     const auto publicPreKeyIndex = publicPreKeyIds.size() > 0 ? rand() % publicPreKeyIds.size() : 0;
 #endif
+
+    qDebug() << "buildSession " << QString(address.name) << ":" << address.device_id << " PreKeyIndex: " << publicPreKeyIndex;
+
     const auto publicPreKeyId = publicPreKeyIds.at(publicPreKeyIndex);
     const auto publicPreKey = publicPreKeys.value(publicPreKeyId);
 
