@@ -101,8 +101,6 @@ QByteArray process(const QByteArray &data, QXmpp::Cipher cipherConfig, Direction
                               SymmetricKey(key),
                               InitializationVector(iv));
     auto output = cipher.update(MemoryRegion(data)).toByteArray();
-    output += cipher.final().toByteArray();
-
 
     switch (cipherConfig) {
     case Aes128GcmNoPad:

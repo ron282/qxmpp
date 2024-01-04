@@ -129,7 +129,11 @@ auto QXmppHttpFileSharingProvider::downloadFile(const std::any &source,
                          // Qt doc: the finished() signal will "probably" follow
                          // => we can't be sure that finished() is going to be called
                          state->finish(QXmppError::fromNetworkReply(*state->reply));
+<<<<<<< HEAD
     });
+=======
+                     });
+>>>>>>> bc0710ac6026442bba46cbe9bba2a81338d5cc3b
 
     return std::dynamic_pointer_cast<QXmppFileSharingProvider::Download>(state);
 }
