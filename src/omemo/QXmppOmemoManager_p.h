@@ -54,7 +54,11 @@ constexpr auto ns_omemo_devices = "eu.siacs.conversations.axolotl.devicelist";
 
 // default possible trust levels a key must have to be used for encryption
 // The class documentation must be adapted if the trust levels are modified.
+#if defined(WITH_OMEMO_V03)
+constexpr auto ACCEPTED_TRUST_LEVELS = TrustLevel::AutomaticallyTrusted | TrustLevel::ManuallyTrusted | TrustLevel::Authenticated | TrustLevel::AutomaticallyDistrusted;
+#else
 constexpr auto ACCEPTED_TRUST_LEVELS = TrustLevel::AutomaticallyTrusted | TrustLevel::ManuallyTrusted | TrustLevel::Authenticated;
+#endif
 
 // count of unresponded stanzas sent to a device until QXmpp stops encrypting for it
 constexpr int UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED = 106;
