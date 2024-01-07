@@ -28,7 +28,6 @@
 #include <QRandomGenerator>
 #endif
 #include <QStringBuilder>
-#include <QDebug>
 
 #undef max
 #undef interface
@@ -235,7 +234,7 @@ void ManagerPrivate::init()
 
 static void log(int level, const char *message, size_t len, void *user_data)
 {
-//    qDebug() << QString(message);
+//    q->debug(QString(message));
 }
 
 //
@@ -3776,8 +3775,6 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
 #else
     const auto publicPreKeyIndex = publicPreKeyIds.size() > 0 ? rand() % publicPreKeyIds.size() : 0;
 #endif
-
-    qDebug() << "buildSession " << QString(address.name) << ":" << address.device_id << " PreKeyIndex: " << publicPreKeyIndex;
 
     const auto publicPreKeyId = publicPreKeyIds.at(publicPreKeyIndex);
     const auto publicPreKey = publicPreKeys.value(publicPreKeyId);

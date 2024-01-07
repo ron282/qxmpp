@@ -13,7 +13,6 @@
 #include "QXmppUtils.h"
 
 #include <QStringBuilder>
-
 #undef max
 #undef interface
 

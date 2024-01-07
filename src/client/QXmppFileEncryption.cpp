@@ -7,10 +7,6 @@
 #include <QByteArray>
 #include <QtCrypto>
 
-#if defined (WITH_OMEMO_V03)
-#include <QDebug>
-#endif
-
 #undef min
 
 using namespace QCA;
@@ -140,6 +136,16 @@ EncryptionDevice::EncryptionDevice(std::unique_ptr<QIODevice> input,
                                    const QByteArray &iv)
     : m_cipherConfig(config),
       m_input(std::move(input)),
+#if defined(WITH_OMEMO_V03)
+      m_cipher(std::make_unique<QCA::Cipher>(
+          cipherName(config),
+          cipherMode(config),
+          padding(config),
+          QCA::Encode,
+          SymmetricKey(key),
+          InitializationVector(iv),
+          AuthTag(16)))
+#else
       m_cipher(std::make_unique<QCA::Cipher>(
           cipherName(config),
           cipherMode(config),
@@ -147,6 +153,7 @@ EncryptionDevice::EncryptionDevice(std::unique_ptr<QIODevice> input,
           QCA::Encode,
           SymmetricKey(key),
           InitializationVector(iv)))
+#endif
 {
     // output must not be sequential
     Q_ASSERT(!m_input->isSequential());
@@ -181,7 +188,12 @@ qint64 EncryptionDevice::size() const
     switch (m_cipherConfig) {
     case Aes128GcmNoPad:
     case Aes256GcmNoPad:
+#if defined(WITH_OMEMO_V03)
+        // It is required to send the authentication tag per XEP-0454 (16 bytes)
+        return m_input->size() + 16;
+#else
         return m_input->size();
+#endif
     case Aes256CbcPkcs7: {
         // padding is done with 128 bits blocks
         return roundUpToBlockSize(m_input->size(), 128 / 8);
@@ -194,7 +206,6 @@ qint64 EncryptionDevice::readData(char *data, qint64 len)
 {
     auto requestedLen = len;
     qint64 read = 0;
-
     {
         // try to read from output buffer
         qint64 outputBufferRead = std::min(qint64(m_outputBuffer.size()), len);
@@ -203,7 +214,6 @@ qint64 EncryptionDevice::readData(char *data, qint64 len)
         read += outputBufferRead;
         len -= outputBufferRead;
     }
-
     if (len > 0) {
         // read from input and encrypt new data
 
@@ -222,6 +232,9 @@ qint64 EncryptionDevice::readData(char *data, qint64 len)
         if (m_input->atEnd()) {
             m_finalized = true;
             processed = processed + m_cipher->final();
+#if defined (WITH_OMEMO_V03)
+            processed = processed + m_cipher->tag();
+#endif
         }
 
         // split up into part for user and put rest into output buffer
