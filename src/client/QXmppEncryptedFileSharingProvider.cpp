@@ -17,6 +17,8 @@
 using namespace QXmpp;
 using namespace QXmpp::Private;
 
+constexpr auto ENCRYPTION_DEFAULT_CIPHER = Aes256CbcPkcs7;
+
 ///
 /// \class QXmppEncryptedFileSharingProvider
 ///
@@ -64,12 +66,17 @@ auto QXmppEncryptedFileSharingProvider::downloadFile(const std::any &source,
         qFatal("QXmppEncryptedFileSharingProvider::downloadFile can only handle QXmppEncryptedFileSource sources");
     }
 
-    auto output = std::make_unique<Encryption::DecryptionDevice>(std::move(target), encryptedSource.cipher(), encryptedSource.iv(), encryptedSource.key());
+    auto output = std::make_unique<Encryption::DecryptionDevice>(std::move(target), encryptedSource.cipher(), encryptedSource.key(), encryptedSource.iv());
 
     // find provider for source of encrypted file
     std::any httpSource = encryptedSource.httpSources().front();
     if (auto provider = d->manager->providerForSource(httpSource)) {
-        return provider->downloadFile(httpSource, std::move(output), std::move(reportProgress), std::move(reportFinished));
+        auto onFinished = [decryptDevice = output.get(), reportFinished = std::move(reportFinished)](DownloadResult result) {
+            decryptDevice->finish();
+            reportFinished(std::move(result));
+        };
+
+        return provider->downloadFile(httpSource, std::move(output), std::move(reportProgress), std::move(onFinished));
     }
 
     reportFinished(QXmppError { QStringLiteral("No basic file sharing provider available for encrypted file."), {} });
@@ -82,7 +89,7 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
                                                    std::function<void(UploadResult)> reportFinished)
     -> std::shared_ptr<Upload>
 {
-    auto cipher = Aes256CbcPkcs7;
+    auto cipher = ENCRYPTION_DEFAULT_CIPHER;
     auto key = Encryption::generateKey(cipher);
     auto iv = Encryption::generateInitializationVector(cipher);
 
@@ -103,6 +110,7 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
         [=, reportFinished = std::move(reportFinished)](UploadResult result) {
             auto encryptedResult = visitForward<UploadResult>(std::move(result), [&](std::any httpSourceAny) {
                 QXmppEncryptedFileSource encryptedSource;
+                encryptedSource.setCipher(ENCRYPTION_DEFAULT_CIPHER);
                 encryptedSource.setKey(key);
                 encryptedSource.setIv(iv);
                 encryptedSource.setHttpSources({ std::any_cast<QXmppHttpFileSource>(std::move(httpSourceAny)) });

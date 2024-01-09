@@ -152,13 +152,17 @@ bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extension
     return false;
 }
 
-bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extensions, const QDomElement &element)
+bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extensions, QXmppE2eeExtension *e2eeExt, const QDomElement &element)
 {
     if (element.tagName() != "message") {
         return false;
     }
     QXmppMessage message;
-    message.parse(element);
+    if (e2eeExt) {
+        message.parse(element, e2eeExt->isEncrypted(element) ? ScePublic : SceSensitive);
+    } else {
+        message.parse(element);
+    }
     return process(client, extensions, std::move(message));
 }
 
@@ -184,15 +188,18 @@ bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extension
 /// \since QXmpp 1.5
 ///
 
+///
 /// Creates a QXmppClient object.
-/// \param parent is passed to the QObject's constructor.
-/// The default value is 0.
-
-QXmppClient::QXmppClient(QObject *parent)
+///
+/// \param initialExtensions can be used to set the initial set of extensions.
+/// \param parent is passed to the QObject's constructor. The default value is 0.
+///
+/// \since QXmpp 1.6
+///
+QXmppClient::QXmppClient(InitialExtensions initialExtensions, QObject *parent)
     : QXmppLoggable(parent),
       d(new QXmppClientPrivate(this))
 {
-
     d->stream = new QXmppOutgoingClient(this);
     d->addProperCapability(d->clientPresence);
 
@@ -232,12 +239,29 @@ QXmppClient::QXmppClient(QObject *parent)
     // logging
     setLogger(QXmppLogger::getLogger());
 
-    addExtension(new QXmppTlsManager);
-    addExtension(new QXmppRosterManager(this));
-    addExtension(new QXmppVCardManager);
-    addExtension(new QXmppVersionManager);
-    addExtension(new QXmppEntityTimeManager());
-    addExtension(new QXmppDiscoveryManager());
+    // always add TLS manager (it is private and can't be added by the user)
+    addNewExtension<QXmppTlsManager>();
+
+    switch (initialExtensions) {
+    case NoExtensions:
+        break;
+    case BasicExtensions:
+        addNewExtension<QXmppRosterManager>(this);
+        addNewExtension<QXmppVCardManager>();
+        addNewExtension<QXmppVersionManager>();
+        addNewExtension<QXmppEntityTimeManager>();
+        addNewExtension<QXmppDiscoveryManager>();
+        break;
+    }
+}
+
+///
+/// Creates a QXmppClient object.
+/// \param parent is passed to the QObject's constructor.
+///
+QXmppClient::QXmppClient(QObject *parent)
+    : QXmppClient(BasicExtensions, parent)
+{
 }
 
 QXmppClient::~QXmppClient() = default;
@@ -876,7 +900,7 @@ void QXmppClient::_q_elementReceived(const QDomElement &element, bool &handled)
     // The stanza comes directly from the XMPP stream, so it's not end-to-end
     // encrypted and there's no e2ee metadata (std::nullopt).
     handled = StanzaPipeline::process(d->extensions, element, std::nullopt) ||
-        MessagePipeline::process(this, d->extensions, element);
+        MessagePipeline::process(this, d->extensions, d->encryptionExtension, element);
 }
 
 void QXmppClient::_q_reconnect()
