@@ -296,6 +296,7 @@ QString QXmppUtils::generateStanzaUuid()
 #endif
 }
 
+
 ///
 /// Returns a random alphanumerical string of the specified size.
 ///

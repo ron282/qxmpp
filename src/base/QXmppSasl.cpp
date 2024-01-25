@@ -577,7 +577,11 @@ QXmppSaslClientScram::QXmppSaslClientScram(QCryptographicHash::Algorithm algorit
     : QXmppSaslClient(parent),
       m_algorithm(algorithm),
       m_step(0),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+      m_dklen(QCryptographicHash::hashLength(algorithm))
+#else
       m_dklen(hashLength(algorithm))
+#endif
 {
     const auto itr = std::find(SCRAM_ALGORITHMS.cbegin(), SCRAM_ALGORITHMS.cend(), algorithm);
     Q_ASSERT(itr != SCRAM_ALGORITHMS.cend());

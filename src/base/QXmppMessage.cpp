@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2010 Jeremy Lainé <jeremy.laine@m4x.org>
 // SPDX-FileCopyrightText: 2018 Linus Jahn <lnj@kaidan.im>
 // SPDX-FileCopyrightText: 2021 Melvin Keskin <melvo@olomono.de>
+// SPDX-FileCopyrightText: 2023 Tibor Csötönyi <work@taibsu.de>
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
@@ -11,6 +12,7 @@
 #include "QXmppConstants_p.h"
 #include "QXmppFileShare.h"
 #include "QXmppGlobal_p.h"
+#include "QXmppJingleData.h"
 #include "QXmppMessageReaction.h"
 #include "QXmppMixInvitation.h"
 #ifdef BUILD_OMEMO
@@ -123,6 +125,9 @@ public:
     // XEP-0334: Message Processing Hints
     quint8 hints;
 
+    // XEP-0353: Jingle Message Initiation
+    std::optional<QXmppJingleMessageInitiationElement> jingleMessageInitiationElement;
+
     // XEP-0359: Unique and Stable Stanza IDs
     QString stanzaId;
     QString stanzaIdBy;
@@ -160,6 +165,9 @@ public:
 
     // XEP-0448: Encryption for stateless file sharing
     QVector<QXmppFileShare> sharedFiles;
+
+    // XEP-0482: Call Invites
+    std::optional<QXmppCallInviteElement> callInviteElement;
 };
 
 QXmppMessagePrivate::QXmppMessagePrivate()
@@ -872,6 +880,24 @@ void QXmppMessage::removeAllHints()
 }
 
 ///
+/// Returns a Jingle Message Initiation element as defined in \xep{0353}: Jingle Message
+/// Initiation.
+///
+std::optional<QXmppJingleMessageInitiationElement> QXmppMessage::jingleMessageInitiationElement() const
+{
+    return d->jingleMessageInitiationElement;
+}
+
+///
+/// Sets a Jingle Message Initiation element as defined in \xep{0353}: Jingle Message
+/// Initiation.
+///
+void QXmppMessage::setJingleMessageInitiationElement(const std::optional<QXmppJingleMessageInitiationElement> &jingleMessageInitiationElement)
+{
+    d->jingleMessageInitiationElement = jingleMessageInitiationElement;
+}
+
+///
 /// Returns the stanza ID of the message according to \xep{0359}: Unique and
 /// Stable Stanza IDs.
 ///
@@ -1288,6 +1314,22 @@ void QXmppMessage::setSharedFiles(const QVector<QXmppFileShare> &sharedFiles)
     d->sharedFiles = sharedFiles;
 }
 
+///
+/// Returns a Call Invite element as defined in \xep{0482, Call Invites}.
+///
+std::optional<QXmppCallInviteElement> QXmppMessage::callInviteElement() const
+{
+    return d->callInviteElement;
+}
+
+///
+/// Sets a Call Invite element as defined in \xep{0482, Call Invites}.
+///
+void QXmppMessage::setCallInviteElement(std::optional<QXmppCallInviteElement> callInviteElement)
+{
+    d->callInviteElement = callInviteElement;
+}
+
 /// \cond
 void QXmppMessage::parse(const QDomElement &element)
 {
@@ -1393,6 +1435,13 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
             }
             return true;
         }
+        // XEP-0353: Jingle Message Initiation
+        if (QXmppJingleMessageInitiationElement::isJingleMessageInitiationElement(element)) {
+            QXmppJingleMessageInitiationElement jingleMessageInitiationElement;
+            jingleMessageInitiationElement.parse(element);
+            d->jingleMessageInitiationElement = jingleMessageInitiationElement;
+            return true;
+        }
         // XEP-0359: Unique and Stable Stanza IDs
         if (checkElement(element, QStringLiteral("stanza-id"), ns_sid)) {
             d->stanzaId = element.attribute(QStringLiteral("id"));
@@ -1476,6 +1525,14 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         }
 #else
 #endif
+
+        // XEP-0482: Call Invites
+        if (QXmppCallInviteElement::isCallInviteElement(element)) {
+            QXmppCallInviteElement callInviteElement;
+            callInviteElement.parse(element);
+            d->callInviteElement = callInviteElement;
+            return true;
+        }
     }
     if (sceMode & QXmpp::SceSensitive) {
         if (element.tagName() == QStringLiteral("body")) {
@@ -1938,6 +1995,11 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         }
 #endif
 
+        // XEP-0353: Jingle Message Initiation
+        if (d->jingleMessageInitiationElement) {
+            d->jingleMessageInitiationElement->toXml(writer);
+        }
+
         // XEP-0367: Message Attaching
         if (!d->attachId.isEmpty()) {
             writer->writeStartElement(QStringLiteral("attach-to"));
@@ -1972,6 +2034,11 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         // XEP-0448: Stateless file sharing
         for (const auto &fileShare : d->sharedFiles) {
             fileShare.toXml(writer);
+        }
+
+        // XEP-0482: Call Invites
+        if (d->callInviteElement) {
+            d->callInviteElement->toXml(writer);
         }
     }
 }

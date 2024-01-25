@@ -24,13 +24,11 @@ SPDX-License-Identifier: CC0-1.0
     <support-forum rdf:resource='xmpp:qxmpp@muc.kaidan.im?join'/>
     <license rdf:resource='https://github.com/qxmpp-project/qxmpp/tree/master/LICENSES'/>
     <language>en</language>
+    <schema:logo rdf:resource='https://raw.githubusercontent.com/qxmpp-project/qxmpp/master/logo.svg'/>
     <programming-language>C++</programming-language>
     <os>Android</os>
-    <os>iOS</os>
     <os>Linux</os>
     <os>macOS</os>
-    <os>tvOS</os>
-    <os>watchOS</os>
     <os>Windows</os>
     <category rdf:resource='https://linkmauve.fr/ns/xmpp-doap#category-library'/>
     <repository>
@@ -282,7 +280,7 @@ SPDX-License-Identifier: CC0-1.0
     <implements>
       <xmpp:SupportedXep>
         <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0167.html'/>
-        <xmpp:status>partial</xmpp:status>
+        <xmpp:status>complete</xmpp:status>
         <xmpp:version>1.2</xmpp:version>
         <xmpp:since>0.2</xmpp:since>
         <xmpp:note>Multiplexing, encryption via SRTP, informational messages for session states 'active', 'hold', 'unhold', 'mute', 'unmute' since 1.5</xmpp:note>
@@ -302,6 +300,14 @@ SPDX-License-Identifier: CC0-1.0
         <xmpp:status>complete</xmpp:status>
         <xmpp:version>1.2</xmpp:version>
         <xmpp:since>0.4</xmpp:since>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0191.html'/>
+        <xmpp:status>complete</xmpp:status>
+        <xmpp:version>1.3</xmpp:version>
+        <xmpp:since>1.6</xmpp:since>
       </xmpp:SupportedXep>
     </implements>
     <implements>
@@ -334,6 +340,14 @@ SPDX-License-Identifier: CC0-1.0
         <xmpp:status>complete</xmpp:status>
         <xmpp:version>2.0</xmpp:version>
         <xmpp:since>0.4</xmpp:since>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0215.html'/>
+        <xmpp:status>complete</xmpp:status>
+        <xmpp:version>1.0</xmpp:version>
+        <xmpp:since>1.6</xmpp:since>
       </xmpp:SupportedXep>
     </implements>
     <implements>
@@ -485,6 +499,14 @@ SPDX-License-Identifier: CC0-1.0
     </implements>
     <implements>
       <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0353.html'/>
+        <xmpp:status>complete</xmpp:status>
+        <xmpp:version>0.6</xmpp:version>
+        <xmpp:since>1.6</xmpp:since>
+      </xmpp:SupportedXep>
+    </implements>
+    <implements>
+      <xmpp:SupportedXep>
         <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0357.html'/>
         <xmpp:status>complete</xmpp:status>
         <xmpp:version>0.4</xmpp:version>
@@ -630,6 +652,56 @@ SPDX-License-Identifier: CC0-1.0
         <xmpp:since>1.5</xmpp:since>
       </xmpp:SupportedXep>
     </implements>
+    <implements>
+      <xmpp:SupportedXep>
+        <xmpp:xep rdf:resource='https://xmpp.org/extensions/xep-0482.html'/>
+        <xmpp:status>complete</xmpp:status>
+        <xmpp:version>0.1</xmpp:version>
+        <xmpp:since>1.6</xmpp:since>
+      </xmpp:SupportedXep>
+    </implements>
+    <release>
+      <Version>
+        <revision>1.5.5</revision>
+        <created>2023-04-30</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.5.tar.gz'/>
+      </Version>
+    </release>
+    <release>
+      <Version>
+        <revision>1.5.4</revision>
+        <created>2023-04-07</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.4.tar.gz'/>
+      </Version>
+    </release>
+    <release>
+      <Version>
+        <revision>1.5.3</revision>
+        <created>2023-03-11</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.3.tar.gz'/>
+      </Version>
+    </release>
+    <release>
+      <Version>
+        <revision>1.5.2</revision>
+        <created>2023-02-23</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.2.tar.gz'/>
+      </Version>
+    </release>
+    <release>
+      <Version>
+        <revision>1.5.1</revision>
+        <created>2023-02-01</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.1.tar.gz'/>
+      </Version>
+    </release>
+    <release>
+      <Version>
+        <revision>1.5.0</revision>
+        <created>2023-01-31</created>
+        <file-release rdf:resource='https://github.com/qxmpp-project/qxmpp/archive/refs/tags/v1.5.0.tar.gz'/>
+      </Version>
+    </release>
     <release>
       <Version>
         <revision>1.4.0</revision>

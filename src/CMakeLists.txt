@@ -23,6 +23,8 @@ set(INSTALL_HEADER_FILES
     base/QXmppEntityTimeIq.h
     base/QXmppError.h
     base/QXmppExtension.h
+    base/QXmppExternalService.h
+    base/QXmppExternalServiceDiscoveryIq.h
     base/QXmppFileMetadata.h
     base/QXmppFileShare.h
     base/QXmppFutureUtils_p.h
@@ -34,6 +36,7 @@ set(INSTALL_HEADER_FILES
     base/QXmppIbbIq.h
     base/QXmppIq.h
     base/QXmppJingleIq.h
+    base/QXmppJingleData.h
     base/QXmppLogger.h
     base/QXmppMamIq.h
     base/QXmppMessage.h
@@ -90,7 +93,9 @@ set(INSTALL_HEADER_FILES
     client/QXmppAtmTrustMemoryStorage.h
     client/QXmppAtmTrustStorage.h
     client/QXmppAttentionManager.h
+    client/QXmppBlockingManager.h
     client/QXmppBookmarkManager.h
+    client/QXmppCallInviteManager.h
     client/QXmppCarbonManager.h
     client/QXmppCarbonManagerV2.h
     client/QXmppClient.h
@@ -99,12 +104,14 @@ set(INSTALL_HEADER_FILES
     client/QXmppDiscoveryManager.h
     client/QXmppE2eeExtension.h
     client/QXmppEntityTimeManager.h
+    client/QXmppExternalServiceDiscoveryManager.h
     client/QXmppFileSharingManager.h
     client/QXmppFileSharingProvider.h
     client/QXmppHttpFileSharingProvider.h
     client/QXmppHttpUploadManager.h
     client/QXmppInvokable.h
     client/QXmppIqHandling.h
+    client/QXmppJingleMessageInitiationManager.h
     client/QXmppMamManager.h
     client/QXmppMessageHandler.h
     client/QXmppMessageReceiptManager.h
@@ -158,6 +165,7 @@ set(SOURCE_FILES
     base/QXmppEncryptedFileSource.cpp
     base/QXmppEntityTimeIq.cpp
     base/QXmppError.cpp
+    base/QXmppExternalServiceDiscoveryIq.cpp
     base/QXmppFileMetadata.cpp
     base/QXmppFileShare.cpp
     base/QXmppGeolocItem.cpp
@@ -168,7 +176,7 @@ set(SOURCE_FILES
     base/QXmppHttpUploadIq.cpp
     base/QXmppIbbIq.cpp
     base/QXmppIq.cpp
-    base/QXmppJingleIq.cpp
+    base/QXmppJingleData.cpp
     base/QXmppLogger.cpp
     base/QXmppMamIq.cpp
     base/QXmppMessage.cpp
@@ -223,7 +231,9 @@ set(SOURCE_FILES
     client/QXmppAtmTrustMemoryStorage.cpp
     client/QXmppAtmTrustStorage.cpp
     client/QXmppAttentionManager.cpp
+    client/QXmppBlockingManager.cpp
     client/QXmppBookmarkManager.cpp
+    client/QXmppCallInviteManager.cpp
     client/QXmppCarbonManager.cpp
     client/QXmppCarbonManagerV2.cpp
     client/QXmppClient.cpp
@@ -232,12 +242,14 @@ set(SOURCE_FILES
     client/QXmppDiscoveryManager.cpp
     client/QXmppE2eeExtension.cpp
     client/QXmppEntityTimeManager.cpp
+    client/QXmppExternalServiceDiscoveryManager.cpp
     client/QXmppFileSharingManager.cpp
     client/QXmppHttpFileSharingProvider.cpp
     client/QXmppHttpUploadManager.cpp
     client/QXmppInternalClientExtension.cpp
     client/QXmppInvokable.cpp
     client/QXmppIqHandling.cpp
+    client/QXmppJingleMessageInitiationManager.cpp
     client/QXmppMamManager.cpp
     client/QXmppMessageReceiptManager.cpp
     client/QXmppMucManager.cpp
