@@ -21,8 +21,6 @@
 #include <protocol.h>
 
 #include "OmemoCryptoProvider.h"
-#include "QXmppDiscoveryIq.h"
-#include "QXmppDiscoveryManager.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
@@ -1031,7 +1029,7 @@ void ManagerPrivate::removeDevicesRemovedFromServer()
                 currentDate - removalDate.toMSecsSinceEpoch() / 1000 * 1s > DEVICE_REMOVAL_INTERVAL) {
                 devicesItr = userDevices.erase(devicesItr);
                 omemoStorage->removeDevice(jid, deviceId);
-#if defined(WITH_OMEMO_V03)
+#if defined(WITH_)
                 trustManager->removeKeys(ns_omemo, QList { device.keyId });
 #else
                 trustManager->removeKeys(ns_omemo_2, QList { device.keyId });
@@ -1076,32 +1074,32 @@ QXmppTask<QXmppE2eeExtension::MessageEncryptResult> ManagerPrivate::encryptMessa
                 };
                 interface.finish(error);
             } else {
-                const auto areDeliveryReceiptsUsed = message.isReceiptRequested() || !message.receiptId().isEmpty();
+                const auto deliveryReceiptsUsed = message.isReceiptRequested() || !message.receiptId().isEmpty();
+                const auto chatMarkerUsed = message.marker() != QXmppMessage::NoMarker;
 
                 // The following cases are covered:
-                // 1. Message with body (possibly including a chat state or used
-                //    for delivery receipts) => usage of EME and fallback body
+                // 1. Message with body (optionally including a chat state, chat marker or used for
+                //    delivery) => usage of EME and fallback body
                 // 2. Message without body
-                //  2.1. Message with chat state or used for delivery receipts
-                //       => neither usage of EME nor fallback body, but hint for
-                //       server-side storage in case of delivery receipts usage
-                //  2.2. Other message (e.g., trust message) => usage of EME and
-                //       fallback body to look like a normal message
-                if (!message.body().isEmpty() || (message.state() == QXmppMessage::None && !areDeliveryReceiptsUsed)) {
-#if defined(WITH_OMEMO_V03)                    
+                //  2.1. Message with chat state, chat marker or used for delivery receipts
+                //       => neither usage of EME nor fallback body, but hint for server-side storage
+                //       in case of delivery receipts or chat marker usage
+                //  2.2. Other message (e.g., trust message) => usage of EME and fallback body to
+                //       look like a normal message
+                if (!message.body().isEmpty() || (message.state() == QXmppMessage::None && !deliveryReceiptsUsed && !chatMarkerUsed)) {
+#if defined(WITH_OMEMO_V03)
                     message.setEncryptionMethod(QXmpp::Omemo0);
 #else
                     message.setEncryptionMethod(QXmpp::Omemo2);
 #endif
-                    // A message processing hint for instructing the server to
-                    // store the message is not needed because of the public
-                    // fallback body.
+
+                    // A message processing hint for instructing the server to store the message is
+                    // not needed because of the public fallback body.
                     message.setE2eeFallbackBody(QStringLiteral("This message is encrypted with %1 but could not be decrypted").arg(message.encryptionName()));
                     message.setIsFallback(true);
-                } else if (areDeliveryReceiptsUsed) {
-                    // A message processing hint for instructing the server to
-                    // store the message is needed because of the missing public
-                    // fallback body.
+                } else if (deliveryReceiptsUsed || chatMarkerUsed) {
+                    // A message processing hint for instructing the server to store the message is
+                    // needed because of the missing public fallback body.
                     message.addHint(QXmppMessage::Store);
                 }
 

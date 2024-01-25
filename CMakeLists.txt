@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 cmake_minimum_required(VERSION 3.7)
-project(qxmpp VERSION 1.5.5)
+project(qxmpp VERSION 1.6.0)
 
 set(SO_VERSION 4)
 
@@ -38,7 +38,7 @@ option(BUILD_INTERNAL_TESTS "Build internal tests." OFF)
 option(BUILD_DOCUMENTATION "Build API documentation." OFF)
 option(BUILD_EXAMPLES "Build examples." ON)
 option(BUILD_OMEMO "Build the OMEMO module" OFF)
-option(WITH_OMEMO_V03 "Comatibility with OMEMO v0.3" OFF)
+option(WITH_OMEMO_V03 "Compatibility with OMEMO v0.3" OFF)
 option(WITH_GSTREAMER "Build with GStreamer support for Jingle" OFF)
 option(WITH_QCA "Build with QCA for OMEMO or encrypted file sharing" ${Qca-qt${QT_VERSION_MAJOR}_FOUND})
 

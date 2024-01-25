@@ -29,10 +29,6 @@
 
 using namespace QXmpp::Private;
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-static bool randomSeeded = false;
-#endif
-
 struct IqState
 {
     QXmppPromise<QXmppStream::IqResult> interface;
@@ -83,13 +79,6 @@ QXmppStream::QXmppStream(QObject *parent)
     : QXmppLoggable(parent),
       d(new QXmppStreamPrivate(this))
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-    // Make sure the random number generator is seeded
-    if (!randomSeeded) {
-        qsrand(QTime(0, 0, 0).msecsTo(QTime::currentTime()) ^ reinterpret_cast<quintptr>(this));
-        randomSeeded = true;
-    }
-#endif
 }
 
 ///
