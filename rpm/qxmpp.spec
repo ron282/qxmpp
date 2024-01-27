@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Ron282 <ronan35@gmx.fr>
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
 Name:       QXmpp
 Summary:    QXmpp Library
 Version:    1.6.0
