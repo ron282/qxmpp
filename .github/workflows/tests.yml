@@ -21,10 +21,10 @@ jobs:
         include:
           - os: ubuntu-latest
             config: full
-            qt_version: 5.14.*
+            qt_version: 5.15.*
           - os: ubuntu-latest
             config: minimal
-            qt_version: 5.14.*
+            qt_version: 5.15.*
     steps:
       - uses: actions/checkout@v2
       - name: Install Qt
