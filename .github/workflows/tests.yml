@@ -17,7 +17,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         config: [minimal, full]
-        qt_version: ['5.14.*']
+        qt_version: ['5.15.*']
         include:
           - os: ubuntu-latest
             config: full
