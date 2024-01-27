@@ -47,16 +47,24 @@ fi
 
 case "$CONFIG" in
 full*)
-    # Enable OMEMO for Qt > 5.15 (including Qt 6)
+    # Enable OMEMO for Qt >= 5.6 (including Qt 6)
     # Build and install qca and libomemo-c
     case "$QT_VERSION" in
-    5.15*)
-        install_cmake libomemo-c https://github.com/dino/libomemo-c "-DBUILD_SHARED_LIBS=ON"
-        install_cmake qca https://invent.kde.org/libraries/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=OFF"
+    5.6*)
+        install_cmake libomemo-c  https://github.com/ron282/libomemo-c  "-DBUILD_SHARED_LIBS=ON"
+        install_cmake qca https://github.com/ron282/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=OFF"
         ;;
-    6*)
-        install_cmake libomemo-c https://github.com/dino/libomemo-c "-DBUILD_SHARED_LIBS=ON"
-        install_cmake qca https://invent.kde.org/libraries/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=ON"
+    5.9*)
+        install_cmake libomemo-c  https://github.com/ron282/libomemo-c  "-DBUILD_SHARED_LIBS=ON"
+        install_cmake qca https://github.com/ron282/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=OFF"
+        ;;
+    5.15*)
+        install_cmake libomemo-c  https://github.com/ron282/libomemo-c  "-DBUILD_SHARED_LIBS=ON"
+        install_cmake qca https://github.com/ron282/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=OFF"
+        ;;
+    6.*)
+        install_cmake libomemo-c  https://github.com/ron282/libomemo-c  "-DBUILD_SHARED_LIBS=ON"
+        install_cmake qca https://github.com/ron282/qca "-DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DBUILD_WITH_QT6=ON"
         ;;
     esac
     ;;

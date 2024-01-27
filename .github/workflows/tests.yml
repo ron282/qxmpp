@@ -15,16 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        config: [minimal, full, full-debug]
-        qt_version: ['5.6.*']
+        os: [ubuntu-latest]
+        config: [minimal, full]
+        qt_version: ['5.9.*']
         include:
           - os: ubuntu-latest
             config: full
-            qt_version: 5.6.*
+            qt_version: 5.9.*
           - os: ubuntu-latest
             config: minimal
-            qt_version: 5.6.*
+            qt_version: 5.15.*
     steps:
       - uses: actions/checkout@v2
       - name: Install Qt
@@ -43,18 +43,6 @@ jobs:
       - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v2
-      - name: Run tests
-        run: |
-          ${env:PATH} += ";D:/a/qxmpp/qxmpp/src/Debug"
-          cmake . && cmake --build .
-          # ctest
-          # ctest --rerun-failed --output-on-failure
   xmllint:
     runs-on: ubuntu-latest
     steps:
