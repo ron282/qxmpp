@@ -232,7 +232,7 @@ void ManagerPrivate::init()
 
 static void log(int level, const char *message, size_t len, void *user_data)
 {
-//    q->debug(QString(message));
+//      qDebug() << "[libomemo-c] : " << QString(message);
 }
 
 //
@@ -251,7 +251,6 @@ bool ManagerPrivate::initGlobalContext()
     }
 
     signal_context_set_log_function(globalContext.get(), log);
-
     return true;
 }
 
@@ -2860,6 +2859,7 @@ QXmppOmemoDeviceListItem ManagerPrivate::deviceListItem(bool addOwnDevice)
         QXmppOmemoDeviceElement deviceElement;
         deviceElement.setId(deviceId);
         deviceElement.setLabel(device.label);
+
         deviceList.append(deviceElement);
     }
 
