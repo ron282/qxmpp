@@ -32,6 +32,22 @@ static const QMap<QCryptographicHash::Algorithm, QString> HASH_ALGORITHMS = {
 #endif
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 12, 0)
+static const QMap<QCryptographicHash::Algorithm, int> HASH_LENGTHS = {
+    { QCryptographicHash::Sha1, 160/8 },
+    { QCryptographicHash::Md4, 128/8 },
+    { QCryptographicHash::Md5, 128/8 },
+    { QCryptographicHash::Sha224, 224/8 },
+    { QCryptographicHash::Sha256, 256/8 },
+    { QCryptographicHash::Sha384, 384/8 },
+    { QCryptographicHash::Sha512, 512/8 },
+    { QCryptographicHash::Sha3_224, 224/8 },
+    { QCryptographicHash::Sha3_256, 256/8 },
+    { QCryptographicHash::Sha3_384, 384/8 },
+    { QCryptographicHash::Sha3_512, 512/8 },
+};
+#endif
+
 class QXmppBitsOfBinaryContentIdPrivate : public QSharedData
 {
 public:
@@ -231,7 +247,8 @@ bool QXmppBitsOfBinaryContentId::isValid() const
         HASH_ALGORITHMS.contains(d->algorithm) &&
         d->hash.length() == QCryptographicHash::hashLength(d->algorithm);
 #else
-    return !d->hash.isEmpty() && HASH_ALGORITHMS.contains(d->algorithm);
+    return !d->hash.isEmpty() && HASH_ALGORITHMS.contains(d->algorithm) &&
+            d->hash.length() == HASH_LENGTHS.value(d->algorithm);
 #endif
 }
 
