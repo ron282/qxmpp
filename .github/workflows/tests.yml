@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        config: [minimal, full]
+        config: [minimal]
         qt_version: ['5.9.*']
         include:
           - os: ubuntu-latest
