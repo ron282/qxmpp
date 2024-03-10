@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2022 Melvin Keskin <melvo@olomono.de>
+﻿// SPDX-FileCopyrightText: 2022 Melvin Keskin <melvo@olomono.de>
 // SPDX-FileCopyrightText: 2022 Linus Jahn <lnj@kaidan.im>
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
@@ -232,7 +232,7 @@ void ManagerPrivate::init()
 
 static void log(int level, const char *message, size_t len, void *user_data)
 {
-//      qDebug() << "[libomemo-c] : " << QString(message);
+      qDebug() << "[libomemo-c] : " << QString(message);
 }
 
 //
@@ -779,8 +779,8 @@ void ManagerPrivate::schedulePeriodicTasks()
         removeDevicesRemovedFromServer();
     });
 
-    signedPreKeyPairsRenewalTimer.start(SIGNED_PRE_KEY_RENEWAL_CHECK_INTERVAL.count());
-    deviceRemovalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL.count());
+    signedPreKeyPairsRenewalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL.count()*3600*1000);
+    deviceRemovalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL.count()*3600*1000);
 }
 
 //
@@ -1024,11 +1024,12 @@ void ManagerPrivate::removeDevicesRemovedFromServer()
             // Remove data for devices removed from their servers after
             // DEVICE_REMOVAL_INTERVAL.
             const auto &removalDate = device.removalFromDeviceListDate;
+
             if (!removalDate.isNull() &&
                 currentDate - removalDate.toMSecsSinceEpoch() / 1000 * 1s > DEVICE_REMOVAL_INTERVAL) {
                 devicesItr = userDevices.erase(devicesItr);
                 omemoStorage->removeDevice(jid, deviceId);
-#if defined(WITH_)
+#if defined(WITH_OMEMO_V03)
                 trustManager->removeKeys(ns_omemo, QList { device.keyId });
 #else
                 trustManager->removeKeys(ns_omemo_2, QList { device.keyId });
@@ -1334,13 +1335,15 @@ template QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStan
 std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByteArray &payload) const
 {
 #if defined(WITH_OMEMO_V03)
-    QCA::SymmetricKey key(16);
+    auto key = QCA::SecureArray(QCA::Random::randomArray(16));
+    auto encryptionKey = QCA::SymmetricKey(key);
 
+    // first part of hkdfKey
 
     // Create a random initialisation vector - you need this
     // value to decrypt the resulting cipher text, but it
     // need not be kept secret (unlike the key).
-    QCA::InitializationVector iv(16);
+    QCA::InitializationVector iv(12);
     QCA::AuthTag tag(16);
 
     // create a 128 bit AES cipher object using Cipher Block Chaining (CBC) mode
@@ -1349,18 +1352,18 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
                        QCA::Cipher::NoPadding,
                        // this object will encrypt
                        QCA::Encode,
-                       key,
+                       encryptionKey,
                        iv,
                        tag);
 
     auto encryptedPayload = cipher.process(QCA::MemoryRegion(payload));
 
+    QCA::SecureArray f = cipher.final();
+
     if (encryptedPayload.isEmpty()) {
         warning("Following payload could not be encrypted: " % QString::fromUtf8(payload));
         return {};
     }
-
-    QCA::SecureArray f = cipher.final();
 
     // Check if the final() call worked
     if (!cipher.ok()) {
@@ -1371,7 +1374,7 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
     auto authTag = cipher.tag();
 
     PayloadEncryptionResult payloadEncryptionData;
-    payloadEncryptionData.decryptionData = key.append(authTag);
+    payloadEncryptionData.decryptionData = encryptionKey.append(authTag);
     payloadEncryptionData.encryptedPayload = encryptedPayload.toByteArray();
     payloadEncryptionData.iv = iv.toByteArray();
 
@@ -1893,11 +1896,13 @@ QXmppTask<std::optional<QCA::SecureArray>> ManagerPrivate::extractPayloadDecrypt
         const auto serializedOmemoEnvelopeData = omemoEnvelope.data();
 
         int retVal;
+
 #if defined(WITH_OMEMO_V03)
         retVal = signal_message_deserialize(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get());
 #else
-        retVal = signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get());       
+        retVal = signal_message_deserialize_omemo(omemoEnvelopeData.ptrRef(), reinterpret_cast<const uint8_t *>(serializedOmemoEnvelopeData.data()), serializedOmemoEnvelopeData.size(), globalContext.get());
 #endif
+
         if (retVal < 0) {
             warning("OMEMO envelope data could not be deserialized");
             interface.finish(std::nullopt);
@@ -2841,13 +2846,18 @@ void ManagerPrivate::publishDeviceListItemWithOptions(Function continuation)
 QXmppOmemoDeviceListItem ManagerPrivate::deviceListItem(bool addOwnDevice)
 {
     QXmppOmemoDeviceList deviceList;
-
+#if defined(WITH_OMEMO_V03)
+    QVector<int> deviceIds;
+#endif
     // Add this device to the device list.
     if (addOwnDevice) {
         QXmppOmemoDeviceElement deviceElement;
         deviceElement.setId(ownDevice.id);
         deviceElement.setLabel(ownDevice.label);
         deviceList.append(deviceElement);
+#if defined(WITH_OMEMO_V03)
+        deviceIds.append(ownDevice.id);
+#endif
     }
 
     // Add all remaining own devices to the device list.
@@ -2859,8 +2869,14 @@ QXmppOmemoDeviceListItem ManagerPrivate::deviceListItem(bool addOwnDevice)
         QXmppOmemoDeviceElement deviceElement;
         deviceElement.setId(deviceId);
         deviceElement.setLabel(device.label);
-
+#if defined(WITH_OMEMO_V03)
+        if(! deviceIds.contains(deviceId)) {
+            deviceIds.append(deviceId);
+            deviceList.append(deviceElement);
+        }
+#else
         deviceList.append(deviceElement);
+#endif
     }
 
     QXmppOmemoDeviceListItem item;
@@ -3932,7 +3948,7 @@ bool ManagerPrivate::deserializePublicIdentityKey(ec_public_key **publicIdentity
     }
 
 #if defined(WITH_OMEMO_V03)
-    if (curve_decode_point_mont(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
+    if (curve_decode_point(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
 #else
     if (curve_decode_point_ed(publicIdentityKey, signal_buffer_data(publicIdentityKeyBuffer.get()), signal_buffer_len(publicIdentityKeyBuffer.get()), globalContext.get()) < 0) {
 #endif
@@ -3960,7 +3976,11 @@ bool ManagerPrivate::deserializeSignedPublicPreKey(ec_public_key **signedPublicP
         return false;
     }
 
+#if defined(WITH_OMEMO_V03)
+    if (curve_decode_point(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#else
     if (curve_decode_point_mont(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#endif
         warning("Signed public pre key could not be deserialized");
         return false;
     }
@@ -3985,7 +4005,11 @@ bool ManagerPrivate::deserializePublicPreKey(ec_public_key **publicPreKey, const
         return false;
     }
 
+#if defined(WITH_OMEMO_V03)
+    if (curve_decode_point(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#else
     if (curve_decode_point_mont(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
+#endif
         warning("Public pre key could not be deserialized");
         return false;
     }
