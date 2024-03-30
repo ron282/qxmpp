@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2022 Melvin Keskin <melvo@olomono.de>
+// SPDX-FileCopyrightText: 2022 Melvin Keskin <melvo@olomono.de>
 // SPDX-FileCopyrightText: 2022 Linus Jahn <lnj@kaidan.im>
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
@@ -779,8 +779,13 @@ void ManagerPrivate::schedulePeriodicTasks()
         removeDevicesRemovedFromServer();
     });
 
-    signedPreKeyPairsRenewalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL.count()*3600*1000);
+#if defined (WITH_OMEMO_V03)
+    signedPreKeyPairsRenewalTimer.start(SIGNED_PRE_KEY_RENEWAL_CHECK_INTERVAL.count()*3600*1000);
     deviceRemovalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL.count()*3600*1000);
+#else
+    signedPreKeyPairsRenewalTimer.start(SIGNED_PRE_KEY_RENEWAL_CHECK_INTERVAL);
+    deviceRemovalTimer.start(DEVICE_REMOVAL_CHECK_INTERVAL);
+#endif
 }
 
 //
@@ -874,11 +879,12 @@ bool ManagerPrivate::updateSignedPreKeyPair(ratchet_identity_key_pair *identityK
     omemoStorage->addSignedPreKeyPair(latestSignedPreKeyId, signedPreKeyPairForStorage);
 
 #if defined(WITH_OMEMO_V03)
-    BufferPtr signedPublicPreKeyBuffer;
-    if(ec_public_key_serialize(signedPublicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get())))) {
-        warning("cannot serialized public pre key");
-        return false;
-    }
+//    BufferPtr signedPublicPreKeyBuffer;
+//    if(ec_public_key_serialize(signedPublicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get())))) {
+//        warning("cannot serialized public pre key");
+//        return false;
+//    }
+    BufferPtr signedPublicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get()))));
 #else
     BufferPtr signedPublicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get()))));
 #endif
@@ -981,11 +987,12 @@ bool ManagerPrivate::updatePreKeyPairs(uint32_t count)
         serializedPreKeyPairs.insert(preKeyId, preKeyPairBuffer.toByteArray());
 
 #if defined(WITH_OMEMO_V03)
-        BufferPtr publicPreKeyBuffer;
-        if(ec_public_key_serialize(publicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair)))) {
-            warning("Cannot serialize public pre key");
-            return false;
-        }
+//        BufferPtr publicPreKeyBuffer;
+//        if(ec_public_key_serialize(publicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair)))) {
+//            warning("Cannot serialize public pre key");
+//            return false;
+//        }
+        BufferPtr publicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair))));
 #else
         BufferPtr publicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair))));
 
@@ -1335,21 +1342,22 @@ template QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStan
 std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByteArray &payload) const
 {
 #if defined(WITH_OMEMO_V03)
-    auto key = QCA::SecureArray(QCA::Random::randomArray(16));
+    auto key = QCA::SecureArray(QCA::Random::randomArray(HKDF_KEY_SIZE));
     auto encryptionKey = QCA::SymmetricKey(key);
+    encryptionKey.resize(PAYLOAD_KEY_SIZE);
 
     // first part of hkdfKey
 
     // Create a random initialisation vector - you need this
     // value to decrypt the resulting cipher text, but it
     // need not be kept secret (unlike the key).
-    QCA::InitializationVector iv(12);
-    QCA::AuthTag tag(16);
+    QCA::InitializationVector iv(QCA::Random::randomArray(PAYLOAD_INITIALIZATION_VECTOR_SIZE));
+    QCA::AuthTag tag(PAYLOAD_AUTHENTICATION_KEY_SIZE);
 
     // create a 128 bit AES cipher object using Cipher Block Chaining (CBC) mode
     QCA::Cipher cipher(QStringLiteral("aes128"),
-                       QCA::Cipher::GCM,
-                       QCA::Cipher::NoPadding,
+                       PAYLOAD_CIPHER_MODE,
+                       PAYLOAD_CIPHER_PADDING,
                        // this object will encrypt
                        QCA::Encode,
                        encryptionKey,
@@ -1358,7 +1366,7 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
 
     auto encryptedPayload = cipher.process(QCA::MemoryRegion(payload));
 
-    QCA::SecureArray f = cipher.final();
+    auto authTag = cipher.tag();
 
     if (encryptedPayload.isEmpty()) {
         warning("Following payload could not be encrypted: " % QString::fromUtf8(payload));
@@ -1371,15 +1379,12 @@ std::optional<PayloadEncryptionResult> ManagerPrivate::encryptPayload(const QByt
         return {};
     }
 
-    auto authTag = cipher.tag();
-
     PayloadEncryptionResult payloadEncryptionData;
     payloadEncryptionData.decryptionData = encryptionKey.append(authTag);
     payloadEncryptionData.encryptedPayload = encryptedPayload.toByteArray();
     payloadEncryptionData.iv = iv.toByteArray();
 
     return payloadEncryptionData;
-
 #else
     auto hkdfKey = QCA::SecureArray(QCA::Random::randomArray(HKDF_KEY_SIZE));
     const auto hkdfSalt = QCA::InitializationVector(QCA::SecureArray(HKDF_SALT_SIZE));
@@ -3975,6 +3980,7 @@ bool ManagerPrivate::deserializeSignedPublicPreKey(ec_public_key **signedPublicP
         warning("Buffer for serialized signed public pre key could not be created");
         return false;
     }
+
 
 #if defined(WITH_OMEMO_V03)
     if (curve_decode_point(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
