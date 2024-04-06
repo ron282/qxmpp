@@ -226,7 +226,7 @@ void tst_QXmppOmemoManager::testLoad()
     QVERIFY(result);
 
     const auto storedOwnDevice = m_alice1.manager->ownDevice();
-    //    QCOMPARE(storedOwnDevice.keyId(), ownDevice.publicIdentityKey);
+    QCOMPARE(storedOwnDevice.keyId(), ownDevice.publicIdentityKey);
     QCOMPARE(storedOwnDevice.label(), ownDevice.label);
 
     m_alice1.omemoStorage->resetAll();

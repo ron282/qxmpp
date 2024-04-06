@@ -879,11 +879,6 @@ bool ManagerPrivate::updateSignedPreKeyPair(ratchet_identity_key_pair *identityK
     omemoStorage->addSignedPreKeyPair(latestSignedPreKeyId, signedPreKeyPairForStorage);
 
 #if defined(WITH_OMEMO_V03)
-//    BufferPtr signedPublicPreKeyBuffer;
-//    if(ec_public_key_serialize(signedPublicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get())))) {
-//        warning("cannot serialized public pre key");
-//        return false;
-//    }
     BufferPtr signedPublicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get()))));
 #else
     BufferPtr signedPublicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_signed_pre_key_get_key_pair(signedPreKeyPair.get()))));
@@ -987,11 +982,6 @@ bool ManagerPrivate::updatePreKeyPairs(uint32_t count)
         serializedPreKeyPairs.insert(preKeyId, preKeyPairBuffer.toByteArray());
 
 #if defined(WITH_OMEMO_V03)
-//        BufferPtr publicPreKeyBuffer;
-//        if(ec_public_key_serialize(publicPreKeyBuffer.ptrRef(), ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair)))) {
-//            warning("Cannot serialize public pre key");
-//            return false;
-//        }
         BufferPtr publicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair))));
 #else
         BufferPtr publicPreKeyBuffer(ec_public_key_get_mont(ec_key_pair_get_public(session_pre_key_get_key_pair(preKeyPair))));
@@ -1162,7 +1152,6 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
 #if defined(WITH_OMEMO_V03)
             omemoElement->setIv(payloadEncryptionResult.iv);
 #endif
-
             // Add envelopes for all devices of the recipients.
             for (const auto &jid : recipientJids) {
                 auto recipientDevices = devices.value(jid);
@@ -1589,6 +1578,9 @@ QXmppTask<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessa
 
         return interface.task();
     } else {
+#if defined(WITH_OMEMO_V03)
+        q->debug(QString("OMEMO envelope not found for ")+ownBareJid()+":"+QString::number(ownDevice.id));
+#endif
         return makeReadyTask<std::optional<QXmppMessage>>(std::nullopt);
     }
 }
@@ -2851,18 +2843,13 @@ void ManagerPrivate::publishDeviceListItemWithOptions(Function continuation)
 QXmppOmemoDeviceListItem ManagerPrivate::deviceListItem(bool addOwnDevice)
 {
     QXmppOmemoDeviceList deviceList;
-#if defined(WITH_OMEMO_V03)
-    QVector<int> deviceIds;
-#endif
+
     // Add this device to the device list.
     if (addOwnDevice) {
         QXmppOmemoDeviceElement deviceElement;
         deviceElement.setId(ownDevice.id);
         deviceElement.setLabel(ownDevice.label);
         deviceList.append(deviceElement);
-#if defined(WITH_OMEMO_V03)
-        deviceIds.append(ownDevice.id);
-#endif
     }
 
     // Add all remaining own devices to the device list.
@@ -2874,14 +2861,8 @@ QXmppOmemoDeviceListItem ManagerPrivate::deviceListItem(bool addOwnDevice)
         QXmppOmemoDeviceElement deviceElement;
         deviceElement.setId(deviceId);
         deviceElement.setLabel(device.label);
-#if defined(WITH_OMEMO_V03)
-        if(! deviceIds.contains(deviceId)) {
-            deviceIds.append(deviceId);
-            deviceList.append(deviceElement);
-        }
-#else
+
         deviceList.append(deviceElement);
-#endif
     }
 
     QXmppOmemoDeviceListItem item;
@@ -3983,7 +3964,7 @@ bool ManagerPrivate::deserializeSignedPublicPreKey(ec_public_key **signedPublicP
 
 
 #if defined(WITH_OMEMO_V03)
-    if (curve_decode_point(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
+    if (curve_decode_point_mont(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
 #else
     if (curve_decode_point_mont(signedPublicPreKey, signal_buffer_data(signedPublicPreKeyBuffer.get()), signal_buffer_len(signedPublicPreKeyBuffer.get()), globalContext.get()) < 0) {
 #endif
@@ -4012,7 +3993,7 @@ bool ManagerPrivate::deserializePublicPreKey(ec_public_key **publicPreKey, const
     }
 
 #if defined(WITH_OMEMO_V03)
-    if (curve_decode_point(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
+    if (curve_decode_point_mont(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
 #else
     if (curve_decode_point_mont(publicPreKey, signal_buffer_data(publicPreKeyBuffer.get()), signal_buffer_len(publicPreKeyBuffer.get()), globalContext.get()) < 0) {
 #endif
