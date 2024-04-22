@@ -631,23 +631,17 @@ QXmppTask<bool> ManagerPrivate::setUpDeviceId()
     QFutureInterface<bool> interface(QFutureInterfaceBase::Started);
 
 #if defined(WITH_OMEMO_V03)
+    // We do not need to retrieve device bundle node but let's get the known deviceIds
     auto future = pubSubManager->requestItem<QXmppOmemoDeviceListItem>(pubSubManager->client()->configuration().jidBare(), ns_omemo_devices);
     return chain<bool>(std::move(future), q, [this](QXmppPubSubManager::ItemResult<QXmppOmemoDeviceListItem> result) mutable {
         QVector<QString> deviceIds;
 
         auto error = std::get_if<QXmppError>(&result);
         if (error) {
-            if (auto stanzaErr = error->value<QXmppStanza::Error>()) {
-                // allow Cancel|ItemNotFound here
-                if (!(stanzaErr->type() == Error::Cancel && stanzaErr->condition() == Error::ItemNotFound)) {
-                    warning("Existing / Published device IDs could not be retrieved: " % errorToString(*error));
-                    return false;
-                }
-                // do not return here
-            } else {
-                return false;
-            }
-        } else {
+            warning("Existing / Published device IDs could not be retrieved: " % errorToString(*error));
+            return false;
+        }
+        else {
             QList<QXmppOmemoDeviceElement> deviceList;
 
             const auto &deviceListItem = std::get<QXmppOmemoDeviceListItem>(result);
@@ -662,6 +656,9 @@ QXmppTask<bool> ManagerPrivate::setUpDeviceId()
         auto deviceId = error ? generateDeviceId() : generateDeviceId(deviceIds);
         if (deviceId) {
             ownDevice.id = *deviceId;
+#if defined(WITH_OMEMO_V03)
+            q->debug("setUpDeviceId ownDevice.id=" % QString::number(ownDevice.id));
+#endif
         }
 
         return deviceId.has_value();
@@ -742,6 +739,9 @@ std::optional<uint32_t> QXmppOmemoManagerPrivate::generateDeviceId(const QVector
 //
 bool ManagerPrivate::setUpIdentityKeyPair(ratchet_identity_key_pair **identityKeyPair)
 {
+#if defined(WITH_OMEMO_V03)
+    q->debug("setUpIdentityKeyPair");
+#endif
     if (signal_protocol_key_helper_generate_identity_key_pair(identityKeyPair, globalContext.get()) < 0) {
         warning("Identity key pair could not be generated");
         return false;

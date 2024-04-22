@@ -263,6 +263,7 @@ int QXmppUtils::generateRandomInteger(int N)
     while (N <= (val = QRandomGenerator::global()->generate() / (RAND_MAX / N))) {
     }
 #else
+    qsrand(QTime::currentTime().msec());
     while (N <= (val = qrand() / (RAND_MAX / N))) {
     }
 #endif
