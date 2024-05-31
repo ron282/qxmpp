@@ -1027,6 +1027,7 @@ void ManagerPrivate::removeDevicesRemovedFromServer()
                 devicesItr = userDevices.erase(devicesItr);
                 omemoStorage->removeDevice(jid, deviceId);
 #if defined(WITH_OMEMO_V03)
+				q->debug(QString("removeKeys ")+jid+":"+QString::number(deviceId));
                 trustManager->removeKeys(ns_omemo, QList { device.keyId });
 #else
                 trustManager->removeKeys(ns_omemo_2, QList { device.keyId });
@@ -1764,6 +1765,7 @@ QXmppTask<std::optional<QCA::SecureArray>> ManagerPrivate::extractPayloadDecrypt
     }
 
 #if defined(WITH_OMEMO_V03)
+	q->debug("extractPayloadDecryptionData for "+senderJid+":"+QString::number(senderDeviceId));
         session_cipher_set_version(sessionCipher.get(), 3);
 #else
         session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
@@ -2100,6 +2102,7 @@ QXmppTask<bool> ManagerPrivate::publishOmemoData()
                             }
                         };
 #if defined(WITH_OMEMO_V03)
+						q->debug("publishDeviceBundle "+ownBareJid()+":"+QString::number(ownDevice.id));
                         publishDeviceBundle(nodes.contains(QString(ns_omemo_bundles)+":"+QString::number(ownDevice.id)),
                                             arePublishOptionsSupported,
                                             isAutomaticCreationSupported,
@@ -2923,7 +2926,10 @@ void ManagerPrivate::updateOwnDevicesLocally(bool isDeviceListNodeExistent, Func
                             auto &device = devices[jid][deviceId];
                             device.label = deviceElement.label();
 
-                            auto future = omemoStorage->addDevice(jid, deviceId, device);
+#if defined(WITH_OMEMO_V03)
+							q->debug("addDevice "+jid+":"+QString::number(deviceId));
+#endif
+							auto future = omemoStorage->addDevice(jid, deviceId, device);
                             future.then(q, [=, &device]() mutable {
                                 auto future = buildSessionForNewDevice(jid, deviceId, device);
                                 future.then(q, [=](auto) mutable {
@@ -3135,6 +3141,7 @@ void ManagerPrivate::handleIrregularDeviceListChanges(const QString &deviceOwner
         // item is removed, if their device list node is removed or if all
         // the node's items are removed.
 #if defined(WITH_OMEMO_V03)
+		q->debug(QString("deleteOwnPepNode ")+ns_omemo_devices);
         auto future = pubSubManager->deleteOwnPepNode(ns_omemo_devices);
 #else
         auto future = pubSubManager->deleteOwnPepNode(ns_omemo_2_devices);
@@ -3695,6 +3702,9 @@ QXmppTask<bool> ManagerPrivate::buildSessionWithDeviceBundle(const QString &jid,
 {
     QXmppPromise<bool> interface;
 
+#if defined(WITH_OMEMO_V03)
+	q->debug("buildSessionWithDeviceBundle "+jid+":"+QString::number(deviceId));
+#endif
     auto future = requestDeviceBundle(jid, deviceId);
     future.then(q, [=, &device](std::optional<QXmppOmemoDeviceBundle> optionalDeviceBundle) mutable {
         if (optionalDeviceBundle) {
@@ -3772,6 +3782,7 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
     const auto publicPreKeyIds = publicPreKeys.keys();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
     const auto publicPreKeyIndex = QRandomGenerator::system()->bounded(publicPreKeyIds.size());
+	q->debug("buildSession with index="+QString::number(publicPreKeyIndex));
 #else
     const auto publicPreKeyIndex = publicPreKeyIds.size() > 0 ? rand() % publicPreKeyIds.size() : 0;
 #endif
