@@ -27,7 +27,12 @@ class QXmppStreamFeatures;
 class QXmppOutgoingClientPrivate;
 class TestClient;
 
+#if defined(SFOS)
+namespace QXmpp {
+	namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 class C2sStreamManager;
 class OutgoingIqManager;
 class PingManager;
@@ -41,9 +46,17 @@ enum HandleElementResult {
 };
 }  // namespace QXmpp::Private
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private { namespace Sasl2 {
+#else
 namespace QXmpp::Private::Sasl2 {
+#endif
 struct StreamFeature;
+#if defined(SFOS)
+} }
+#else
 }
+#endif
 
 // The QXmppOutgoingClient class represents an outgoing XMPP stream to an XMPP server.
 class QXMPP_EXPORT QXmppOutgoingClient : public QXmppLoggable
@@ -129,7 +142,12 @@ private:
     const std::unique_ptr<QXmppOutgoingClientPrivate> d;
 };
 
+#if defined(SFOS)
+namespace QXmpp {
+	namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 class C2sStreamManager
 {
@@ -169,6 +187,10 @@ private:
     bool m_streamResumed = false;
 };
 
+#if defined(SFOS)
+} }  // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPOUTGOINGCLIENT_H

@@ -883,7 +883,7 @@ void QXmppClient::_q_elementReceived(const QDomElement &element, bool &handled)
     // The stanza comes directly from the XMPP stream, so it's not end-to-end
     // encrypted and there's no e2ee metadata (std::nullopt).
     handled = StanzaPipeline::process(d->extensions, element, std::nullopt) ||
-        MessagePipeline::process(this, d->extensions, d->encryptionExtension, element);
+    MessagePipeline::process(this, d->extensions, d->encryptionExtension, element);
 }
 
 void QXmppClient::_q_reconnect()

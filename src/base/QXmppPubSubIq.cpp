@@ -600,35 +600,38 @@ void PubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
 
         writer->writeEndElement();  // query type
 
-        // add extra element with data form
-        if (auto form = d->dataForm) {
-            const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
-                writer->writeStartElement(subElementName);
-                form.toXml(writer);
-                writer->writeEndElement();
-            };
+        if(d->queryNode.contains(ns_omemo_bundles) == false)
+        {
+            // add extra element with data form
+            if (auto form = d->dataForm) {
+                const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
+                    writer->writeStartElement(subElementName);
+                    form.toXml(writer);
+                    writer->writeEndElement();
+                };
 
-            // make sure form type is 'submit'
-            form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
+                // make sure form type is 'submit'
+                form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
 
-            switch (d->queryType) {
-            case Create:
-                writeForm(writer, *form, QStringLiteral("configure"));
-                break;
-            case Publish:
-                writeForm(writer, *form, QStringLiteral("publish-options"));
-                break;
-            case Subscribe:
-            case Subscription:
-                writeForm(writer, *form, QStringLiteral("options"));
-                break;
-            default:
-                break;
+                switch (d->queryType) {
+                case Create:
+                    writeForm(writer, *form, QStringLiteral("configure"));
+                    break;
+                case Publish:
+                    writeForm(writer, *form, QStringLiteral("publish-options"));
+                    break;
+                case Subscribe:
+                case Subscription:
+                    writeForm(writer, *form, QStringLiteral("options"));
+                    break;
+                default:
+                    break;
+                }
             }
         }
 
         // Result Set Management
-        if (d->queryType == Items && d->itemsContinuation.has_value()) {
+        if (d->queryType == Items && d->itemsContinuation.has_value() && (d->queryNode.contains(ns_omemo_bundles) == false)) {
             d->itemsContinuation->toXml(writer);
         }
     }

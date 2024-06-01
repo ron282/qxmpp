@@ -282,6 +282,10 @@ public:
     std::optional<QXmppCallInviteElement> callInviteElement() const;
     void setCallInviteElement(std::optional<QXmppCallInviteElement> callInviteElement);
 
+    // XEP-0482: Call Invites
+    std::optional<QXmppCallInviteElement> callInviteElement() const;
+    void setCallInviteElement(std::optional<QXmppCallInviteElement> callInviteElement);
+
     /// \cond
 #ifdef BUILD_OMEMO
     // XEP-0384: OMEMO Encryption

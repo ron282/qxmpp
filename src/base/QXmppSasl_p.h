@@ -23,10 +23,17 @@ class QXmlStreamWriter;
 class QXmppSaslClientPrivate;
 class QXmppSaslServerPrivate;
 
+#if defined (SFOS)
+namespace QXmpp {
+	namespace Private {
+	class SaslManager;
+	}
+}
+#else
 namespace QXmpp::Private {
 class SaslManager;
 }
-
+#endif
 //
 //  W A R N I N G
 //  -------------
@@ -40,7 +47,13 @@ class SaslManager;
 // We mean it.
 //
 
+#if defined (SFOS)
+namespace QXmpp {
+	namespace Private {
+	   namespace Sasl {
+#else
 namespace QXmpp::Private::Sasl {
+#endif
 
 enum class ErrorCondition {
     Aborted,
@@ -94,9 +107,19 @@ struct Success {
     void toXml(QXmlStreamWriter *writer) const;
 };
 
+#if defined(SFOS)
+} } }  // namespace QXmpp Private Sasl2
+#else
 }  // namespace QXmpp::Private::Sasl
+#endif
 
+#if defined (SFOS)
+namespace QXmpp {
+	namespace Private {
+	   namespace Sasl {
+#else
 namespace QXmpp::Private::Sasl2 {
+#endif
 
 struct StreamFeature {
     static std::optional<StreamFeature> fromDom(const QDomElement &);
@@ -174,7 +197,12 @@ struct Abort {
     QString text;
 };
 
+#if defined(SFOS)
+} } }  // namespace QXmpp Private Sasl2
+#else
 }  // namespace QXmpp::Private::Sasl2
+#endif
+
 
 class QXMPP_AUTOTEST_EXPORT QXmppSaslClient : public QXmppLoggable
 {

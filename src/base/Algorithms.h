@@ -7,7 +7,11 @@
 
 #include <algorithm>
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 template<typename OutputVector, typename InputVector, typename Converter>
 auto transform(InputVector &input, Converter convert)
@@ -18,6 +22,9 @@ auto transform(InputVector &input, Converter convert)
     return output;
 }
 
+#if defined(SFOS)
+} } // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
-
+#endif
 #endif  // ALGORITHMS_H

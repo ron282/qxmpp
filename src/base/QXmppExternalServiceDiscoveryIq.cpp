@@ -333,7 +333,12 @@ void QXmppExternalService::toXml(QXmlStreamWriter *writer) const
     }
 
     if (d->expires) {
-        writeOptionalXmlAttribute(writer, u"expires", d->expires->toString(Qt::ISODateWithMs));
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+        auto e = *d->expires;
+		writeOptionalXmlAttribute(writer, u"expires", e.toUTC().toString(Qt::ISODate).insert(19, e.toUTC().toString(".zzz")));
+#else
+		writeOptionalXmlAttribute(writer, u"expires", d->expires->toString(Qt::ISODateWithMs));
+#endif
     }
 
     if (d->name) {
@@ -380,7 +385,15 @@ QXmppExternalServiceDiscoveryIq::QXmppExternalServiceDiscoveryIq()
 {
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
 QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppExternalServiceDiscoveryIq)
+#else
+QXmppExternalServiceDiscoveryIq::QXmppExternalServiceDiscoveryIq(const QXmppExternalServiceDiscoveryIq &) = default;
+QXmppExternalServiceDiscoveryIq::QXmppExternalServiceDiscoveryIq(QXmppExternalServiceDiscoveryIq &&) = default;
+QXmppExternalServiceDiscoveryIq::~QXmppExternalServiceDiscoveryIq() = default;
+QXmppExternalServiceDiscoveryIq &QXmppExternalServiceDiscoveryIq::operator=(const QXmppExternalServiceDiscoveryIq &) = default;
+QXmppExternalServiceDiscoveryIq &QXmppExternalServiceDiscoveryIq::operator=(QXmppExternalServiceDiscoveryIq &&) = default;
+#endif
 
 ///
 /// Returns the external services of the IQ.

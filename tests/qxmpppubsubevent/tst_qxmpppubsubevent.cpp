@@ -235,7 +235,11 @@ void tst_QXmppPubSubEvent::testBasic()
     serializePacket(event, xml);
 
     // serialize from setters
+#if defined(WITH_OMEMO_V03)
+    event = QXmppPubSubEvent<>();
+#else
     event = QXmppPubSubEvent();
+#endif
     event.setId("foo");
     event.setEventType(eventType);
     event.setNode(node);

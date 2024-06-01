@@ -15,7 +15,15 @@ class QXMPP_EXPORT QXmppExternalServiceDiscoveryIq : public QXmppIq
 public:
     QXmppExternalServiceDiscoveryIq();
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     QXMPP_PRIVATE_DECLARE_RULE_OF_SIX(QXmppExternalServiceDiscoveryIq)
+#else
+    QXmppExternalServiceDiscoveryIq(const QXmppExternalServiceDiscoveryIq &);
+    QXmppExternalServiceDiscoveryIq(QXmppExternalServiceDiscoveryIq &&);
+    ~QXmppExternalServiceDiscoveryIq();
+    QXmppExternalServiceDiscoveryIq &operator=(const QXmppExternalServiceDiscoveryIq &);
+    QXmppExternalServiceDiscoveryIq &operator=(QXmppExternalServiceDiscoveryIq &&);
+#endif
 
     QVector<QXmppExternalService> externalServices();
     void setExternalServices(const QVector<QXmppExternalService> &);

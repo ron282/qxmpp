@@ -1189,12 +1189,20 @@ void tst_QXmppMessage::testTrustMessageElement()
 
     QXmppMessage message1;
     parsePacket(message1, xml);
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(message1.trustMessageElement().has_value());
+#else
     QVERIFY(message1.trustMessageElement());
+#endif
     serializePacket(message1, xml);
 
     QXmppMessage message2;
     message2.setTrustMessageElement(QXmppTrustMessageElement());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(message2.trustMessageElement().has_value());
+#else
     QVERIFY(message2.trustMessageElement());
+#endif
 }
 
 void tst_QXmppMessage::testReaction()
@@ -1212,13 +1220,21 @@ void tst_QXmppMessage::testReaction()
     QVERIFY(!message1.reaction());
 
     parsePacket(message1, xml);
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(message1.reaction().has_value());
+#else
     QVERIFY(message1.reaction());
+#endif
     serializePacket(message1, xml);
 
     QXmppMessage message2;
     message2.addHint(QXmppMessage::Store);
     message2.setReaction(QXmppMessageReaction());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(message2.reaction().has_value());
+#else
     QVERIFY(message2.reaction());
+#endif
 }
 
 void tst_QXmppMessage::testE2eeFallbackBody()
@@ -1380,16 +1396,16 @@ void tst_QXmppMessage::testJingleMessageInitiationElement()
         "</message>");
 
     QXmppMessage message1;
-    QVERIFY(!message1.jingleMessageInitiationElement());
+    QVERIFY(!message1.jingleMessageInitiationElement().has_value());
 
     parsePacket(message1, xml);
-    QVERIFY(message1.jingleMessageInitiationElement());
+    QVERIFY(message1.jingleMessageInitiationElement().has_value());
     serializePacket(message1, xml);
 
     QXmppMessage message2;
     message2.addHint(QXmppMessage::Store);
     message2.setJingleMessageInitiationElement(QXmppJingleMessageInitiationElement());
-    QVERIFY(message2.jingleMessageInitiationElement());
+    QVERIFY(message2.jingleMessageInitiationElement().has_value());
 }
 
 QTEST_MAIN(tst_QXmppMessage)

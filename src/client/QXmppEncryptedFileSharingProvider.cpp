@@ -15,6 +15,10 @@
 
 #include <QMimeDatabase>
 
+#if defined(WITH_OMEMO_V03)
+#include <QFileInfo>
+#endif
+
 using namespace QXmpp;
 using namespace QXmpp::Private;
 
@@ -85,21 +89,32 @@ auto QXmppEncryptedFileSharingProvider::downloadFile(const std::any &source,
 }
 
 auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> data,
+#if defined (WITH_OMEMO_V03)
+                                                   const QXmppFileMetadata &info,
+#else
                                                    const QXmppFileMetadata &,
+#endif
                                                    std::function<void(quint64, quint64)> reportProgress,
                                                    std::function<void(UploadResult)> reportFinished)
     -> std::shared_ptr<Upload>
 {
+#if defined(WITH_OMEMO_V03)
+    auto cipher = Aes256GcmNoPad;
+#else
     auto cipher = ENCRYPTION_DEFAULT_CIPHER;
+#endif
     auto key = Encryption::generateKey(cipher);
     auto iv = Encryption::generateInitializationVector(cipher);
-
     auto encDevice = std::make_unique<Encryption::EncryptionDevice>(std::move(data), cipher, key, iv);
     auto encryptedSize = encDevice->size();
 
     QXmppFileMetadata metadata;
+#if defined(WITH_OMEMO_V03)
+    metadata.setFilename(QXmppUtils::generateStanzaHash(10)+"."+QFileInfo(info.filename().value_or("")).completeSuffix());
+#else
     metadata.setFilename(QXmppUtils::generateStanzaHash(10));
-    metadata.setMediaType(QMimeDatabase().mimeTypeForName(QStringLiteral("application/octet-stream")));
+#endif
+	metadata.setMediaType(QMimeDatabase().mimeTypeForName(QStringLiteral("application/octet-stream")));
     metadata.setSize(encryptedSize);
 
     // find provider for source of encrypted file
@@ -111,7 +126,11 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
         [=, reportFinished = std::move(reportFinished)](UploadResult result) {
             auto encryptedResult = visitForward<UploadResult>(std::move(result), [&](std::any httpSourceAny) {
                 QXmppEncryptedFileSource encryptedSource;
+#if defined(WITH_OMEMO_V03)
+                encryptedSource.setCipher(Aes256GcmNoPad);
+#else
                 encryptedSource.setCipher(ENCRYPTION_DEFAULT_CIPHER);
+#endif
                 encryptedSource.setKey(key);
                 encryptedSource.setIv(iv);
                 encryptedSource.setHttpSources({ std::any_cast<QXmppHttpFileSource>(std::move(httpSourceAny)) });

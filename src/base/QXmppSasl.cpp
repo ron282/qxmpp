@@ -51,6 +51,19 @@ std::optional<Auth> Auth::fromDom(const QDomElement &el)
 {
     if (el.tagName() != u"auth" || el.namespaceURI() != ns_sasl) {
         return {};
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+    return QCryptographicHash::hashLength(algorithm);
+#else
+    switch (algorithm) {
+    case QCryptographicHash::Sha1:
+        return 160 / 8;
+    case QCryptographicHash::Sha256:
+        return 256 / 8;
+    case QCryptographicHash::Sha512:
+//    case QCryptographicHash::RealSha3_512:
+        return 512 / 8;
+    default:
+        return QCryptographicHash::hash({}, algorithm).size();
     }
 
     Auth auth;
@@ -860,7 +873,11 @@ QXmppSaslClientScram::QXmppSaslClientScram(QCryptographicHash::Algorithm algorit
     : QXmppSaslClient(parent),
       m_algorithm(algorithm),
       m_step(0),
-      m_dklen(QCryptographicHash::hashLength(algorithm))
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+	m_dklen(QCryptographicHash::hashLength(algorithm))
+#else
+      m_dklen(hashLength(algorithm))
+#endif
 {
     const auto itr = std::find(SCRAM_ALGORITHMS.cbegin(), SCRAM_ALGORITHMS.cend(), algorithm);
     Q_ASSERT(itr != SCRAM_ALGORITHMS.cend());

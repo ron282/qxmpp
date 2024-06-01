@@ -14,7 +14,6 @@
 #include "QXmppUtils_p.h"
 
 #include <QStringBuilder>
-
 #undef max
 #undef interface
 
@@ -443,7 +442,11 @@ QXmppTask<bool> Manager::setUp()
 ///
 QXmppTask<QByteArray> Manager::ownKey()
 {
-    return d->trustManager->ownKey(ns_omemo_2.toString());
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->ownKey(ns_omemo.toString());
+#else
+	return d->trustManager->ownKey(ns_omemo_2.toString());
+#endif
 }
 
 ///
@@ -462,7 +465,11 @@ QXmppTask<QByteArray> Manager::ownKey()
 ///
 QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::keys(QXmpp::TrustLevels trustLevels)
 {
-    return d->trustManager->keys(ns_omemo_2.toString(), trustLevels);
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->keys(ns_omemo.toString(), trustLevels);
+#else
+	return d->trustManager->keys(ns_omemo_2.toString(), trustLevels);
+#endif
 }
 
 ///
@@ -482,7 +489,11 @@ QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::ke
 ///
 QXmppTask<QHash<QString, QHash<QByteArray, QXmpp::TrustLevel>>> Manager::keys(const QList<QString> &jids, QXmpp::TrustLevels trustLevels)
 {
-    return d->trustManager->keys(ns_omemo_2.toString(), jids, trustLevels);
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->keys(ns_omemo.toString(), jids, trustLevels);
+#else
+	return d->trustManager->keys(ns_omemo_2.toString(), jids, trustLevels);
+#endif
 }
 
 ///
@@ -769,7 +780,11 @@ QXmppTask<QXmppPubSubManager::Result> Manager::removeContactDevices(const QStrin
 
             auto future = d->omemoStorage->removeDevices(jid);
             future.then(this, [=]() mutable {
-                auto future = d->trustManager->removeKeys(ns_omemo_2.toString(), jid);
+#if defined(WITH_OMEMO_V03)
+				auto future = d->trustManager->removeKeys(ns_omemo.toString(), jid);
+#else
+				auto future = d->trustManager->removeKeys(ns_omemo_2.toString(), jid);
+#endif
                 future.then(this, [=]() mutable {
                     interface.finish(std::move(result));
                     Q_EMIT devicesRemoved(jid);
@@ -953,7 +968,11 @@ QXmppTask<bool> Manager::resetAll()
 ///
 QXmppTask<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPolicy)
 {
-    return d->trustManager->setSecurityPolicy(ns_omemo_2.toString(), securityPolicy);
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->setSecurityPolicy(ns_omemo.toString(), securityPolicy);
+#else
+	return d->trustManager->setSecurityPolicy(ns_omemo_2.toString(), securityPolicy);
+#endif
 }
 
 ///
@@ -963,7 +982,11 @@ QXmppTask<void> Manager::setSecurityPolicy(QXmpp::TrustSecurityPolicy securityPo
 ///
 QXmppTask<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 {
-    return d->trustManager->securityPolicy(ns_omemo_2.toString());
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->securityPolicy(ns_omemo.toString());
+#else
+	return d->trustManager->securityPolicy(ns_omemo_2.toString());
+#endif
 }
 
 ///
@@ -976,7 +999,12 @@ QXmppTask<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 ///
 QXmppTask<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &keyIds, QXmpp::TrustLevel trustLevel)
 {
-    return d->trustManager->setTrustLevel(ns_omemo_2.toString(), keyIds, trustLevel);
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->setTrustLevel(ns_omemo.toString(), keyIds, trustLevel);
+    return d->trustManager->setTrustLevel(ns_omemo, keyIds, trustLevel);
+#else
+	return d->trustManager->setTrustLevel(ns_omemo_2.toString(), keyIds, trustLevel);
+#endif
 }
 
 ///
@@ -991,7 +1019,12 @@ QXmppTask<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &ke
 ///
 QXmppTask<QXmpp::TrustLevel> Manager::trustLevel(const QString &keyOwnerJid, const QByteArray &keyId)
 {
-    return d->trustManager->trustLevel(ns_omemo_2.toString(), keyOwnerJid, keyId);
+
+#if defined(WITH_OMEMO_V03)
+	return d->trustManager->trustLevel(ns_omemo.toString(), keyOwnerJid, keyId);
+#else
+	return d->trustManager->trustLevel(ns_omemo_2.toString(), keyOwnerJid, keyId);
+#endif
 }
 
 /// \cond
@@ -1110,7 +1143,12 @@ QXmppTask<QXmppE2eeExtension::IqDecryptResult> Manager::decryptIq(const QDomElem
 
 bool QXmppOmemoManager::isEncrypted(const QDomElement &el)
 {
-    return !firstChildElement(el, u"encrypted", ns_omemo_2).isNull();
+#if defined(WITH_OMEMO_V03)
+	return !firstChildElement(el, u"encrypted", ns_omemo).isNull();
+#else
+	return !firstChildElement(el, u"encrypted", ns_omemo_2).isNull();
+#endif
+
 }
 
 bool QXmppOmemoManager::isEncrypted(const QXmppMessage &message)
@@ -1120,9 +1158,15 @@ bool QXmppOmemoManager::isEncrypted(const QXmppMessage &message)
 
 QStringList Manager::discoveryFeatures() const
 {
+#if defined(WITH_OMEMO_V03)
+    return {
+        QString(ns_omemo_devices) % "+notify"
+    };
+#else
     return {
         ns_omemo_2_devices + u"+notify"
     };
+#endif
 }
 
 bool Manager::handleStanza(const QDomElement &stanza)
@@ -1233,7 +1277,12 @@ void Manager::onRegistered(QXmppClient *client)
     }
 
     connect(d->trustManager, &QXmppTrustManager::trustLevelsChanged, this, [=](const QHash<QString, QMultiHash<QString, QByteArray>> &modifiedKeys) {
-        const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo_2.toString());
+
+#if defined(WITH_OMEMO_V03)
+		const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo.toString());
+#else
+		const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo_2.toString());
+#endif
 
         if (!modifiedOmemoKeys.isEmpty()) {
             Q_EMIT trustLevelsChanged(modifiedOmemoKeys);
@@ -1269,7 +1318,11 @@ void Manager::onUnregistered(QXmppClient *client)
 
 bool Manager::handlePubSubEvent(const QDomElement &element, const QString &pubSubService, const QString &nodeName)
 {
+#if defined(WITH_OMEMO_V03)
+    if (nodeName == ns_omemo_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
+#else
     if (nodeName == ns_omemo_2_devices && QXmppPubSubEvent<QXmppOmemoDeviceListItem>::isPubSubEvent(element)) {
+#endif
         QXmppPubSubEvent<QXmppOmemoDeviceListItem> event;
         event.parse(element);
 

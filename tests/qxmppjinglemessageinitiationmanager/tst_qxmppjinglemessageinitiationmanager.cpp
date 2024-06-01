@@ -105,7 +105,7 @@ void tst_QXmppJingleMessageInitiationManager::testRing()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jmicallPartnerJid) {
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), JmiType::Ringing);
             }
         }
@@ -132,7 +132,7 @@ void tst_QXmppJingleMessageInitiationManager::testProceed()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jmiCallPartnerJid) {
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), JmiType::Proceed);
             }
         }
@@ -163,10 +163,10 @@ void tst_QXmppJingleMessageInitiationManager::testReject()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jmiCallPartnerJid) {
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), JmiType::Reject);
                 QCOMPARE(message.jingleMessageInitiationElement()->reason()->type(), QXmppJingleReason::Decline);
-                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), "Declined");
+                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), QString("Declined"));
                 QCOMPARE(message.jingleMessageInitiationElement()->containsTieBreak(), true);
             }
         }
@@ -197,10 +197,10 @@ void tst_QXmppJingleMessageInitiationManager::testRetract()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jmicallPartnerJid) {
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), JmiType::Retract);
                 QCOMPARE(message.jingleMessageInitiationElement()->reason()->type(), QXmppJingleReason::Gone);
-                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), "Gone");
+                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), QString("Gone"));
                 QCOMPARE(message.jingleMessageInitiationElement()->containsTieBreak(), true);
             }
         }
@@ -231,11 +231,11 @@ void tst_QXmppJingleMessageInitiationManager::testFinish()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jmicallPartnerJid) {
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), JmiType::Finish);
                 QCOMPARE(message.jingleMessageInitiationElement()->reason()->type(), QXmppJingleReason::Success);
-                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), "Finished");
-                QCOMPARE(message.jingleMessageInitiationElement()->migratedTo(), "fecbea35-08d3-404f-9ec7-2b57c566fa74");
+                QCOMPARE(message.jingleMessageInitiationElement()->reason()->text(), QString("Finished"));
+                QCOMPARE(message.jingleMessageInitiationElement()->migratedTo(), QString("fecbea35-08d3-404f-9ec7-2b57c566fa74"));
             }
         }
     });
@@ -266,11 +266,11 @@ void tst_QXmppJingleMessageInitiationManager::testPropose()
 
             if (message.to() == jid) {
                 const auto &jmiElement { message.jingleMessageInitiationElement() };
-                QVERIFY(jmiElement);
+                QVERIFY(jmiElement.has_value());
 
                 QCOMPARE(jmiElement->type(), JmiType::Propose);
                 QVERIFY(!jmiElement->id().isEmpty());
-                QVERIFY(jmiElement->description());
+                QVERIFY(jmiElement->description().has_value());
                 QCOMPARE(jmiElement->description()->media(), description.media());
                 QCOMPARE(jmiElement->description()->ssrc(), description.ssrc());
                 QCOMPARE(jmiElement->description()->type(), description.type());
@@ -308,7 +308,7 @@ void tst_QXmppJingleMessageInitiationManager::testSendMessage()
 
             if (message.to() == jid) {
                 QVERIFY(message.hasHint(QXmppMessage::Store));
-                QVERIFY(message.jingleMessageInitiationElement());
+                QVERIFY(message.jingleMessageInitiationElement().has_value());
                 QCOMPARE(message.jingleMessageInitiationElement()->type(), jmiElement.type());
             }
         }
@@ -352,18 +352,18 @@ void tst_QXmppJingleMessageInitiationManager::testHandleNonExistingSessionLowerI
 
             if (message.to() == jmiWithHigherId->callPartnerJid()) {
                 const auto &jmiElement { message.jingleMessageInitiationElement() };
-                QVERIFY(jmiElement);
+                QVERIFY(jmiElement.has_value());
 
                 QCOMPARE(jmiElement->type(), JmiType::Retract);
-                QCOMPARE(jmiElement->id(), "fecbea35-08d3-404f-9ec7-2b57c566fa74");
-                QVERIFY(jmiElement->reason());
+                QCOMPARE(jmiElement->id(), QString("fecbea35-08d3-404f-9ec7-2b57c566fa74"));
+                QVERIFY(jmiElement->reason().has_value());
                 QCOMPARE(jmiElement->reason()->type(), reason.type());
                 QCOMPARE(jmiElement->reason()->text(), reason.text());
 
                 SKIP_IF_INTEGRATION_TESTS_DISABLED()
 
                 // verify that the JMI ID has been changed and the JMI was processed
-                QCOMPARE(jmiWithHigherId->id(), "ca3cf894-5325-482f-a412-a6e9f832298d");
+                QCOMPARE(jmiWithHigherId->id(), QString("ca3cf894-5325-482f-a412-a6e9f832298d"));
                 QVERIFY(jmiWithHigherId->isProceeded());
             }
         }
@@ -403,11 +403,11 @@ void tst_QXmppJingleMessageInitiationManager::testHandleNonExistingSessionHigher
 
             if (message.to() == jid) {
                 const auto &jmiElement { message.jingleMessageInitiationElement() };
-                QVERIFY(jmiElement);
+                QVERIFY(jmiElement.has_value());
 
                 QCOMPARE(jmiElement->type(), JmiType::Reject);
-                QCOMPARE(jmiElement->id(), "fecbea35-08d3-404f-9ec7-2b57c566fa74");
-                QVERIFY(jmiElement->reason());
+                QCOMPARE(jmiElement->id(), QString("fecbea35-08d3-404f-9ec7-2b57c566fa74"));
+                QVERIFY(jmiElement->reason().has_value());
                 QCOMPARE(jmiElement->reason()->type(), reason.type());
                 QCOMPARE(jmiElement->reason()->text(), reason.text());
             }
@@ -449,12 +449,12 @@ void tst_QXmppJingleMessageInitiationManager::testHandleExistingSession()
 
             if (message.to() == jmi->callPartnerJid()) {
                 const auto &jmiElement { message.jingleMessageInitiationElement() };
-                QVERIFY(jmiElement);
+                QVERIFY(jmiElement.has_value());
 
                 QCOMPARE(jmiElement->type(), JmiType::Finish);
                 QCOMPARE(jmiElement->id(), jmi->id());
-                QCOMPARE(jmiElement->migratedTo(), "989a46a6-f202-4910-a7c3-83c6ba3f3947");
-                QVERIFY(jmiElement->reason());
+                QCOMPARE(jmiElement->migratedTo(), QString("989a46a6-f202-4910-a7c3-83c6ba3f3947"));
+                QVERIFY(jmiElement->reason().has_value());
                 QCOMPARE(jmiElement->reason()->type(), reason.type());
                 QCOMPARE(jmiElement->reason()->text(), reason.text());
             }
@@ -593,7 +593,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleExistingJmi()
         QVERIFY(std::holds_alternative<ResultType>(result));
         const ResultType &rejectedJmiElement { std::get<ResultType>(result) };
 
-        QVERIFY(rejectedJmiElement.reason);
+        QVERIFY(rejectedJmiElement.reason.has_value());
         QCOMPARE(rejectedJmiElement.reason->type(), jmiElement.reason()->type());
         QCOMPARE(rejectedJmiElement.reason->text(), jmiElement.reason()->text());
         QCOMPARE(rejectedJmiElement.containsTieBreak, jmiElement.containsTieBreak());
@@ -619,7 +619,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleExistingJmi()
         QVERIFY(std::holds_alternative<ResultType>(result));
         const ResultType &rejectedJmiElement { std::get<ResultType>(result) };
 
-        QVERIFY(rejectedJmiElement.reason);
+        QVERIFY(rejectedJmiElement.reason.has_value());
         QCOMPARE(rejectedJmiElement.reason->type(), jmiElement.reason()->type());
         QCOMPARE(rejectedJmiElement.reason->text(), jmiElement.reason()->text());
         QCOMPARE(rejectedJmiElement.containsTieBreak, jmiElement.containsTieBreak());
@@ -646,7 +646,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleExistingJmi()
         QVERIFY(std::holds_alternative<ResultType>(result));
         const ResultType &rejectedJmiElement { std::get<ResultType>(result) };
 
-        QVERIFY(rejectedJmiElement.reason);
+        QVERIFY(rejectedJmiElement.reason.has_value());
         QCOMPARE(rejectedJmiElement.reason->type(), jmiElement.reason()->type());
         QCOMPARE(rejectedJmiElement.reason->text(), jmiElement.reason()->text());
         QCOMPARE(rejectedJmiElement.migratedTo, jmiElement.migratedTo());
@@ -822,7 +822,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleMessageClosedRejected()
         const ResultType &rejectedJmiElement { std::get<ResultType>(result) };
 
         QCOMPARE(rejectedJmiElement.reason->type(), QXmppJingleReason::Busy);
-        QCOMPARE(rejectedJmiElement.reason->text(), "Busy");
+        QCOMPARE(rejectedJmiElement.reason->text(), QString("Busy"));
     });
 
     message.parse(xmlToDom(xmlReject));
@@ -856,7 +856,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleMessageClosedRetracted()
         const ResultType &retractedJmiElement { std::get<ResultType>(result) };
 
         QCOMPARE(retractedJmiElement.reason->type(), QXmppJingleReason::Cancel);
-        QCOMPARE(retractedJmiElement.reason->text(), "Retracted");
+        QCOMPARE(retractedJmiElement.reason->text(), QString("Retracted"));
     });
 
     message.parse(xmlToDom(xmlRetract));
@@ -891,8 +891,8 @@ void tst_QXmppJingleMessageInitiationManager::testHandleMessageClosedFinished()
         const ResultType &finishedJmiElement { std::get<ResultType>(result) };
 
         QCOMPARE(finishedJmiElement.reason->type(), QXmppJingleReason::Success);
-        QCOMPARE(finishedJmiElement.reason->text(), "Success");
-        QCOMPARE(finishedJmiElement.migratedTo, "989a46a6-f202-4910-a7c3-83c6ba3f3947");
+        QCOMPARE(finishedJmiElement.reason->text(), QString("Success"));
+        QCOMPARE(finishedJmiElement.migratedTo, QString("989a46a6-f202-4910-a7c3-83c6ba3f3947"));
     });
 
     message.parse(xmlToDom(xmlFinish));

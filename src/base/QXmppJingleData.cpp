@@ -1386,7 +1386,6 @@ void QXmppJingleIq::parseElementFromChild(const QDomElement &element)
         content.parse(contentElement);
         addContent(content);
     }
-
     d->reason.parse(firstChildElement(jingleElement, u"reason"));
 
     for (const auto &childElement : iterChildElements(jingleElement, {}, ns_jingle_rtp_info)) {
@@ -3030,9 +3029,9 @@ void QXmppJingleMessageInitiationElement::parse(const QDomElement &element)
 void QXmppJingleMessageInitiationElement::toXml(QXmlStreamWriter *writer) const
 {
     writer->writeStartElement(jmiElementTypeToString(d->type));
-    writer->writeDefaultNamespace(toString65(ns_jingle_message_initiation));
+    writer->writeDefaultNamespace(ns_jingle_message_initiation);
 
-    writeOptionalXmlAttribute(writer, u"id", d->id);
+    helperToXmlAddAttribute(writer, QStringLiteral("id"), d->id);
 
     if (d->description) {
         d->description->toXml(writer);

@@ -98,6 +98,16 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
 {
     m_recipientDeviceId = element.attribute(QStringLiteral("rid")).toInt();
 
+#if defined(WITH_OMEMO_V03)
+    const auto isUsedForKeyExchange = element.attribute(QStringLiteral("prekey"));
+    if (isUsedForKeyExchange == QStringLiteral("true") ||
+        isUsedForKeyExchange == QStringLiteral("1")) {
+        m_isUsedForKeyExchange = true;
+    }
+    m_data = QByteArray::fromBase64(element.text().toLatin1());        
+#else
+    m_recipientDeviceId = element.attribute(QStringLiteral("rid")).toInt();
+
     const auto isUsedForKeyExchange = element.attribute(QStringLiteral("kex"));
     if (isUsedForKeyExchange == QStringLiteral("true") ||
         isUsedForKeyExchange == QStringLiteral("1")) {
@@ -105,11 +115,23 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
     }
 
     m_data = QByteArray::fromBase64(element.text().toLatin1());
+#endif
 }
 
 void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 {
+#if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QSL65("key"));
+    writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
+
+    if (m_isUsedForKeyExchange) {
+        helperToXmlAddAttribute(writer, QSL65("prekey"), QSL65("true"));
+    }
+
+    writer->writeCharacters(m_data.toBase64());
+    writer->writeEndElement();        
+#else
+	writer->writeStartElement(QSL65("key"));
     writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
 
     if (m_isUsedForKeyExchange) {
@@ -118,6 +140,7 @@ void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 
     writer->writeCharacters(QString::fromUtf8(m_data.toBase64()));
     writer->writeEndElement();
+#endif
 }
 
 ///
@@ -129,9 +152,27 @@ void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoEnvelope::isOmemoEnvelope(const QDomElement &element)
 {
+#if defined(WITH_OMEMO_V03)
+    return element.tagName() == QStringLiteral("key") &&
+        (element.namespaceURI() == ns_omemo);    
+#else
     return element.tagName() == QStringLiteral("key") &&
         element.namespaceURI() == ns_omemo_2;
+#endif
 }
+
+#if defined(WITH_OMEMO_V03)
+QByteArray QXmppOmemoEnvelope::iv() const
+{
+    return m_iv;
+}
+
+void QXmppOmemoEnvelope::setIv(const QByteArray &iv)
+{
+    m_iv = iv;
+}
+
+#endif
 
 ///
 /// \class QXmppOmemoElement
@@ -185,6 +226,17 @@ void QXmppOmemoElement::setPayload(const QByteArray &payload)
     m_payload = payload;
 }
 
+#if defined(WITH_OMEMO_V03)
+QByteArray QXmppOmemoElement::iv() const
+{
+    return m_iv;
+}
+
+void QXmppOmemoElement::setIv(const QByteArray &iv)
+{
+    m_iv = iv;
+}
+#endif
 ///
 /// Searches for an OMEMO envelope by its recipient JID and device ID.
 ///
@@ -195,6 +247,16 @@ void QXmppOmemoElement::setPayload(const QByteArray &payload)
 ///
 std::optional<QXmppOmemoEnvelope> QXmppOmemoElement::searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const
 {
+#if defined(WITH_OMEMO_V03)
+    for (auto itr = m_envelopes.constBegin();
+         itr != m_envelopes.constEnd();
+         ++itr) {
+        const auto &envelope = itr.value();
+        if (envelope.recipientDeviceId() == recipientDeviceId) {
+            return envelope;
+        }
+    }
+#else
     for (auto itr = m_envelopes.constFind(recipientJid);
          itr != m_envelopes.constEnd() && itr.key() == recipientJid;
          ++itr) {
@@ -204,6 +266,7 @@ std::optional<QXmppOmemoEnvelope> QXmppOmemoElement::searchEnvelope(const QStrin
         }
     }
 
+#endif
     return std::nullopt;
 }
 
@@ -228,22 +291,71 @@ void QXmppOmemoElement::parse(const QDomElement &element)
 
     m_senderDeviceId = header.attribute(QStringLiteral("sid")).toInt();
 
-    for (const auto &recipient : iterChildElements(header, u"keys")) {
-        const auto recipientJid = recipient.attribute(QStringLiteral("jid"));
+#if defined(WITH_OMEMO_V03)
+    auto iv = header.firstChildElement(QStringLiteral("iv"));
+    if(!iv.isNull()) {
+        m_iv = QByteArray::fromBase64(iv.text().toLatin1());;
+    }
 
-        for (const auto &envelope : iterChildElements(recipient, u"key")) {
+    for (auto envelope = header.firstChildElement(QStringLiteral("key"));
+         !envelope.isNull();
+         envelope = envelope.nextSiblingElement(QStringLiteral("key"))) {
+        QXmppOmemoEnvelope omemoEnvelope;
+        omemoEnvelope.setIv(m_iv);
+        omemoEnvelope.parse(envelope);
+        addEnvelope("", omemoEnvelope);
+    }        
+#else
+	for (const auto &recipient : iterChildElements(header, u"keys")) {
+		const auto recipientJid = recipient.attribute(QStringLiteral("jid"));
+
+		for (const auto &envelope : iterChildElements(recipient, u"key")) {
             QXmppOmemoEnvelope omemoEnvelope;
             omemoEnvelope.parse(envelope);
             addEnvelope(recipientJid, omemoEnvelope);
         }
     }
+#endif
 
     m_payload = QByteArray::fromBase64(element.firstChildElement(QStringLiteral("payload")).text().toLatin1());
 }
 
 void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 {
-    writer->writeStartElement(QSL65("encrypted"));
+#if defined(WITH_OMEMO_V03)
+    writer->writeStartElement(QStringLiteral("encrypted"));
+    writer->writeDefaultNamespace(ns_omemo);
+
+    writer->writeStartElement(QStringLiteral("header"));
+    writer->writeAttribute(QStringLiteral("sid"), QString::number(m_senderDeviceId));
+
+    const auto recipientJids = m_envelopes.uniqueKeys();
+    for (const auto &recipientJid : recipientJids) {
+        for (auto itr = m_envelopes.constFind(recipientJid);
+             itr != m_envelopes.constEnd() && itr.key() == recipientJid;
+             ++itr) {
+            const auto &envelope = itr.value();
+            envelope.toXml(writer);
+        }
+    }
+
+    if(m_iv.size() > 0) {
+        writer->writeStartElement(QStringLiteral("iv"));
+        writer->writeCharacters(m_iv.toBase64());
+        writer->writeEndElement();  // iv            
+    }
+
+    writer->writeEndElement();  // header
+
+    // The payload element is only included if there is a payload.
+    // An empty OMEMO message does not contain a payload.
+    if (!m_payload.isEmpty()) {
+        writer->writeTextElement(QStringLiteral("payload"), m_payload.toBase64());
+    }
+
+    writer->writeEndElement();  // encrypted
+#else
+	writer->writeStartElement(QSL65("encrypted"));
     writer->writeDefaultNamespace(toString65(ns_omemo_2));
 
     writer->writeStartElement(QSL65("header"));
@@ -273,6 +385,7 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
     }
 
     writer->writeEndElement();  // encrypted
+#endif
 }
 
 ///
@@ -284,7 +397,12 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppOmemoElement::isOmemoElement(const QDomElement &element)
 {
+#if defined(WITH_OMEMO_V03)
+    return element.tagName() == QStringLiteral("encrypted") &&
+        (element.namespaceURI() == ns_omemo);
+#else
     return element.tagName() == QStringLiteral("encrypted") &&
         element.namespaceURI() == ns_omemo_2;
+#endif
 }
 /// \endcond

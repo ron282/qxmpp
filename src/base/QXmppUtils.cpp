@@ -106,8 +106,13 @@ QDateTime QXmppUtils::datetimeFromString(const QString &str)
 ///
 QString QXmppUtils::datetimeToString(const QDateTime &dt)
 {
+    // https://stackoverflow.com/questions/9527960/how-do-i-construct-an-iso-8601-datetime-in-c
     if (dt.time().msec()) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+        return dt.toUTC().toString(Qt::ISODate).insert(19, dt.toUTC().toString(".zzz"));
+#else
         return dt.toUTC().toString(Qt::ISODateWithMs);
+#endif
     }
     return dt.toUTC().toString(Qt::ISODate);
 }
@@ -245,10 +250,16 @@ QByteArray QXmppUtils::generateHmacSha1(const QByteArray &key, const QByteArray 
 
 int QXmppUtils::generateRandomInteger(int N)
 {
-    Q_ASSERT(N > 0 && N <= RAND_MAX);
+	Q_ASSERT(N > 0 && N <= RAND_MAX);
     int val;
+#if !defined(SFOS)
     while (N <= (val = QRandomGenerator::global()->generate() / (RAND_MAX / N))) {
     }
+#else
+    qsrand(QTime::currentTime().msec());
+    while (N <= (val = qrand() / (RAND_MAX / N))) {
+    }
+#endif
     return val;
 }
 
@@ -274,6 +285,7 @@ QString QXmppUtils::generateStanzaUuid()
 {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
+
 
 ///
 /// Returns a random alphanumerical string of the specified size.

@@ -19,7 +19,8 @@ class QXmppPubSubSubscription;
 class QXmppPubSubAffiliation;
 class QXmppResultSetReply;
 
-namespace QXmpp::Private {
+namespace QXmpp {
+    namespace Private {
 
 class PubSubIqPrivate;
 
@@ -165,6 +166,7 @@ void PubSubIq<T>::serializeItems(QXmlStreamWriter *writer) const
 }
 /// \endcond
 
-}  // namespace QXmpp::Private
+}  // namespace Private
+}  // namespace QXmpp
 
 #endif  // QXMPPPUBSUBIQ_H

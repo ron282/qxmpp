@@ -3,9 +3,12 @@ SPDX-FileCopyrightText: 2009 Manjeet Dahiya <manjeetdahiya@gmail.com>
 
 SPDX-License-Identifier: CC0-1.0
 -->
+<<<<<<< HEAD
 
 # QXmpp - Cross-platform C++/Qt XMPP library
 
+=======
+>>>>>>> 1.6
 <h1 align="center">
 <picture>
     <img alt="QXmpp logo" src="./logo.svg" height="150">
@@ -17,14 +20,14 @@ SPDX-License-Identifier: CC0-1.0
     </a>
 </p>
 <p align="center">
-    <a href="https://github.com/qxmpp-project/qxmpp/actions">
-        <img alt="Build Status" src="https://github.com/qxmpp-project/qxmpp/workflows/tests/badge.svg">
+    <a href="https://github.com/ron282/qxmpp/actions">
+        <img alt="Build Status" src="https://github.com/ron282/qxmpp/workflows/tests/badge.svg">
     </a>
     <a href="https://codecov.io/gh/qxmpp-project/qxmpp">
-        <img alt="Code Coverage" src="https://img.shields.io/codecov/c/github/qxmpp-project/qxmpp.svg">
+        <img alt="Code Coverage" src="https://img.shields.io/codecov/c/github/ron282/qxmpp.svg">
     </a>
-    <a href="https://github.com/qxmpp-project/qxmpp/releases/latest">
-        <img alt="Latest release" src="https://img.shields.io/github/v/release/qxmpp-project/qxmpp">
+    <a href="https://github.com/ron282/qxmpp/releases/latest">
+        <img alt="Latest release" src="https://img.shields.io/github/v/release/ron282/qxmpp">
     </a>
     <a href="https://doc.qxmpp.org/">
         <img alt="Documentation" src="https://img.shields.io/website?down_message=offline&label=documentation&up_message=online&url=https%3A%2F%2Fdoc.qxmpp.org%2F">
@@ -57,7 +60,12 @@ additional features.
 
 QXmpp is released under the terms of the GNU Lesser General Public License, version 2.1 or later.
 
+<<<<<<< HEAD
 ## Building
+=======
+QXmpp requires Qt 5.15 or Qt 6.0 or higher with SSL enabled.
+It uses CMake as build system.
+>>>>>>> 1.6
 
 QXmpp requires **Qt 5.15** or **Qt 6.0 or higher** with SSL enabled.
 
@@ -71,6 +79,7 @@ cmake --build .
 
 You can pass the following arguments to CMake:
 
+<<<<<<< HEAD
 Option | Default | Description
 ---|---|---
 `BUILD_SHARED` | `ON` | Build as shared library, otherwise static
@@ -81,6 +90,26 @@ Option | Default | Description
 `BUILD_OMEMO` | `OFF` | Build the [OMEMO module][omemo]
 `WITH_GSTREAMER` | `OFF` | Enable audio/video over Jingle
 `QT_VERSION_MAJOR=5/6` | | to build with a specific Qt major version, prefers Qt 6 if undefined
+=======
+    BUILD_SHARED                  to build with shared type library, otherwise static (default: true)
+    BUILD_DOCUMENTATION           to build the documentation, requires Doxygen (default: false)
+    BUILD_EXAMPLES                to build the examples (default: true)
+    BUILD_TESTS                   to build the unit tests (default: true)
+    BUILD_INTERNAL_TESTS          to build the unit tests testing private parts of the API (default: false)
+    BUILD_OMEMO                   to build the OMEMO module (default: false)
+    WITH_OMEMO_V03                to get compatibility with OMEMO v0.3  
+    WITH_GSTREAMER                to enable audio/video over jingle (default: false)
+    QT_VERSION_MAJOR=5/6          to build with a specific Qt major version (default behaviour: prefer 6)
+
+For building the OMEMO module [additional dependencies](src/omemo/README.md)
+are required.
+
+Installing QXmpp
+================
+
+After building QXmpp, you can install the Headers, Libraries
+and Documentation using the following command:
+>>>>>>> 1.6
 
 For example, to build without unit tests you could do:
 ```

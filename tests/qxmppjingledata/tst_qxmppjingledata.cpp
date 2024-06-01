@@ -634,7 +634,11 @@ void tst_QXmppJingleData::testContent()
     QCOMPARE(content1.description().media(), QStringLiteral("audio"));
     QCOMPARE(content1.description().ssrc(), quint32(0));
     QVERIFY(content1.isRtpMultiplexingSupported());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(content1.rtpEncryption().has_value());
+#else
     QVERIFY(content1.rtpEncryption());
+#endif
     QCOMPARE(content1.description().payloadTypes().size(), 2);
     QCOMPARE(content1.description().payloadTypes().at(0).id(), quint8(96));
     QCOMPARE(content1.description().payloadTypes().at(1).id(), quint8(97));
@@ -680,10 +684,14 @@ void tst_QXmppJingleData::testContent()
     QCOMPARE(content2.description().media(), QStringLiteral("audio"));
     QCOMPARE(content2.description().ssrc(), quint32(0));
     QVERIFY(content2.isRtpMultiplexingSupported());
+#if defined(WITH_OMEMO_V03)
+    QVERIFY(content2.rtpEncryption().has_value());
+#else
     QVERIFY(content2.rtpEncryption());
     QCOMPARE(content2.description().payloadTypes().size(), 2);
     QCOMPARE(content2.description().payloadTypes().at(0).id(), quint8(96));
     QCOMPARE(content2.description().payloadTypes().at(1).id(), quint8(97));
+#endif
     QCOMPARE(content2.transportUser(), QStringLiteral("8hhy"));
     QCOMPARE(content2.transportPassword(), QStringLiteral("asd88fgpdd777uzjYhagZg"));
     QCOMPARE(content2.transportCandidates().size(), 2);
@@ -1591,7 +1599,8 @@ void tst_QXmppJingleData::testJingleMessageInitiationElement()
     QCOMPARE(proposeElement.description()->type(), QStringLiteral("urn:xmpp:jingle:apps:rtp:1"));
     QCOMPARE(proposeElement.description()->media(), QStringLiteral("audio"));
     QCOMPARE(proposeElement.containsTieBreak(), false);  // single check if containsTieBreak is set correctly when unused
-    QCOMPARE(proposeElement.reason(), std::nullopt);     // single check if reason is set correctly when unused
+    QVERIFY(!proposeElement.reason().has_value());
+    //    QCOMPARE(proposeElement.reason(), std::nullopt);     // single check if reason is set correctly when unused
     serializePacket(proposeElement, proposeXml);
 
     // --- Ringing ---

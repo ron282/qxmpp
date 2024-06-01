@@ -21,7 +21,11 @@ using namespace QXmpp::Private;
 class QXmppEncryptedFileSourcePrivate : public QSharedData
 {
 public:
+#if defined(WITH_OMEMO_V03)
+    Cipher cipher = Aes256GcmNoPad;
+#else
     Cipher cipher = Aes128GcmNoPad;
+#endif
     QByteArray key;
     QByteArray iv;
     QVector<QXmppHash> hashes;

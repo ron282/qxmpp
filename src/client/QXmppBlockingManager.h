@@ -34,7 +34,11 @@ public:
     QXMPP_PRIVATE_DECLARE_RULE_OF_SIX(QXmppBlocklist)
 
     QVector<QString> entries() const;
-    bool containsEntry(QStringView) const;
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+    bool containsEntry(QString) const;
+#else
+	bool containsEntry(QStringView) const;
+#endif
     BlockingState blockingState(const QString &jid) const;
 
 private:
@@ -79,5 +83,4 @@ private:
 
     std::unique_ptr<QXmppBlockingManagerPrivate> d;
 };
-
 #endif  // QXMPPBLOCKINGMANAGER_H

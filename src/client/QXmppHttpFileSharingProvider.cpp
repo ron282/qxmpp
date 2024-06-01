@@ -119,6 +119,10 @@ auto QXmppHttpFileSharingProvider::downloadFile(const std::any &source,
     });
 
     QObject::connect(state->reply, &QNetworkReply::errorOccurred,
+#else
+    //QObject::connect(state->reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error),
+    QObject::connect(state->reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error),
+#endif
                      [state](QNetworkReply::NetworkError) {
                          // Qt doc: the finished() signal will "probably" follow
                          // => we can't be sure that finished() is going to be called

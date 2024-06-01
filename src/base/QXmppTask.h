@@ -18,7 +18,8 @@
 template<typename T>
 class QXmppPromise;
 
-namespace QXmpp::Private {
+namespace QXmpp {
+    namespace Private {
 
 struct TaskData;
 
@@ -43,7 +44,8 @@ private:
     std::shared_ptr<TaskData> d;
 };
 
-}  // namespace QXmpp::Private
+}  // namespace QXmpp
+}  // namespace Private
 
 ///
 /// Handle for an ongoing operation that finishes in the future.

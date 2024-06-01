@@ -11,6 +11,7 @@
 #include "QXmppPromise.h"
 #include "QXmppUtils.h"
 
+#include <QStringBuilder>
 #include <QUuid>
 
 using namespace QXmpp;
@@ -287,7 +288,11 @@ QXmppTask<QXmppJingleMessageInitiationManager::ProposeResult> QXmppJingleMessage
 
     sendMessage(jmiElement, callPartnerJid).then(this, [this, promise, callPartnerJid](SendResult result) mutable {
         if (auto error = std::get_if<QXmppError>(&result)) {
-            warning(u"Error sending Jingle Message Initiation proposal: " + error->description);
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+            warning("Error sending Jingle Message Initiation proposal: " % error->description);
+#else
+            warning(u"Error sending Jingle Message Initiation proposal: " % error->description);
+#endif
             promise.finish(*error);
         } else {
             promise.finish(addJmi(callPartnerJid));
@@ -512,8 +517,11 @@ bool QXmppJingleMessageInitiationManager::handleNonExistingSession(const std::sh
     QXmppJingleReason reason;
     reason.setType(QXmppJingleReason::Expired);
     reason.setText(QStringLiteral("Tie-Break"));
-
+#if QT_VERSION < QT_VERSION_CHECK(5,14,0)
+    if (QUuid(existingJmi->id()) < QUuid(jmiElementId)) {
+#else
     if (QUuid::fromString(existingJmi->id()) < QUuid::fromString(jmiElementId)) {
+#endif
         // Jingle message initiator with lower ID rejects the other proposal.
         existingJmi->setId(jmiElementId);
         existingJmi->reject(std::move(reason), true).then(this, [existingJmi](auto result) {

@@ -227,7 +227,9 @@ void QXmppBitsOfBinaryDataList::parse(const QDomElement &element)
     clear();
 
     // parse all <data/> elements
-    for (const auto &child : iterChildElements(element)) {
+    for (auto child = element.firstChildElement();
+         !child.isNull();
+         child = child.nextSiblingElement()) {
         if (QXmppBitsOfBinaryData::isBitsOfBinaryData(child)) {
             QXmppBitsOfBinaryData data;
             data.parseElementFromChild(child);

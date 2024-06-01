@@ -878,6 +878,8 @@ void QXmppVCardIq::parseElementFromChild(const QDomElement &nodeRecv)
     QDomElement cardElement = nodeRecv.firstChildElement(QStringLiteral("vCard"));
     d->birthday = QDate::fromString(cardElement.firstChildElement(QStringLiteral("BDAY")).text(), QStringLiteral("yyyy-MM-dd"));
     d->description = cardElement.firstChildElement(QStringLiteral("DESC")).text();
+    if(d->description.isEmpty())
+        d->description = cardElement.firstChildElement(QStringLiteral("NOTE")).text();
     d->fullName = cardElement.firstChildElement(QStringLiteral("FN")).text();
     d->nickName = cardElement.firstChildElement(QStringLiteral("NICKNAME")).text();
     QDomElement nameElement = cardElement.firstChildElement(QStringLiteral("N"));

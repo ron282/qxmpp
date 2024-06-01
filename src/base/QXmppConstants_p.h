@@ -5,7 +5,11 @@
 #ifndef QXMPPCONSTANTS_H
 #define QXMPPCONSTANTS_H
 
+//#if defined (SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview.h"
+//#else
 #include <QStringView>
+//#endif
 
 //
 //  W A R N I N G

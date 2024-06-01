@@ -59,7 +59,11 @@ void tst_QXmppPubSubIq::testItems()
     QCOMPARE(iq.queryNode(), QLatin1String("storage:bookmarks"));
     serializePacket(iq, xml);
 
+#if defined(WITH_OMEMO_V03)
+    iq = PubSubIq<>();
+#else
     iq = PubSubIq();
+#endif
     iq.setId(QLatin1String("items1"));
     iq.setTo(QLatin1String("pubsub.shakespeare.lit"));
     iq.setFrom(QLatin1String("francisco@denmark.lit/barracks"));
@@ -127,7 +131,11 @@ void tst_QXmppPubSubIq::testCreateNode()
     QCOMPARE(iq.queryNode(), QLatin1String("princely_musings"));
     serializePacket(iq, xml);
 
+#if defined(WITH_OMEMO_V03)
+    iq = PubSubIq<QXmppPubSubBaseItem>();
+#else
     iq = PubSubIq();
+#endif
     iq.setId(QLatin1String("create1"));
     iq.setTo(QLatin1String("pubsub.shakespeare.lit"));
     iq.setFrom(QLatin1String("hamlet@denmark.lit/elsinore"));
@@ -196,7 +204,11 @@ void tst_QXmppPubSubIq::testPublish()
     // serialize using setters
     QXmppPubSubBaseItem item(QStringLiteral("current"));
 
+#if defined(WITH_OMEMO_V03)
+    iq = PubSubIq<>();
+#else
     iq = PubSubIq();
+#endif
     iq.setId(QLatin1String("items1"));
     iq.setTo(QLatin1String("pubsub.shakespeare.lit"));
     iq.setFrom(QLatin1String("francisco@denmark.lit/barracks"));
@@ -237,7 +249,11 @@ void tst_QXmppPubSubIq::testRetractItem()
     QCOMPARE(iq.items().first().id(), QStringLiteral("ae890ac52d0df67ed7cfdf51b644e901"));
     serializePacket(iq, xml);
 
+#if defined(WITH_OMEMO_V03)
+    iq = PubSubIq<>();
+#else
     iq = PubSubIq();
+#endif
     iq.setId(QLatin1String("retract1"));
     iq.setTo(QLatin1String("pubsub.shakespeare.lit"));
     iq.setFrom(QLatin1String("hamlet@denmark.lit/elsinore"));
@@ -305,7 +321,11 @@ void tst_QXmppPubSubIq::testSubscription()
     QCOMPARE(iq.subscription()->subId(), QStringLiteral("ba49252aaa4f5d320c24d3766f0bdcade78c78d3"));
     serializePacket(iq, xml);
 
+#if defined(WITH_OMEMO_V03)
+    iq = PubSubIq<>();
+#else
     iq = PubSubIq();
+#endif
     iq.setId("sub1");
     iq.setTo("francisco@denmark.lit/barracks");
     iq.setFrom("pubsub.shakespeare.lit");

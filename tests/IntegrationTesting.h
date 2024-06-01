@@ -27,7 +27,11 @@ class IntegrationTests
 public:
     static QString environmentVariable(const char *varName, const QString &defaultValue = {})
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5,10,0)
         return qEnvironmentVariable(varName, defaultValue);
+#else
+        return qEnvironmentVariableIsEmpty(varName) ? defaultValue : qgetenv(varName);
+#endif
     }
 
     static bool enabled()

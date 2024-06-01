@@ -20,6 +20,7 @@
 #include <QTimer>
 #include <QtCrypto>
 
+#include <chrono>
 #undef max
 
 class QXmppTrustManager;
@@ -34,13 +35,28 @@ class QXmppOmemoDeviceListItem;
 class QXmppOmemoDeviceBundleItem;
 
 using namespace QXmpp;
-using namespace std::chrono_literals;
+//using namespace std::chrono_literals;
+using namespace std::literals;
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+namespace QXmpp { namespace Omemo { namespace Private {
+#else
 namespace QXmpp::Omemo::Private {
+#endif
+
+#if defined(WITH_OMEMO_V03)
+constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
+constexpr auto ns_omemo_bundles = "eu.siacs.conversations.axolotl.bundles";
+constexpr auto ns_omemo_devices = "eu.siacs.conversations.axolotl.devicelist";
+#endif
 
 // default possible trust levels a key must have to be used for encryption
 // The class documentation must be adapted if the trust levels are modified.
+#if defined(WITH_OMEMO_V03)
+constexpr auto ACCEPTED_TRUST_LEVELS = TrustLevel::AutomaticallyTrusted | TrustLevel::ManuallyTrusted | TrustLevel::Authenticated | TrustLevel::AutomaticallyDistrusted;
+#else
 constexpr auto ACCEPTED_TRUST_LEVELS = TrustLevel::AutomaticallyTrusted | TrustLevel::ManuallyTrusted | TrustLevel::Authenticated;
+#endif
 
 // count of unresponded stanzas sent to a device until QXmpp stops encrypting for it
 constexpr int UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED = 106;
@@ -80,7 +96,24 @@ constexpr auto DEVICE_REMOVAL_INTERVAL = 24h * 7 * 12;
 
 // interval to check for devices removed from their servers
 constexpr auto DEVICE_REMOVAL_CHECK_INTERVAL = 24h;
+#if defined(WITH_OMEMO_V03)
+constexpr auto PAYLOAD_CIPHER_TYPE = "aes128";
+constexpr QCA::Cipher::Mode PAYLOAD_CIPHER_MODE = QCA::Cipher::GCM;
+constexpr QCA::Cipher::Padding PAYLOAD_CIPHER_PADDING = QCA::Cipher::NoPadding;
 
+constexpr auto HKDF_INFO = "";
+constexpr int HKDF_KEY_SIZE = 16;
+constexpr int HKDF_SALT_SIZE = 16;
+constexpr int HKDF_OUTPUT_SIZE = 48;
+
+extern const QString PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE;
+constexpr uint32_t PAYLOAD_MESSAGE_AUTHENTICATION_CODE_SIZE = 16;
+
+constexpr int PAYLOAD_KEY_SIZE = 16;
+constexpr uint32_t PAYLOAD_INITIALIZATION_VECTOR_SIZE = 12;
+constexpr uint32_t PAYLOAD_AUTHENTICATION_KEY_SIZE = 16;
+#else
+constexpr auto PAYLOAD_CIPHER_TYPE = "aes256";
 constexpr QStringView PAYLOAD_CIPHER_TYPE = u"aes256";
 constexpr QCA::Cipher::Mode PAYLOAD_CIPHER_MODE = QCA::Cipher::CBC;
 constexpr QCA::Cipher::Padding PAYLOAD_CIPHER_PADDING = QCA::Cipher::PKCS7;
@@ -96,6 +129,7 @@ constexpr uint32_t PAYLOAD_MESSAGE_AUTHENTICATION_CODE_SIZE = 16;
 constexpr int PAYLOAD_KEY_SIZE = 32;
 constexpr uint32_t PAYLOAD_INITIALIZATION_VECTOR_SIZE = 16;
 constexpr uint32_t PAYLOAD_AUTHENTICATION_KEY_SIZE = 32;
+#endif
 
 // boundaries for the count of characters in SCE's <rpad/> element
 constexpr uint32_t SCE_RPAD_SIZE_MIN = 0;
@@ -104,6 +138,9 @@ constexpr uint32_t SCE_RPAD_SIZE_MAX = 200;
 struct PayloadEncryptionResult {
     QCA::SecureArray decryptionData;
     QByteArray encryptedPayload;
+#if defined(WITH_OMEMO_V03)
+    QByteArray iv;
+#endif
 };
 
 struct DecryptionResult {
@@ -116,7 +153,11 @@ struct IqDecryptionResult {
     QXmppE2eeMetadata e2eeMetadata;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
+}  /* namespace Private*/ }  /* namespace Omemo */  }  /* namespace QXmpp */
+#else
 }  // namespace QXmpp::Omemo::Private
+#endif
 
 using namespace QXmpp::Private;
 using namespace QXmpp::Omemo::Private;
@@ -156,7 +197,11 @@ public:
 
     OmemoContextPtr globalContext;
     StoreContextPtr storeContext;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QRecursiveMutex mutex;
+#else
+    QMutex mutex;
+#endif
     signal_crypto_provider cryptoProvider;
 
     signal_protocol_identity_key_store identityKeyStore;
@@ -217,6 +262,9 @@ public:
                                                                             uint32_t senderDeviceId,
                                                                             const QXmppOmemoEnvelope &omemoEnvelope,
                                                                             bool isMessageStanza = true);
+#if defined(WITH_OMEMO_V03)
+    QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &iv, const QByteArray &payload) const;
+#endif
     QByteArray decryptPayload(const QCA::SecureArray &payloadDecryptionData, const QByteArray &payload) const;
 
     QXmppTask<bool> publishOmemoData();

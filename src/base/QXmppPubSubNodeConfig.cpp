@@ -784,6 +784,7 @@ void QXmppPubSubNodeConfig::serializeForm(QXmppDataForm &form) const
                       Type::TextSingleField,
                       LANGUAGE,
                       d->language);
+
     std::visit(overloaded {
                    [](Unset) {},
                    [&](uint64_t value) {
@@ -793,6 +794,7 @@ void QXmppPubSubNodeConfig::serializeForm(QXmppDataForm &form) const
                        serializeValue(form, Type::TextSingleField, MAX_ITEMS, QStringLiteral("max"));
                    } },
                d->maxItems);
+
     serializeOptionalNumber(form,
                             Type::TextSingleField,
                             MAX_PAYLOAD_SIZE,

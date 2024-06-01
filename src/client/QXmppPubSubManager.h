@@ -80,6 +80,10 @@ public:
     QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, const QString &itemId);
     template<typename T = QXmppPubSubBaseItem>
     QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName, StandardItemId itemId);
+#if defined(WITH_OMEMO_V03)
+    template<typename T = QXmppPubSubBaseItem>
+    QXmppTask<ItemResult<T>> requestItem(const QString &jid, const QString &nodeName);
+#endif
     template<typename T = QXmppPubSubBaseItem>
     QXmppTask<ItemsResult<T>> requestItems(const QString &jid, const QString &nodeName);
     template<typename T = QXmppPubSubBaseItem>
@@ -180,6 +184,31 @@ QXmppTask<QXmppPubSubManager::ItemResult<T>> QXmppPubSubManager::requestItem(con
                        return QXmppError { QStringLiteral("No such item has been found."), {} };
                    });
 }
+
+#if defined(WITH_OMEMO_V03)
+///
+/// Requests a specific item of an entity's node.
+///
+/// \param jid Jabber ID of the entity hosting the pubsub service. For PEP this
+/// should be an account's bare JID
+/// \param nodeName the name of the node to query
+/// \return
+///
+
+template<typename T>
+QXmppTask<QXmppPubSubManager::ItemResult<T>> QXmppPubSubManager::requestItem(const QString &jid,
+                                                                           const QString &nodeName)
+{
+    using namespace QXmpp::Private;
+    return chainIq(client()->sendIq(requestItemsIq(jid, nodeName, {})), this,
+                   [](PubSubIq<T> &&iq) -> ItemResult<T> {
+                       if (!iq.items().isEmpty()) {
+                           return iq.items().constFirst();
+                       }
+                       return QXmppError {QStringLiteral("No such item has been found."), {} };
+                   });
+}
+#endif
 
 ///
 /// Requests a specific item of an entity's node.
@@ -386,3 +415,4 @@ QXmppTask<QXmppPubSubManager::PublishItemsResult> QXmppPubSubManager::publishOwn
 }
 
 #endif  // QXMPPPUBSUBMANAGER_H
+    

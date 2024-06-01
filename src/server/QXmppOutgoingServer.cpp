@@ -60,7 +60,11 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
     d->localDomain = domain;
     d->ready = false;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingServer::slotSslErrors);
+#else
+    connect(socket, static_cast<void (QSslSocket::*)(const QList<QSslError> &)>(&QSslSocket::sslErrors), this, &QXmppOutgoingServer::slotSslErrors);
+#endif
 }
 
 QXmppOutgoingServer::~QXmppOutgoingServer() = default;

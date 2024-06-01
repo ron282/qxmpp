@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: 2010 Jeremy Lainé <jeremy.laine@m4x.org>
 SPDX-License-Identifier: CC0-1.0
 -->
 
+<<<<<<< HEAD
 QXmpp 1.7.0 (May 19, 2024)
 --------------------------
 
@@ -64,6 +65,12 @@ Changes:
  - Fix picking by strength of hashing algorithms (@lnjX)
  - Fix github ci (@lnjX)
  - Add unit tests for all file encryption ciphers (@lnjX)
+=======
+QXmpp 1.6.0 (UNRELEASED)
+------------------------
+
+*under development*
+>>>>>>> 1.6
 
 QXmpp 1.5.5 (Apr 30, 2023)
 --------------------------

@@ -25,7 +25,8 @@
 #include <QFutureWatcher>
 #include <QObject>
 
-namespace QXmpp::Private {
+namespace QXmpp {
+namespace Private {
 
 // helper for std::visit
 template<class... Ts>
@@ -217,6 +218,7 @@ auto chainMapSuccess(QXmppTask<Input> &&source, QObject *context, Converter conv
     });
 }
 
-}  // namespace QXmpp::Private
+}  // namespace Private
+}  // namespace QXmpp
 
 #endif  // QXMPPFUTUREUTILS_P_H

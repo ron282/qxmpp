@@ -7,6 +7,10 @@
 #include <QMap>
 #include <QSharedData>
 
+#if defined(SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview.h"
+#endif
+
 #define CONTENTID_URL QStringLiteral("cid:")
 #define CONTENTID_URL_LENGTH 4
 #define CONTENTID_POSTFIX QStringLiteral("@bob.xmpp.org")
@@ -14,7 +18,7 @@
 #define CONTENTID_HASH_SEPARATOR QStringLiteral("+")
 
 static const QMap<QCryptographicHash::Algorithm, QStringView> HASH_ALGORITHMS = {
-    { QCryptographicHash::Sha1, u"sha1" },
+	{ QCryptographicHash::Sha1, u"sha1" },
     { QCryptographicHash::Md4, u"md4" },
     { QCryptographicHash::Md5, u"md5" },
     { QCryptographicHash::Sha224, u"sha-224" },
@@ -30,6 +34,22 @@ static const QMap<QCryptographicHash::Algorithm, QStringView> HASH_ALGORITHMS = 
     { QCryptographicHash::Blake2b_512, u"blake2b-512" },
 #endif
 };
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 12, 0)
+static const QMap<QCryptographicHash::Algorithm, int> HASH_LENGTHS = {
+    { QCryptographicHash::Sha1, 160/8 },
+    { QCryptographicHash::Md4, 128/8 },
+    { QCryptographicHash::Md5, 128/8 },
+    { QCryptographicHash::Sha224, 224/8 },
+    { QCryptographicHash::Sha256, 256/8 },
+    { QCryptographicHash::Sha384, 384/8 },
+    { QCryptographicHash::Sha512, 512/8 },
+    { QCryptographicHash::Sha3_224, 224/8 },
+    { QCryptographicHash::Sha3_256, 256/8 },
+    { QCryptographicHash::Sha3_384, 384/8 },
+    { QCryptographicHash::Sha3_512, 512/8 },
+};
+#endif
 
 class QXmppBitsOfBinaryContentIdPrivate : public QSharedData
 {
@@ -225,9 +245,14 @@ void QXmppBitsOfBinaryContentId::setAlgorithm(QCryptographicHash::Algorithm algo
 ///
 bool QXmppBitsOfBinaryContentId::isValid() const
 {
-    return !d->hash.isEmpty() &&
+#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
+	return !d->hash.isEmpty() &&
         HASH_ALGORITHMS.contains(d->algorithm) &&
         d->hash.length() == QCryptographicHash::hashLength(d->algorithm);
+#else
+    return !d->hash.isEmpty() && HASH_ALGORITHMS.contains(d->algorithm) &&
+            d->hash.length() == HASH_LENGTHS.value(d->algorithm);
+#endif
 }
 
 ///

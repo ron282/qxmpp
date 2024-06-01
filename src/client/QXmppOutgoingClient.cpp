@@ -282,8 +282,16 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
     d->socket.setSocket(socket);
 
     connect(socket, &QAbstractSocket::disconnected, this, &QXmppOutgoingClient::_q_socketDisconnected);
-    connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingClient::socketSslErrors);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	connect(socket, QOverload<const QList<QSslError> &>::of(&QSslSocket::sslErrors), this, &QXmppOutgoingClient::socketSslErrors);
     connect(socket, &QSslSocket::errorOccurred, this, &QXmppOutgoingClient::socketError);
+#else
+	connect(socket, static_cast<void (QSslSocket::*)(const QList<QSslError> &)>(&QSslSocket::sslErrors), this, &QXmppOutgoingClient::socketSslErrors);
+    connect(socket, static_cast<void (QSslSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error), this, &QXmppOutgoingClient::socketError);
+#endif
+
+    // DNS lookups
+    connect(&d->dns, &QDnsLookup::finished, this, &QXmppOutgoingClient::_q_dnsLookupFinished);
 
     connect(&d->socket, &XmppSocket::started, this, &QXmppOutgoingClient::handleStart);
     connect(&d->socket, &XmppSocket::stanzaReceived, this, &QXmppOutgoingClient::handlePacketReceived);

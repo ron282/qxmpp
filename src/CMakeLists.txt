@@ -30,7 +30,10 @@ set(INSTALL_HEADER_FILES
     base/QXmppExtension.h
     base/QXmppExternalService.h
     base/QXmppExternalServiceDiscoveryIq.h
+<<<<<<< HEAD
     base/QXmppFallback.h
+=======
+>>>>>>> 1.6
     base/QXmppFileMetadata.h
     base/QXmppFileShare.h
     base/QXmppFutureUtils_p.h
@@ -103,8 +106,11 @@ set(INSTALL_HEADER_FILES
     client/QXmppAtmTrustMemoryStorage.h
     client/QXmppAtmTrustStorage.h
     client/QXmppAttentionManager.h
+<<<<<<< HEAD
     client/QXmppAuthenticationError.h
     client/QXmppBindError.h
+=======
+>>>>>>> 1.6
     client/QXmppBlockingManager.h
     client/QXmppBookmarkManager.h
     client/QXmppCallInviteManager.h

@@ -9,7 +9,6 @@
 
 #include "IntegrationTesting.h"
 #include "util.h"
-
 #include <QTest>
 
 using CallInviteType = QXmppCallInviteElement::Type;
@@ -153,7 +152,7 @@ void tst_QXmppCallInviteManager::testRetract()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == callInviteCallPartnerJid) {
-                QVERIFY(message.callInviteElement());
+                QVERIFY(message.callInviteElement().has_value());
                 QCOMPARE(message.callInviteElement()->id(), QStringLiteral("id1_testRetract"));
                 QCOMPARE(message.callInviteElement()->type(), CallInviteType::Retract);
             }

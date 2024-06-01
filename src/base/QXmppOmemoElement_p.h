@@ -25,6 +25,11 @@ public:
     QByteArray payload() const;
     void setPayload(const QByteArray &payload);
 
+#if defined(WITH_OMEMO_V03)
+    QByteArray iv() const;
+    void setIv(const QByteArray &iv);
+#endif
+
     std::optional<QXmppOmemoEnvelope> searchEnvelope(const QString &recipientJid, uint32_t recipientDeviceId) const;
     void addEnvelope(const QString &recipientJid, const QXmppOmemoEnvelope &envelope);
 
@@ -39,6 +44,9 @@ private:
     uint32_t m_senderDeviceId = 0;
     QByteArray m_payload;
     QMultiMap<QString, QXmppOmemoEnvelope> m_envelopes;
+#if defined(WITH_OMEMO_V03)
+    QByteArray m_iv;
+#endif
 };
 
 Q_DECLARE_TYPEINFO(QXmppOmemoElement, Q_MOVABLE_TYPE);
