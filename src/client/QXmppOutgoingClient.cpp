@@ -43,7 +43,11 @@ using namespace std::chrono_literals;
 using namespace QXmpp;
 using namespace QXmpp::Private;
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 struct ProtocolError {
     QString text;
@@ -176,7 +180,11 @@ private:
     std::unordered_map<QString, IqState> m_requests;
 };
 
+#if defined(SFOS)
+}  } // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 class QXmppOutgoingClientPrivate
 {
@@ -876,7 +884,11 @@ QXmppStanza::Error::Condition QXmppOutgoingClient::xmppStreamError()
     return d->xmppStreamError;
 }
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 QXmppTask<BindManager::Result> BindManager::bindAddress(const QString &resource)
 {
@@ -1346,4 +1358,9 @@ bool C2sStreamManager::setResumeAddress(const QString &address)
     return false;
 }
 
+#if defined(SFOS)
+}  } // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
+

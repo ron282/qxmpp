@@ -24,11 +24,9 @@ class QXmppSaslClientPrivate;
 class QXmppSaslServerPrivate;
 
 #if defined (SFOS)
-namespace QXmpp {
-	namespace Private {
-	class SaslManager;
-	}
-}
+namespace QXmpp {  namespace Private {
+class SaslManager;
+}  }
 #else
 namespace QXmpp::Private {
 class SaslManager;
@@ -48,9 +46,7 @@ class SaslManager;
 //
 
 #if defined (SFOS)
-namespace QXmpp {
-	namespace Private {
-	   namespace Sasl {
+namespace QXmpp {  namespace Private {  namespace Sasl {
 #else
 namespace QXmpp::Private::Sasl {
 #endif
@@ -70,7 +66,7 @@ enum class ErrorCondition {
 };
 
 QString errorConditionToString(ErrorCondition);
-std::optional<ErrorCondition> errorConditionFromString(QStringView);
+std::optional<ErrorCondition> errorConditionFromString(QEmuStringView);
 
 struct Auth {
     static std::optional<Auth> fromDom(const QDomElement &);
@@ -107,16 +103,14 @@ struct Success {
     void toXml(QXmlStreamWriter *writer) const;
 };
 
-#if defined(SFOS)
-} } }  // namespace QXmpp Private Sasl2
+#if defined (SFOS)
+} } }  // namespace QXmpp Private Sasl
 #else
 }  // namespace QXmpp::Private::Sasl
 #endif
 
 #if defined (SFOS)
-namespace QXmpp {
-	namespace Private {
-	   namespace Sasl {
+namespace QXmpp {	namespace Private {		namespace Sasl2 {
 #else
 namespace QXmpp::Private::Sasl2 {
 #endif

@@ -9,9 +9,15 @@
 
 class QXmppOmemoManagerPrivate;
 
+#if defined(SFOS)
+namespace QXmpp { namespace Omemo { namespace Private {
+signal_crypto_provider createOmemoCryptoProvider(QXmppOmemoManagerPrivate *d);
+} } }
+#else
 namespace QXmpp::Omemo::Private {
-
 signal_crypto_provider createOmemoCryptoProvider(QXmppOmemoManagerPrivate *d);
 }
+#endif
+
 
 #endif  // OMEMOCRYPTOPROVIDER_H

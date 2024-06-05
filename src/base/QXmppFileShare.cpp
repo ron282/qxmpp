@@ -19,7 +19,11 @@
 using namespace QXmpp::Private;
 using Disposition = QXmppFileShare::Disposition;
 
+#if defined (SFOS)
+namespace QXmpp {	namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 struct FileSources {
     static FileSources fromSourcesDom(const QDomElement &el);
@@ -57,7 +61,11 @@ void FileSources::innerToXml(QXmlStreamWriter *writer) const
     }
 }
 
+#if defined (SFOS)
+}  } // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 static std::optional<Disposition> dispositionFromString(const QString &str)
 {

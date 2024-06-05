@@ -28,8 +28,7 @@ class QXmppOutgoingClientPrivate;
 class TestClient;
 
 #if defined(SFOS)
-namespace QXmpp {
-	namespace Private {
+namespace QXmpp {  namespace Private {
 #else
 namespace QXmpp::Private {
 #endif
@@ -44,7 +43,11 @@ enum HandleElementResult {
     Rejected,
     Finished,
 };
+#if defined(SFOS)
+}  }  // namespace QXmpp::Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #if defined(SFOS)
 namespace QXmpp { namespace Private { namespace Sasl2 {
@@ -53,7 +56,7 @@ namespace QXmpp::Private::Sasl2 {
 #endif
 struct StreamFeature;
 #if defined(SFOS)
-} }
+} } }
 #else
 }
 #endif
@@ -143,8 +146,7 @@ private:
 };
 
 #if defined(SFOS)
-namespace QXmpp {
-	namespace Private {
+namespace QXmpp {  namespace Private {
 #else
 namespace QXmpp::Private {
 #endif
@@ -188,7 +190,7 @@ private:
 };
 
 #if defined(SFOS)
-} }  // namespace QXmpp Private
+}  }  // namespace QXmpp Private
 #else
 }  // namespace QXmpp::Private
 #endif

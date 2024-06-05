@@ -81,7 +81,11 @@ constexpr auto PUBSUB_QUERIES = to_array<QStringView>({
     u"unsubscribe",
 });
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 class PubSubIqPrivate : public QSharedData
 {
@@ -97,7 +101,11 @@ public:
     std::optional<QXmppResultSetReply> itemsContinuation;
 };
 
+#if defined(SFOS)
+}  } // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 ///
 /// Constructs a PubSub IQ.

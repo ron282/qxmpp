@@ -16,17 +16,15 @@ class QSslSocket;
 class QXmppNonza;
 class QXmppStreamPrivate;
 
-//#if defined(SFOS)
-namespace QXmpp {
-	namespace Private {
-		class XmppSocket;
-	}
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+class XmppSocket;
+}  }
+#else
+namespace QXmpp::Private {
+class XmppSocket;
 }
-//#else
-//namespace QXmpp::Private {
-//class XmppSocket;
-//}
-//#endif
+#endif
 
 ///
 /// \brief The QXmppStream class is the base class for all XMPP streams.

@@ -6,7 +6,11 @@
 
 #include <QDebug>
 
-namespace QXmpp::Private {
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+#else
+}
+#endif
 
 struct TaskData {
     QPointer<const QObject> context;
@@ -23,7 +27,11 @@ struct TaskData {
     }
 };
 
+#if defined(SFOS)
+}  }  // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 QXmpp::Private::TaskPrivate::TaskPrivate(void (*freeResult)(void *))
     : d(std::make_shared<QXmpp::Private::TaskData>())

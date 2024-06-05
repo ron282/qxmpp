@@ -12,6 +12,10 @@
 #include <QTextStream>
 #include <QXmlStreamWriter>
 
+#if defined (SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview2.h"
+#endif
+
 using namespace QXmpp::Private;
 
 /// Creates a Bind IQ of type set with the specified resource.

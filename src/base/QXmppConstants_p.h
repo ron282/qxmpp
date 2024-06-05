@@ -5,11 +5,11 @@
 #ifndef QXMPPCONSTANTS_H
 #define QXMPPCONSTANTS_H
 
-//#if defined (SFOS)
-#include "../../3rdparty/QEmuStringView/qemustringview.h"
-//#else
+#if defined (SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview2.h"
+#else
 #include <QStringView>
-//#endif
+#endif
 
 //
 //  W A R N I N G
@@ -22,11 +22,19 @@
 // We mean it.
 //
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 constexpr int XMPP_DEFAULT_PORT = 5222;
 
+#if defined(SFOS)
+} }
+#else
 }
+#endif
 
 inline constexpr QStringView ns_stream = u"http://etherx.jabber.org/streams";
 inline constexpr QStringView ns_client = u"jabber:client";

@@ -174,7 +174,7 @@ namespace QEmuPrivate {
 
 } // namespace QEmuPrivate
 
-class QEmuStringView : public QString
+class QEmuStringView
 {
 public:
     typedef QChar storage_type;
@@ -281,8 +281,10 @@ public:
         }
     }
 
-//     inline QEmuStringView(const QChar *str, qsizetype len=-1)
-//         : QString(str,len) {}
+	inline QEmuStringView(const QChar *str)
+		: m_hasData(true), m_data(str)
+	{}
+
 template <typename Char, if_compatible_char<Char> = true>
     inline Q_DECL_CONSTEXPR QEmuStringView(const Char *str, qsizetype len)
         : QString(castHelper(str),len), m_isNull(str==nullptr)

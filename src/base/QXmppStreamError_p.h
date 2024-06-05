@@ -13,7 +13,11 @@
 class QDomElement;
 class QXmlStreamWriter;
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 // implemented in QXmppStream.cpp
 struct StreamErrorElement {
@@ -35,6 +39,10 @@ struct StreamErrorElement {
     bool operator==(const StreamErrorElement &o) const { return condition == o.condition && text == o.text; }
 };
 
+#if defined(SFOS)
+}  }  // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPSTREAMERROR_P_H

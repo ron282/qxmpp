@@ -79,11 +79,19 @@ private:
     QXmppMixInvitation m_invitation;
 };
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 QXMPP_EXPORT QVector<QString> mixNodesToList(QXmppMixConfigItem::Nodes nodes);
 QXMPP_EXPORT QXmppMixConfigItem::Nodes listToMixNodes(const QVector<QString> &nodeList);
 
+#if defined(SFOS)
+}  } // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPMIXIQ_P_H

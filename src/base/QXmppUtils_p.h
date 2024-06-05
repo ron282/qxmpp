@@ -20,7 +20,11 @@ class QDomElement;
 class QXmlStreamWriter;
 class QXmppNonza;
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 // std::array helper
 namespace detail {
@@ -56,11 +60,17 @@ inline auto toString65(QStringView s)
 #endif
 }
 
+#if !defined(QStringLiteral)
+#define QStringLiteral(text) QString(text)
+#endif
+
 // QStringLiteral for Qt < 6.5, otherwise uses string view
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 #define QSL65(text) u"" text
-#else
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
 #define QSL65(text) QStringLiteral(text)
+#else
+#define QSL65(text) QString(text)
 #endif
 
 // Enum parsing
@@ -140,6 +150,10 @@ float calculateProgress(qint64 transferred, qint64 total);
 
 QXMPP_EXPORT std::pair<QString, int> parseHostAddress(const QString &address);
 
+#if defined(SFOS)
+}  } // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPUTILS_P_H

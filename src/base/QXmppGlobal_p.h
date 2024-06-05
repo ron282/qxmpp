@@ -9,13 +9,21 @@
 
 #include <optional>
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 // Encryption enum
 std::optional<EncryptionMethod> encryptionFromString(QStringView str);
 QStringView encryptionToString(EncryptionMethod);
 QStringView encryptionToName(EncryptionMethod);
 
+#if defined(SFOS)
+}	}  // namespace QXmpp Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPGLOBAL_P_H

@@ -12,6 +12,10 @@
 
 #include <QString>
 
+#if defined (SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview2.h"
+#endif
+
 #define QXMPP_AUTOTEST_EXPORT
 
 ///
