@@ -58,14 +58,14 @@ static const char *jingle_reasons[] = {
 
 constexpr auto JINGLE_RTP_ERROR_CONDITIONS = to_array<QStringView>({
     {},
-    u"invalid-crypto",
-    u"crypto-required",
+    QStringView(u"invalid-crypto"),
+    QStringView(u"crypto-required"),
 });
 
 constexpr auto JINGLE_RTP_HEADER_EXTENSIONS_SENDERS = to_array<QStringView>({
-    u"both",
-    u"initiator",
-    u"responder",
+    QStringView(u"both"),
+    QStringView(u"initiator"),
+    QStringView(u"responder"),
 });
 
 static QString formatFingerprint(const QByteArray &digest)
@@ -961,7 +961,7 @@ QString QXmppJingleIq::Content::toSdp() const
         if (payload.channels() > 1) {
             rtpmap += u'/' + QString::number(payload.channels());
         }
-        attrs << u"a=rtpmap:" + rtpmap;
+        attrs << QStringLiteral(u"a=rtpmap:") + rtpmap;
 
         // payload parameters
         QStringList paramList;
@@ -977,7 +977,7 @@ QString QXmppJingleIq::Content::toSdp() const
             }
         }
         if (!paramList.isEmpty()) {
-            attrs << QString(QStringLiteral("a=fmtp:") + QString::number(payload.id()) + u' ' + paramList.join(u"; "));
+            attrs << QString(QStringLiteral("a=fmtp:") + QString::number(payload.id()) + u' ' + paramList.join(QStringLiteral(u"; ")));
         }
     }
     sdp << QStringLiteral("m=%1 %2 RTP/AVP%3").arg(d->description.media(), QString::number(localRtpPort), payloads);
@@ -1001,7 +1001,7 @@ QString QXmppJingleIq::Content::toSdp() const
         sdp << QStringLiteral("a=setup:%1").arg(d->transportFingerprintSetup);
     }
 
-    return sdp.join(u"\r\n") + u"\r\n";
+    return sdp.join(QStringLiteral(u"\r\n")) + QStringLiteral(u"\r\n");
 }
 
 /// \endcond
@@ -3029,8 +3029,11 @@ void QXmppJingleMessageInitiationElement::parse(const QDomElement &element)
 void QXmppJingleMessageInitiationElement::toXml(QXmlStreamWriter *writer) const
 {
     writer->writeStartElement(jmiElementTypeToString(d->type));
-    writer->writeDefaultNamespace(ns_jingle_message_initiation);
-
+#if defined(SFOS)
+    writer->writeDefaultNamespace(ns_jingle_message_initiation.toString());
+#else
+	writer->writeDefaultNamespace(ns_jingle_message_initiation);
+#endif
     helperToXmlAddAttribute(writer, QStringLiteral("id"), d->id);
 
     if (d->description) {

@@ -11,9 +11,15 @@
 
 class QXmppStreamFeaturesPrivate;
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {  namespace Sasl2 {
+struct StreamFeature;
+}  }  }
+#else
 namespace QXmpp::Private::Sasl2 {
 struct StreamFeature;
 }
+#endif
 
 ///
 /// \brief The QXmppStreamFeatures class represents the features returned by an

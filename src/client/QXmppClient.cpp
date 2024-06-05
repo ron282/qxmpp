@@ -150,7 +150,11 @@ void QXmppClientPrivate::onErrorOccurred(const QString &text, const QXmppOutgoin
 }
 /// \endcond
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private  {  namespace StanzaPipeline {
+#else
 namespace QXmpp::Private::StanzaPipeline {
+#endif
 
 bool process(const QList<QXmppClientExtension *> &extensions, const QDomElement &element, const std::optional<QXmppE2eeMetadata> &e2eeMetadata)
 {
@@ -167,9 +171,17 @@ bool process(const QList<QXmppClientExtension *> &extensions, const QDomElement 
     return false;
 }
 
+#if defined(SFOS)
+}  }  } // namespace QXmpp  Private  StanzaPipeline
+#else
 }  // namespace QXmpp::Private::StanzaPipeline
+#endif
 
+#if defined(SFOS)
+namespace QXmpp  {  namespace Private { namespace MessagePipeline {
+#else
 namespace QXmpp::Private::MessagePipeline {
+#endif
 
 bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extensions, QXmppMessage &&message)
 {
@@ -197,7 +209,11 @@ bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extension
     return process(client, extensions, std::move(message));
 }
 
+#if defined(SFOS)
+}  }  } // namespace QXmpp  Private  MessagePipeline
+#else
 }  // namespace QXmpp::Private::MessagePipeline
+#endif
 
 ///
 /// \typedef QXmppClient::IqResult

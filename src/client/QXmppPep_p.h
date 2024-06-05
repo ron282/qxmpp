@@ -5,7 +5,11 @@
 #include <QXmppPubSubEvent.h>
 #include <QXmppPubSubManager.h>
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private { namespace Pep {
+#else
 namespace QXmpp::Private::Pep {
+#endif
 
 template<typename T>
 using GetResult = std::variant<T, QXmppError>;
@@ -53,4 +57,8 @@ inline bool handlePubSubEvent(const QDomElement &element, const QString &pubSubS
     return false;
 }
 
+#if defined(SFOS)
+}  }  }  // namespace QXmpp  Private  Pep
+#else
 }  // namespace QXmpp::Private::Pep
+#endif

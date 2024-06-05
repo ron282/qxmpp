@@ -322,7 +322,11 @@ void QXmppStreamManagementReq::toXml(QXmlStreamWriter *writer)
     writer->writeEndElement();
 }
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 StreamAckManager::StreamAckManager(XmppSocket &socket)
     : socket(socket)
@@ -497,5 +501,9 @@ void StreamAckManager::resetCache()
     m_unacknowledgedStanzas.clear();
 }
 
+#if defined(SFOS)
+}  } // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 /// \endcond

@@ -25,12 +25,12 @@ constexpr auto ENCRYPTION_NAMESPACES = to_array<QStringView>({
 constexpr auto ENCRYPTION_NAMES = to_array<QStringView>({
     {},
     {},
-    u"OTR",
-    u"Legacy OpenPGP",
-    u"OpenPGP for XMPP (OX)",
-    u"OMEMO",
-    u"OMEMO 1",
-    u"OMEMO 2",
+    QStringView(u"OTR"),
+    QStringView(u"Legacy OpenPGP"),
+    QStringView(u"OpenPGP for XMPP (OX)"),
+    QStringView(u"OMEMO"),
+    QStringView(u"OMEMO 1"),
+    QStringView(u"OMEMO 2"),
 });
 
 std::optional<QXmpp::EncryptionMethod> QXmpp::Private::encryptionFromString(QStringView str)

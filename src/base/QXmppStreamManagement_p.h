@@ -16,9 +16,15 @@
 class QXmppStream;
 class QXmppPacket;
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+class XmppSocket;
+}  }
+#else
 namespace QXmpp::Private {
 class XmppSocket;
 }
+#endif
 
 //
 //  W A R N I N G

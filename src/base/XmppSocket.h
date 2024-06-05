@@ -12,8 +12,7 @@ class QSslSocket;
 class TestStream;
 
 #if defined (SFOS)
-namespace QXmpp {
-	namespace Private {
+namespace QXmpp {  namespace Private {
 #else
 namespace QXmpp::Private {
 #endif

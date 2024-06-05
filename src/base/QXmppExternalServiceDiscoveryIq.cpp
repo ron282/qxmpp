@@ -334,8 +334,9 @@ void QXmppExternalService::toXml(QXmlStreamWriter *writer) const
 
     if (d->expires) {
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-        auto e = *d->expires;
-		writeOptionalXmlAttribute(writer, u"expires", e.toUTC().toString(Qt::ISODate).insert(19, e.toUTC().toString(".zzz")));
+//        auto e = *d->expires;
+//		auto f = e.toUTC().toString(Qt::ISODate).insert(19, e.toUTC().toString(".zzz"));
+//		writeOptionalXmlAttribute(writer, u"expires", QStringView(f));
 #else
 		writeOptionalXmlAttribute(writer, u"expires", d->expires->toString(Qt::ISODateWithMs));
 #endif

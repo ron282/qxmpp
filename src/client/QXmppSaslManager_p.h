@@ -17,7 +17,11 @@
 class QXmppConfiguration;
 class QXmppStreamFeatures;
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 class SendDataInterface;
 
@@ -62,6 +66,10 @@ private:
     std::optional<State> m_state;
 };
 
+#if defined(SFOS)
+}  }  // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPSASLMANAGER_P_H

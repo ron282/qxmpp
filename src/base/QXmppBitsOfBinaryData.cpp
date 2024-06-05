@@ -166,7 +166,7 @@ void QXmppBitsOfBinaryData::setData(const QByteArray &data)
 ///
 bool QXmppBitsOfBinaryData::isBitsOfBinaryData(const QDomElement &element)
 {
-    return element.tagName() == u"data" && element.namespaceURI() == ns_bob;
+    return element.tagName() == QSL65("data") && element.namespaceURI() == ns_bob;
 }
 
 /// \cond
@@ -182,11 +182,11 @@ void QXmppBitsOfBinaryData::toXmlElementFromChild(QXmlStreamWriter *writer) cons
 {
     writer->writeStartElement(QSL65("data"));
     writer->writeDefaultNamespace(toString65(ns_bob));
-    writeOptionalXmlAttribute(writer, u"cid", d->cid.toContentId());
+    writeOptionalXmlAttribute(writer, QSL65("cid"), d->cid.toContentId());
     if (d->maxAge > -1) {
-        writeOptionalXmlAttribute(writer, u"max-age", QString::number(d->maxAge));
+        writeOptionalXmlAttribute(writer, QSL65("max-age"), QString::number(d->maxAge));
     }
-    writeOptionalXmlAttribute(writer, u"type", d->contentType.name());
+    writeOptionalXmlAttribute(writer, QSL65("type"), d->contentType.name());
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     writer->writeCharacters(d->data.toBase64());
 #else

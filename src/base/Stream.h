@@ -9,7 +9,11 @@
 
 class QXmlStreamWriter;
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 struct StreamOpen {
     void toXml(QXmlStreamWriter *) const;
@@ -19,6 +23,10 @@ struct StreamOpen {
     QStringView xmlns;
 };
 
+#if defined(SFOS)
+}  }  // namespace QXmpp  Private
+#else
 }  // namespace QXmpp::Private
+#endif
 
 #endif  // STREAM_H

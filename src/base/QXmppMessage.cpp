@@ -30,37 +30,40 @@
 #include <QTextStream>
 #include <QXmlStreamWriter>
 
+#if defined (SFOS)
+#include "../../3rdparty/QEmuStringView/qemustringview2.h"
+#endif
 using namespace QXmpp::Private;
 
 constexpr auto CHAT_STATES = to_array<QStringView>({
     {},
-    u"active",
-    u"inactive",
-    u"gone",
-    u"composing",
-    u"paused",
+    QStringView(u"active"),
+    QStringView(u"inactive"),
+    QStringView(u"gone"),
+    QStringView(u"composing"),
+    QStringView(u"paused",
 });
 
 constexpr auto MESSAGE_TYPES = to_array<QStringView>({
-    u"error",
-    u"normal",
-    u"chat",
-    u"groupchat",
-    u"headline",
+    QStringView(u"error"),
+    QStringView(u"normal"),
+    QStringView(u"chat"),
+    QStringView(u"groupchat"),
+    QStringView(u"headline"),
 });
 
 constexpr auto MARKER_TYPES = to_array<QStringView>({
     {},
-    u"received",
-    u"displayed",
-    u"acknowledged",
+    QStringView(u"received"),
+    QStringView(u"displayed"),
+    QStringView(u"acknowledged"),
 });
 
 static const QVector<QStringView> HINT_TYPES = {
-    u"no-permanent-store",
-    u"no-store",
-    u"no-copy",
-    u"store",
+    QStringView(u"no-permanent-store"),
+    QStringView(u"no-store"),
+    QStringView(u"no-copy"),
+    QStringView(u"store"),
 };
 
 static bool checkElement(const QDomElement &element, QStringView tagName, QStringView xmlns)
@@ -126,9 +129,6 @@ public:
 
     // XEP-0334: Message Processing Hints
     quint8 hints = 0;
-
-    // XEP-0353: Jingle Message Initiation
-    std::optional<QXmppJingleMessageInitiationElement> jingleMessageInitiationElement;
 
     // XEP-0353: Jingle Message Initiation
     std::optional<QXmppJingleMessageInitiationElement> jingleMessageInitiationElement;
