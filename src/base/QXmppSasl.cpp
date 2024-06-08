@@ -22,18 +22,37 @@ using namespace QXmpp::Private;
 static QByteArray forcedNonce;
 
 constexpr auto SASL_ERROR_CONDITIONS = to_array<QStringView>({
-    u"aborted",
-    u"account-disabled",
-    u"credentials-expired",
-    u"encryption-required",
-    u"incorrect-encoding",
-    u"invalid-authzid",
-    u"invalid-mechanism",
-    u"malformed-request",
-    u"mechanism-too-weak",
-    u"not-authorized",
-    u"temporary-auth-failure",
+    QStringView(u"aborted"),
+    QStringView(u"account-disabled"),
+    QStringView(u"credentials-expired"),
+    QStringView(u"encryption-required"),
+    QStringView(u"incorrect-encoding"),
+    QStringView(u"invalid-authzid"),
+    QStringView(u"invalid-mechanism"),
+    QStringView(u"malformed-request"),
+    QStringView(u"mechanism-too-weak"),
+    QStringView(u"not-authorized"),
+    QStringView(u"temporary-auth-failure"),
 });
+
+// Returns the hash length in bytes (QCH::hashLength() only exists since 5.12).
+#if QT_VERSION < QT_VERSION_CHECK(5, 12, 0)
+static int hashLength(QCryptographicHash::Algorithm algorithm)
+{
+    switch (algorithm) {
+    case QCryptographicHash::Sha1:
+        return 160 / 8;
+    case QCryptographicHash::Sha256:
+        return 256 / 8;
+    case QCryptographicHash::Sha512:
+    case QCryptographicHash::Sha3_512:
+        return 512 / 8;
+    default:
+        return QCryptographicHash::hash({}, algorithm).size();
+    }
+}
+#endif
+
 
 #if defined(SFOS)
 namespace QXmpp { namespace Private { namespace Sasl {
@@ -55,21 +74,7 @@ std::optional<Auth> Auth::fromDom(const QDomElement &el)
 {
     if (el.tagName() != u"auth" || el.namespaceURI() != ns_sasl) {
         return {};
-#if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-    return QCryptographicHash::hashLength(algorithm);
-#else
-    switch (algorithm) {
-    case QCryptographicHash::Sha1:
-        return 160 / 8;
-    case QCryptographicHash::Sha256:
-        return 256 / 8;
-    case QCryptographicHash::Sha512:
-//    case QCryptographicHash::RealSha3_512:
-        return 512 / 8;
-    default:
-        return QCryptographicHash::hash({}, algorithm).size();
     }
-
     Auth auth;
     if (auto value = parseBase64(el.text())) {
         auth.value = *value;
@@ -244,7 +249,11 @@ std::optional<UserAgent> UserAgent::fromDom(const QDomElement &el)
     }
 
     return UserAgent {
-        QUuid::fromString(el.attribute(QStringLiteral("id"))),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+		QUuid::fromString(el.attribute(QStringLiteral("id"))),
+#else
+		QUuid(el.attribute(QStringLiteral("id"))),
+#endif
         firstChildElement(el, u"software", ns_sasl_2).text(),
         firstChildElement(el, u"device", ns_sasl_2).text(),
     };
@@ -254,7 +263,12 @@ void UserAgent::toXml(QXmlStreamWriter *writer) const
 {
     writer->writeStartElement(QSL65("user-agent"));
     if (!id.isNull()) {
-        writer->writeAttribute(QSL65("id"), id.toString(QUuid::WithoutBraces));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+		writer->writeAttribute(QSL65("id"), id.toString(QUuid::WithoutBraces));
+#else
+		writer->writeAttribute(QSL65("id"), id.toString().mid(1, 36));
+#endif
+
     }
     writeOptionalXmlTextElement(writer, u"software", software);
     writeOptionalXmlTextElement(writer, u"device", device);
@@ -527,7 +541,11 @@ static const QMap<QStringView, QCryptographicHash::Algorithm> SCRAM_ALGORITHMS =
     { u"SCRAM-SHA-1", QCryptographicHash::Sha1 },
     { u"SCRAM-SHA-256", QCryptographicHash::Sha256 },
     { u"SCRAM-SHA-512", QCryptographicHash::Sha512 },
-    { u"SCRAM-SHA3-512", QCryptographicHash::RealSha3_512 },
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 2)
+	{ u"SCRAM-SHA3-512", QCryptographicHash::RealSha3_512 },
+#else
+	{ u"SCRAM-SHA3-512", QCryptographicHash::Sha3_512 },
+#endif
 };
 
 // Calculate digest response for use with XMPP/SASL.
@@ -891,7 +909,7 @@ QXmppSaslClientScram::QXmppSaslClientScram(QCryptographicHash::Algorithm algorit
       m_algorithm(algorithm),
       m_step(0),
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-	m_dklen(QCryptographicHash::hashLength(algorithm))
+	  m_dklen(QCryptographicHash::hashLength(algorithm))
 #else
       m_dklen(hashLength(algorithm))
 #endif

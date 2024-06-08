@@ -120,27 +120,19 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
 
 void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 {
-#if defined(WITH_OMEMO_V03)
-    writer->writeStartElement(QSL65("key"));
-    writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
-
-    if (m_isUsedForKeyExchange) {
-        helperToXmlAddAttribute(writer, QSL65("prekey"), QSL65("true"));
-    }
-
-    writer->writeCharacters(m_data.toBase64());
-    writer->writeEndElement();        
-#else
 	writer->writeStartElement(QSL65("key"));
     writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
-
+#if defined(WITH_OMEMO_V03)
+    if (m_isUsedForKeyExchange) {
+		writeOptionalXmlAttribute(writer, u"prekey", QStringLiteral("true"));
+    }
+#else
     if (m_isUsedForKeyExchange) {
         writeOptionalXmlAttribute(writer, u"kex", QStringLiteral("true"));
     }
-
-    writer->writeCharacters(QString::fromUtf8(m_data.toBase64()));
-    writer->writeEndElement();
 #endif
+	writer->writeCharacters(QString::fromUtf8(m_data.toBase64()));
+    writer->writeEndElement();
 }
 
 ///
@@ -303,7 +295,7 @@ void QXmppOmemoElement::parse(const QDomElement &element)
         QXmppOmemoEnvelope omemoEnvelope;
         omemoEnvelope.setIv(m_iv);
         omemoEnvelope.parse(envelope);
-        addEnvelope("", omemoEnvelope);
+        addEnvelope(QStringLiteral(""), omemoEnvelope);
     }        
 #else
 	for (const auto &recipient : iterChildElements(header, u"keys")) {
@@ -341,7 +333,7 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 
     if(m_iv.size() > 0) {
         writer->writeStartElement(QStringLiteral("iv"));
-        writer->writeCharacters(m_iv.toBase64());
+        writer->writeCharacters(QString::fromStdString(m_iv.toBase64().toStdString()));
         writer->writeEndElement();  // iv            
     }
 
@@ -350,7 +342,7 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
     // The payload element is only included if there is a payload.
     // An empty OMEMO message does not contain a payload.
     if (!m_payload.isEmpty()) {
-        writer->writeTextElement(QStringLiteral("payload"), m_payload.toBase64());
+        writer->writeTextElement(QStringLiteral("payload"), QString::fromStdString(m_payload.toBase64().toStdString()));
     }
 
     writer->writeEndElement();  // encrypted

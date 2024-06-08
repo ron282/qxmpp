@@ -3029,12 +3029,9 @@ void QXmppJingleMessageInitiationElement::parse(const QDomElement &element)
 void QXmppJingleMessageInitiationElement::toXml(QXmlStreamWriter *writer) const
 {
     writer->writeStartElement(jmiElementTypeToString(d->type));
-#if defined(SFOS)
-    writer->writeDefaultNamespace(ns_jingle_message_initiation.toString());
-#else
-	writer->writeDefaultNamespace(ns_jingle_message_initiation);
-#endif
-    helperToXmlAddAttribute(writer, QStringLiteral("id"), d->id);
+    writer->writeDefaultNamespace(toString65(ns_jingle_message_initiation));
+
+    writer->writeDefaultNamespace(toString65(ns_jingle_message_initiation));
 
     if (d->description) {
         d->description->toXml(writer);

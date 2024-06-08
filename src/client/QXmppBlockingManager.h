@@ -13,6 +13,10 @@
 
 #include <QVector>
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+#include "../../3rdparty/QEmuStringView/qemustringview2.h"
+#endif
+
 struct QXmppBlockingManagerPrivate;
 
 class QXMPP_EXPORT QXmppBlocklist
@@ -34,11 +38,7 @@ public:
     QXMPP_PRIVATE_DECLARE_RULE_OF_SIX(QXmppBlocklist)
 
     QVector<QString> entries() const;
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-    bool containsEntry(QString) const;
-#else
 	bool containsEntry(QStringView) const;
-#endif
     BlockingState blockingState(const QString &jid) const;
 
 private:

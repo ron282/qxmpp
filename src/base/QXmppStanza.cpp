@@ -1014,7 +1014,7 @@ void QXmppStanza::generateAndSetNextId()
 {
     // get back
     ++s_uniqeIdNo;
-    d->id = u"qxmpp" + QString::number(s_uniqeIdNo);
+    d->id = QStringView(u"qxmpp") + QString::number(s_uniqeIdNo);
 }
 
 void QXmppStanza::parse(const QDomElement &element)

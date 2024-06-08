@@ -509,8 +509,8 @@ inline bool operator> (const Char* lhs, QEmuStringView rhs) Q_DECL_NOTHROW { ret
 template <typename Char, QEmuStringView::if_compatible_char<Char> = true>
 inline bool operator>=(const Char* lhs, QEmuStringView rhs) Q_DECL_NOTHROW { return QEmuStringView(lhs) >= rhs; }
 
-template <typename Char, QEmuStringView::if_compatible_char<Char> = true>
-inline bool operator==(QEmuStringView lhs, const std::basic_string<Char> rhs) Q_DECL_NOTHROW { return lhs == QEmuStringView(rhs); }
+//template <typename Char, QEmuStringView::if_compatible_char<Char> = true>
+//inline bool operator==(QEmuStringView lhs, const std::basic_string<Char> rhs) Q_DECL_NOTHROW { return lhs == QEmuStringView(rhs); }
 template <typename Char, QEmuStringView::if_compatible_char<Char> = true>
 inline bool operator!=(QEmuStringView lhs, const std::basic_string<Char> rhs) Q_DECL_NOTHROW { return lhs != QEmuStringView(rhs); }
 template <typename Char, QEmuStringView::if_compatible_char<Char> = true>

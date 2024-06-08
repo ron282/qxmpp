@@ -62,14 +62,14 @@ QXmppPubSubBaseItem::QXmppPubSubBaseItem(const QString &id, const QString &publi
 }
 
 /// Default copy-constructor
-QXmppPubSubBaseItem::QXmppPubSubBaseItem(const QXmppPubSubBaseItem &iq) noexcept = default;
+QXmppPubSubBaseItem::QXmppPubSubBaseItem(const QXmppPubSubBaseItem &iq) = default;
 /// Default move-constructor
-QXmppPubSubBaseItem::QXmppPubSubBaseItem(QXmppPubSubBaseItem &&) noexcept = default;
-QXmppPubSubBaseItem::~QXmppPubSubBaseItem() noexcept = default;
+QXmppPubSubBaseItem::QXmppPubSubBaseItem(QXmppPubSubBaseItem &&) = default;
+QXmppPubSubBaseItem::~QXmppPubSubBaseItem() = default;
 /// Default assignment operator
-QXmppPubSubBaseItem &QXmppPubSubBaseItem::operator=(const QXmppPubSubBaseItem &iq) noexcept = default;
+QXmppPubSubBaseItem &QXmppPubSubBaseItem::operator=(const QXmppPubSubBaseItem &iq) = default;
 /// Default move-assignment operator
-QXmppPubSubBaseItem &QXmppPubSubBaseItem::operator=(QXmppPubSubBaseItem &&iq) noexcept = default;
+QXmppPubSubBaseItem &QXmppPubSubBaseItem::operator=(QXmppPubSubBaseItem &&iq) = default;
 
 ///
 /// Returns the ID of the PubSub item.

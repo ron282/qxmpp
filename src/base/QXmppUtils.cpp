@@ -14,7 +14,9 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDomElement>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
+#endif
 #include <QRegularExpression>
 #include <QStringList>
 #include <QUrl>
@@ -109,7 +111,7 @@ QString QXmppUtils::datetimeToString(const QDateTime &dt)
     // https://stackoverflow.com/questions/9527960/how-do-i-construct-an-iso-8601-datetime-in-c
     if (dt.time().msec()) {
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-        return dt.toUTC().toString(Qt::ISODate).insert(19, dt.toUTC().toString(".zzz"));
+        return dt.toUTC().toString(Qt::ISODate).insert(19, dt.toUTC().toString(QString::fromLatin1(".zzz")));
 #else
         return dt.toUTC().toString(Qt::ISODateWithMs);
 #endif
@@ -252,7 +254,7 @@ int QXmppUtils::generateRandomInteger(int N)
 {
 	Q_ASSERT(N > 0 && N <= RAND_MAX);
     int val;
-#if !defined(SFOS)
+#if QT_VERSION >= QT_VERSION_CHECK(5,10,0)
     while (N <= (val = QRandomGenerator::global()->generate() / (RAND_MAX / N))) {
     }
 #else
@@ -283,7 +285,11 @@ QByteArray QXmppUtils::generateRandomBytes(int length)
 ///
 QString QXmppUtils::generateStanzaUuid()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
+#else
+    return QUuid::createUuid().toString().mid(1, 36);
+#endif
 }
 
 
@@ -362,10 +368,14 @@ void QXmpp::Private::writeEmptyElement(QXmlStreamWriter *writer, QStringView nam
 
 std::optional<QByteArray> QXmpp::Private::parseBase64(const QString &text)
 {
-    if (auto result = QByteArray::fromBase64Encoding(text.toUtf8())) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	if (auto result = QByteArray::fromBase64Encoding(text.toUtf8())) {
         return *result;
     }
-    return {};
+	return {};
+#else
+	return QByteArray::fromBase64(text.toUtf8());
+#endif
 }
 
 template<typename Int>
@@ -470,7 +480,11 @@ QByteArray QXmpp::Private::serializeXml(const void *packet, void (*toXml)(const 
 //
 QByteArray QXmpp::Private::generateRandomBytes(uint32_t minimumByteCount, uint32_t maximumByteCount)
 {
-    const auto byteCount = QRandomGenerator::system()->bounded(minimumByteCount, maximumByteCount);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+	const auto byteCount = QRandomGenerator::system()->bounded(minimumByteCount, maximumByteCount);
+#else
+    const auto byteCount = (qrand() % (maximumByteCount - minimumByteCount)) + minimumByteCount;
+#endif
     QByteArray bytes;
     bytes.resize(byteCount);
     generateRandomBytes(reinterpret_cast<uint8_t *>(bytes.data()), byteCount);
@@ -492,16 +506,26 @@ void QXmpp::Private::generateRandomBytes(uint8_t *bytes, uint32_t byteCount)
     constexpr uint32_t intSize = sizeof(uint32_t);
     auto intCount = byteCount / intSize;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
     auto *randomGenerator = QRandomGenerator::system();
-
+#endif
     // Fill the space with intCount unsigned integers.
     if (intCount) {
-        randomGenerator->fillRange(reinterpret_cast<uint32_t *>(bytes), intCount);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+		randomGenerator->fillRange(reinterpret_cast<uint32_t *>(bytes), intCount);
+#else
+		for(unsigned int j=0; j<intCount; j+=intCount)
+			reinterpret_cast<uint32_t *>(bytes)[j] = qrand() % std::numeric_limits<uint8_t>::max();
+#endif
     }
 
     // Fill the remaining space with single bytes.
     for (size_t i = byteCount - byteCount % intSize; i < byteCount; i++) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
         bytes[i] = randomGenerator->bounded(std::numeric_limits<uint8_t>::max() + 1);
+#else
+		bytes[i] = qrand() % std::numeric_limits<uint8_t>::max();
+#endif
     }
 }
 
@@ -519,7 +543,7 @@ float QXmpp::Private::calculateProgress(qint64 transferred, qint64 total)
 
 std::pair<QString, int> QXmpp::Private::parseHostAddress(const QString &address)
 {
-    QUrl url(u"//" + address);
+    QUrl url(QStringView(u"//") + address);
     if (url.isValid() && !url.host().isEmpty()) {
         return { url.host(), url.port() };
     }

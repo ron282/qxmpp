@@ -11,7 +11,7 @@ class QDomElement;
 class QSslSocket;
 class TestStream;
 
-#if defined (SFOS)
+#if defined(SFOS)
 namespace QXmpp {  namespace Private {
 #else
 namespace QXmpp::Private {
@@ -54,7 +54,7 @@ private:
     QString m_streamOpenElement;
 };
 
-#if defined (SFOS)
+#if defined(SFOS)
 }  } // namespaces QXmpp Private
 #else
 }  // namespace QXmpp::Private

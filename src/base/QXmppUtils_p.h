@@ -60,17 +60,11 @@ inline auto toString65(QStringView s)
 #endif
 }
 
-#if !defined(QStringLiteral)
-#define QStringLiteral(text) QString(text)
-#endif
-
 // QStringLiteral for Qt < 6.5, otherwise uses string view
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
 #define QSL65(text) u"" text
-#elif QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-#define QSL65(text) QStringLiteral(text)
 #else
-#define QSL65(text) QString(text)
+#define QSL65(text) QStringLiteral(text)
 #endif
 
 // Enum parsing

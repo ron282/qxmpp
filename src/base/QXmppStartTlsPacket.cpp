@@ -13,9 +13,9 @@
 using namespace QXmpp::Private;
 
 constexpr auto STARTTLS_TYPES = to_array<QStringView>({
-    u"starttls",
-    u"proceed",
-    u"failure",
+    QStringView(u"starttls"),
+    QStringView(u"proceed"),
+    QStringView(u"failure"),
 });
 
 ///

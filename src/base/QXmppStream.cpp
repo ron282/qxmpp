@@ -143,30 +143,30 @@ void StreamOpen::toXml(QXmlStreamWriter *writer) const
 }
 
 constexpr auto STREAM_ERROR_CONDITIONS = to_array<QStringView>({
-    u"bad-format",
-    u"bad-namespace-prefix",
-    u"conflict",
-    u"connection-timeout",
-    u"host-gone",
-    u"host-unknown",
-    u"improper-addressing",
-    u"internal-server-error",
-    u"invalid-from",
-    u"invalid-id",
-    u"invalid-namespace",
-    u"invalid-xml",
-    u"not-authorized",
-    u"not-well-formed",
-    u"policy-violation",
-    u"remote-connection-failed",
-    u"reset",
-    u"resource-constraint",
-    u"restricted-xml",
-    u"system-shutdown",
-    u"undefined-condition",
-    u"unsupported-encoding",
-    u"unsupported-stanza-type",
-    u"unsupported-version",
+    QStringView(u"bad-format"),
+    QStringView(u"bad-namespace-prefix"),
+    QStringView(u"conflict"),
+    QStringView(u"connection-timeout"),
+    QStringView(u"host-gone"),
+    QStringView(u"host-unknown"),
+    QStringView(u"improper-addressing"),
+    QStringView(u"internal-server-error"),
+    QStringView(u"invalid-from"),
+    QStringView(u"invalid-id"),
+    QStringView(u"invalid-namespace"),
+    QStringView(u"invalid-xml"),
+    QStringView(u"not-authorized"),
+    QStringView(u"not-well-formed"),
+    QStringView(u"policy-violation"),
+    QStringView(u"remote-connection-failed"),
+    QStringView(u"reset"),
+    QStringView(u"resource-constraint"),
+    QStringView(u"restricted-xml"),
+    QStringView(u"system-shutdown"),
+    QStringView(u"undefined-condition"),
+    QStringView(u"unsupported-encoding"),
+    QStringView(u"unsupported-stanza-type"),
+    QStringView(u"unsupported-version"),
 });
 
 /// \cond
@@ -234,7 +234,11 @@ void XmppSocket::setSocket(QSslSocket *socket)
         m_streamOpenElement.clear();
         Q_EMIT started();
     });
-    QObject::connect(socket, &QSslSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	QObject::connect(socket, &QSslSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
+#else
+	connect(socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error), this,  [this](QAbstractSocket::SocketError) {;
+#endif
         warning(QStringLiteral("Socket error: ") + m_socket->errorString());
     });
     QObject::connect(socket, &QSslSocket::readyRead, this, [this]() {

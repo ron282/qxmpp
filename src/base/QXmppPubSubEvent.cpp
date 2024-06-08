@@ -49,12 +49,12 @@ using namespace QXmpp::Private;
 ///
 
 constexpr auto PUBSUB_EVENTS = to_array<QStringView>({
-    u"configuration",
-    u"delete",
-    u"items",
-    u"items",  // virtual retract type
-    u"purge",
-    u"subscription",
+    QStringView(u"configuration"),
+    QStringView(u"delete"),
+    QStringView(u"items"),
+    QStringView(u"items"),  // virtual retract type
+    QStringView(u"purge"),
+    QStringView(u"subscription"),
 });
 
 class QXmppPubSubEventPrivate : public QSharedData

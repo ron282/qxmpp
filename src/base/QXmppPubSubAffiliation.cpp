@@ -24,13 +24,15 @@ using namespace QXmpp::Private;
 /// \since QXmpp 1.5
 ///
 
+constexpr QStringView TEST =  u"affiliations";
+
 constexpr auto PUBSUB_AFFILIATIONS = to_array<QStringView>({
-    u"none",
-    u"member",
-    u"outcast",
-    u"owner",
-    u"publisher",
-    u"publish-only",
+    QStringView(u"none"),
+    QStringView(u"member"),
+    QStringView(u"outcast"),
+    QStringView(u"owner"),
+    QStringView(u"publisher"),
+    QStringView(u"publish-only"),
 });
 
 class QXmppPubSubAffiliationPrivate : public QSharedData

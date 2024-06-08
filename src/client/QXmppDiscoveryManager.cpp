@@ -56,7 +56,7 @@ QXmppDiscoveryManager::QXmppDiscoveryManager()
     d->clientType = QStringLiteral("pc");
 #endif
     if (qApp->applicationName().isEmpty() && qApp->applicationVersion().isEmpty()) {
-        d->clientName = QStringLiteral("%1 %2").arg(u"Based on QXmpp", QXmppVersion());
+        d->clientName = QStringLiteral("%1 %2").arg(QStringView(u"Based on QXmpp"), QXmppVersion());
     } else {
         d->clientName = QStringLiteral("%1 %2").arg(qApp->applicationName(), qApp->applicationVersion());
     }

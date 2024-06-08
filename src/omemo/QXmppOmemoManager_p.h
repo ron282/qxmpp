@@ -44,12 +44,6 @@ namespace QXmpp { namespace Omemo { namespace Private {
 namespace QXmpp::Omemo::Private {
 #endif
 
-#if defined(WITH_OMEMO_V03)
-constexpr auto ns_omemo = "eu.siacs.conversations.axolotl";
-constexpr auto ns_omemo_bundles = "eu.siacs.conversations.axolotl.bundles";
-constexpr auto ns_omemo_devices = "eu.siacs.conversations.axolotl.devicelist";
-#endif
-
 // default possible trust levels a key must have to be used for encryption
 // The class documentation must be adapted if the trust levels are modified.
 #if defined(WITH_OMEMO_V03)

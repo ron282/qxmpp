@@ -175,7 +175,11 @@ public:
     static void toXml(QXmlStreamWriter *writer);
 };
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 //
 // This manager is used in the QXmppStream. It contains the parts of stream
@@ -217,7 +221,11 @@ private:
     unsigned int m_lastIncomingSequenceNumber = 0;
 };
 
+#if defined(SFOS)
+} }
+#else
 }  // namespace QXmpp::Private
+#endif
 /// \endcond
 
 #endif

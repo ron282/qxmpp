@@ -10,11 +10,7 @@
 
 #include <QDomElement>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-QString XMLNS_BLOCKING("urn:xmpp:blocking");
-#else
-constexpr QStringView XMLNS_BLOCKING = u"urn:xmpp:blocking";
-#endif
+constexpr QStringView XMLNS_BLOCKING = QStringView(u"urn:xmpp:blocking");
 
 using namespace QXmpp;
 using namespace QXmpp::Private;
@@ -60,21 +56,13 @@ public:
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
         writer->writeStartElement(QSL65("blocklist"));
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        writer->writeDefaultNamespace(XMLNS_BLOCKING);
-#else
         writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
-#endif
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        return tagName == "blocklist" && xmlns == XMLNS_BLOCKING;
-#else
-        return tagName == u"blocklist" && xmlns == XMLNS_BLOCKING;
-#endif
+        return tagName == QStringView(u"blocklist") && xmlns == XMLNS_BLOCKING;
     }
 };
 
@@ -95,21 +83,13 @@ public:
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
 		writer->writeStartElement(QSL65("block"));
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        writer->writeDefaultNamespace(XMLNS_BLOCKING);
-#else
         writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
-#endif
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        return tagName == "block" && xmlns == XMLNS_BLOCKING;
-#else
-        return tagName == u"block" && xmlns == XMLNS_BLOCKING;
-#endif
+        return tagName == QStringView(u"block") && xmlns == XMLNS_BLOCKING;
     }
 };
 
@@ -131,22 +111,14 @@ public:
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
         writer->writeStartElement(QSL65("unblock"));
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        writer->writeDefaultNamespace(XMLNS_BLOCKING);
-#else
         writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
-#endif
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
 
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        return tagName == "unblock" && xmlns == XMLNS_BLOCKING;
-#else
-        return tagName == u"unblock" && xmlns == XMLNS_BLOCKING;
-#endif
+        return tagName == QStringView(u"unblock") && xmlns == XMLNS_BLOCKING;
     }
 };
 
@@ -378,11 +350,7 @@ QXmppTask<QXmppBlockingManager::Result> QXmppBlockingManager::unblock(QVector<QS
 /// \cond
 QStringList QXmppBlockingManager::discoveryFeatures() const
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-    return { XMLNS_BLOCKING };
-#else
     return { XMLNS_BLOCKING.toString() };
-#endif
 }
 
 void QXmppBlockingManager::onRegistered(QXmppClient *client)
@@ -397,11 +365,7 @@ void QXmppBlockingManager::onUnregistered(QXmppClient *oldClient)
 
 bool QXmppBlockingManager::handleStanza(const QDomElement &stanza, const std::optional<QXmppE2eeMetadata> &)
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-    auto checkIqValidity = [this](QXmppIq::Type type, QString from) -> std::optional<StanzaError> {
-#else
     auto checkIqValidity = [this](QXmppIq::Type type, QStringView from) -> std::optional<StanzaError> {
-#endif
         // check type
         if (type != QXmppIq::Set) {
             return StanzaError {
@@ -519,11 +483,7 @@ QVector<QString> QXmppBlocklist::entries() const
 /// E.g. `containsEntry("user@domain.tld")` will return false even if `domain.tld` is blocked
 /// completely.
 ///
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-bool QXmppBlocklist::containsEntry(QString entry) const
-#else
 bool QXmppBlocklist::containsEntry(QStringView entry) const
-#endif
 {
     // Can be replaced with .contains() with Qt 6
     return std::find(m_blocklist.begin(), m_blocklist.end(), entry) != m_blocklist.end();
@@ -592,15 +552,9 @@ QXmppBlocklist::BlockingState QXmppBlocklist::blockingState(const QString &jid) 
         // Partially blocked:
         //  not possible
         checkBlockingJid(jid);
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        checkBlockingJid(user % '@' % domain);
-        checkBlockingJid(domain);
-        checkBlockingJid(domain % '/' % resource);
-#else
         checkBlockingJid(user % u'@' % domain);
         checkBlockingJid(domain);
         checkBlockingJid(domain % u'/' % resource);
-#endif
         break;
     case BareJid: {
         // Blocking:
@@ -620,11 +574,7 @@ QXmppBlocklist::BlockingState QXmppBlocklist::blockingState(const QString &jid) 
             }
         }
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        checkPartiallyBlockingJid(domain % '/' % resource);
-#else
         checkPartiallyBlockingJid(domain % u'/' % resource);
-#endif
         break;
     }
     case Domain: {
@@ -637,13 +587,8 @@ QXmppBlocklist::BlockingState QXmppBlocklist::blockingState(const QString &jid) 
         checkBlockingJid(jid);
 
         // look for full/bare jids and domain+resource jids
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        QString userJidSubstring = '@' % domain;
-        QString domainResourceSubstring = domain % '/';
-#else
         QString userJidSubstring = u'@' % domain;
         QString domainResourceSubstring = domain % u'/';
-#endif
         for (const auto &blockedJid : m_blocklist) {
             if (blockedJid.contains(userJidSubstring) || blockedJid.contains(domainResourceSubstring)) {
                 partiallyBlockingJids.append(blockedJid);
@@ -663,11 +608,7 @@ QXmppBlocklist::BlockingState QXmppBlocklist::blockingState(const QString &jid) 
         checkBlockingJid(domain);
 
         // look for full/bare jids
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-        QString userJidSubstring = '@' % domain;
-#else
         QString userJidSubstring = u'@' % domain;
-#endif
         for (const auto &blockedJid : m_blocklist) {
             if (blockedJid.contains(userJidSubstring)) {
                 partiallyBlockingJids.append(blockedJid);

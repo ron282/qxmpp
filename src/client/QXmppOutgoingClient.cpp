@@ -30,6 +30,20 @@
 
 #include <unordered_map>
 
+#if QT_VERSION < QT_VERSION_CHECK(5,7,0)
+#include <QHash>
+#include <QString>
+#include <functional>
+
+namespace std {
+  template<> struct hash<QString> {
+    std::size_t operator()(const QString& s) const noexcept {
+      return (size_t) qHash(s);
+    }
+  };
+}
+#endif
+
 #include <QDnsLookup>
 #include <QHostAddress>
 #include <QNetworkProxy>
@@ -37,6 +51,10 @@
 #include <QSslConfiguration>
 #include <QSslSocket>
 #include <QTimer>
+
+#if defined(SFOS)
+#include <chrono>
+#endif
 
 using std::visit;
 using namespace std::chrono_literals;
@@ -298,9 +316,6 @@ QXmppOutgoingClient::QXmppOutgoingClient(QObject *parent)
     connect(socket, static_cast<void (QSslSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error), this, &QXmppOutgoingClient::socketError);
 #endif
 
-    // DNS lookups
-    connect(&d->dns, &QDnsLookup::finished, this, &QXmppOutgoingClient::_q_dnsLookupFinished);
-
     connect(&d->socket, &XmppSocket::started, this, &QXmppOutgoingClient::handleStart);
     connect(&d->socket, &XmppSocket::stanzaReceived, this, &QXmppOutgoingClient::handlePacketReceived);
     connect(&d->socket, &XmppSocket::streamReceived, this, &QXmppOutgoingClient::handleStream);
@@ -530,7 +545,7 @@ void QXmppOutgoingClient::startNonSaslAuth()
             task.then(this, [this](auto result) {
                 if (std::holds_alternative<Success>(result)) {
                     // successful Non-SASL Authentication
-                    debug(QStringLiteral("Authenticated (Non-SASL)"));
+//                  debug(QStringLiteral("Authenticated (Non-SASL)"));
                     d->isAuthenticated = true;
 
                     // xmpp connection made
@@ -538,16 +553,16 @@ void QXmppOutgoingClient::startNonSaslAuth()
                     Q_EMIT connected();
                 } else {
                     // TODO: errors: should trigger error signal
-                    auto &error = std::get<QXmppError>(result);
-                    warning(QStringLiteral("Could not authenticate using Non-SASL Authentication: ") + error.description);
+//                  auto &error = std::get<QXmppError>(result);
+//                  warning(QStringLiteral("Could not authenticate using Non-SASL Authentication: ") + error.description);
                     disconnectFromHost();
                     return;
                 }
             });
         } else {
             // TODO: errors: should trigger error signal
-            auto &error = std::get<QXmppError>(result);
-            warning(QStringLiteral("Couldn't list Non-SASL Authentication mechanisms: ") + error.description);
+//            auto &error = std::get<QXmppError>(result);
+//            warning(QStringLiteral("Couldn't list Non-SASL Authentication mechanisms: ") + error.description);
             disconnectFromHost();
         }
     });
@@ -1048,20 +1063,31 @@ PingManager::PingManager(QXmppOutgoingClient *q)
       timeoutTimer(new QTimer(q))
 {
     // send ping timer
-    pingTimer->callOnTimeout(q, [this]() { sendPing(); });
+#if QT_VERSION < QT_VERSION_CHECK(5,12,0)
+	QObject::connect(pingTimer, &QTimer::timeout, q, [this]() { sendPing(); });
+#else
+	pingTimer->callOnTimeout(q, [this]() { sendPing(); });
+#endif
 
     // timeout triggers connection error
     timeoutTimer->setSingleShot(true);
+#if QT_VERSION < QT_VERSION_CHECK(5,12,0)
+	QObject::connect(timeoutTimer, &QTimer::timeout, q, &QXmppOutgoingClient::throwKeepAliveError);
+#else
     timeoutTimer->callOnTimeout(q, &QXmppOutgoingClient::throwKeepAliveError);
-
+#endif
     // on connect: start ping timer
     QObject::connect(q, &QXmppOutgoingClient::connected, q, [this]() {
         const auto interval = this->q->configuration().keepAliveInterval();
 
         // start ping timer
         if (interval > 0) {
-            pingTimer->setInterval(interval * 1s);
-            pingTimer->start();
+#if QT_VERSION < QT_VERSION_CHECK(5,12,0)
+            pingTimer->setInterval(interval * 1000);
+#else
+			pingTimer->setInterval(interval * 1s);
+#endif
+			pingTimer->start();
         }
     });
 
@@ -1102,8 +1128,12 @@ void PingManager::sendPing()
     // start timeout timer
     const int timeout = q->configuration().keepAliveTimeout();
     if (timeout > 0) {
+#if QT_VERSION < QT_VERSION_CHECK(5,12,0)
+            pingTimer->setInterval(timeout * 1000);
+#else
         timeoutTimer->setInterval(timeout * 1s);
-        timeoutTimer->start();
+#endif
+		timeoutTimer->start();
     }
 }
 

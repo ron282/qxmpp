@@ -27,11 +27,11 @@ using namespace QXmpp::Private;
 ///
 
 constexpr auto SUBSCRIPTION_STATES = to_array<QStringView>({
-    {},
-    u"none",
-    u"pending",
-    u"subscribed",
-    u"unconfigured",
+    QStringView({}),
+    QStringView(u"none"),
+    QStringView(u"pending"),
+    QStringView(u"subscribed"),
+    QStringView(u"unconfigured"),
 });
 
 class QXmppPubSubSubscriptionPrivate : public QSharedData

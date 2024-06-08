@@ -110,7 +110,7 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
 
     QXmppFileMetadata metadata;
 #if defined(WITH_OMEMO_V03)
-    metadata.setFilename(QXmppUtils::generateStanzaHash(10)+"."+QFileInfo(info.filename().value_or("")).completeSuffix());
+    metadata.setFilename(QXmppUtils::generateStanzaHash(10)+QStringLiteral(".")+QFileInfo(info.filename().value_or(QString())).completeSuffix());
 #else
     metadata.setFilename(QXmppUtils::generateStanzaHash(10));
 #endif

@@ -19,7 +19,7 @@
 using namespace QXmpp::Private;
 using Disposition = QXmppFileShare::Disposition;
 
-#if defined (SFOS)
+#if defined(SFOS)
 namespace QXmpp {	namespace Private {
 #else
 namespace QXmpp::Private {
@@ -61,7 +61,7 @@ void FileSources::innerToXml(QXmlStreamWriter *writer) const
     }
 }
 
-#if defined (SFOS)
+#if defined(SFOS)
 }  } // namespace QXmpp Private
 #else
 }  // namespace QXmpp::Private
