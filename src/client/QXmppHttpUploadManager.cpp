@@ -337,9 +337,9 @@ std::shared_ptr<QXmppHttpUpload> QXmppHttpUploadManager::uploadFile(std::unique_
                 reply->deleteLater();
             });
 
-            connect(reply, &QNetworkReply::errorOccurred, this,
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+			connect(reply, &QNetworkReply::errorOccurred, this,
 #else
-//          connect(reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this,
             connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this,
 #endif
                     [upload, reply](QNetworkReply::NetworkError error) {

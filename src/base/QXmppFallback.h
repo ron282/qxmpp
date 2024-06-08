@@ -38,6 +38,7 @@ public:
         std::optional<Range> range;
     };
 
+	QXmppFallback();
     QXmppFallback(const QString &forNamespace, const QVector<Reference> &references);
     QXMPP_PRIVATE_DECLARE_RULE_OF_SIX(QXmppFallback)
 

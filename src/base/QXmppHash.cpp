@@ -116,7 +116,7 @@ bool QXmppHash::parse(const QDomElement &el)
 {
     if (el.tagName() == u"hash" && el.namespaceURI() == ns_hashes) {
         m_algorithm = hashAlgorithmFromString(el.attribute(QStringLiteral("algo")));
-#if defined(SFOS)
+#if QT_VERSION < QT_VERSION_CHECK(5,15,0)
 		auto hashResult = QByteArray::fromBase64(el.text().toUtf8());
         if (!hashResult.isEmpty()) {
 			m_hash = std::move(hashResult);

@@ -120,27 +120,19 @@ void QXmppOmemoEnvelope::parse(const QDomElement &element)
 
 void QXmppOmemoEnvelope::toXml(QXmlStreamWriter *writer) const
 {
-#if defined(WITH_OMEMO_V03)
-    writer->writeStartElement(QSL65("key"));
-    writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
-
-    if (m_isUsedForKeyExchange) {
-        helperToXmlAddAttribute(writer, QSL65("prekey"), QSL65("true"));
-    }
-
-    writer->writeCharacters(m_data.toBase64());
-    writer->writeEndElement();        
-#else
 	writer->writeStartElement(QSL65("key"));
     writer->writeAttribute(QSL65("rid"), QString::number(m_recipientDeviceId));
-
+#if defined(WITH_OMEMO_V03)
+    if (m_isUsedForKeyExchange) {
+		writeOptionalXmlAttribute(writer, u"prekey", QStringLiteral("true"));
+    }
+#else
     if (m_isUsedForKeyExchange) {
         writeOptionalXmlAttribute(writer, u"kex", QStringLiteral("true"));
     }
-
-    writer->writeCharacters(QString::fromUtf8(m_data.toBase64()));
-    writer->writeEndElement();
 #endif
+	writer->writeCharacters(QString::fromUtf8(m_data.toBase64()));
+    writer->writeEndElement();
 }
 
 ///

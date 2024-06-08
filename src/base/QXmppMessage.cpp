@@ -30,7 +30,7 @@
 #include <QTextStream>
 #include <QXmlStreamWriter>
 
-#if defined (SFOS)
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
 #include "../../3rdparty/QEmuStringView/qemustringview2.h"
 #endif
 using namespace QXmpp::Private;
@@ -41,7 +41,7 @@ constexpr auto CHAT_STATES = to_array<QStringView>({
     QStringView(u"inactive"),
     QStringView(u"gone"),
     QStringView(u"composing"),
-    QStringView(u"paused",
+    QStringView(u"paused"),
 });
 
 constexpr auto MESSAGE_TYPES = to_array<QStringView>({
@@ -1517,14 +1517,13 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
             return true;
         }
 #if defined(WITH_OMEMO_V03)
-        // XEP-0333: Chat Markers
+		// XEP-0333: Chat Markers
         if (element.namespaceURI() == ns_chat_markers) {
-            if (element.tagName() == QStringLiteral("markable")) {
+            if (element.tagName() == u"markable") {
                 d->markable = true;
             } else {
-                int marker = MARKER_TYPES.indexOf(element.tagName());
-                if (marker != -1) {
-                    d->marker = static_cast<QXmppMessage::Marker>(marker);
+                if (auto marker = enumFromString<Marker>(MARKER_TYPES, element.tagName())) {
+                    d->marker = *marker;
                     d->markedId = element.attribute(QStringLiteral("id"));
                     d->markedThread = element.attribute(QStringLiteral("thread"));
                 }
@@ -1822,20 +1821,20 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
 #endif
 
 #if defined(WITH_OMEMO_V03)
-        // XEP-0091: Legacy Delayed Delivery | XEP-0203: Delayed Delivery
+		// XEP-0091: Legacy Delayed Delivery | XEP-0203: Delayed Delivery
         if (d->stamp.isValid()) {
             QDateTime utcStamp = d->stamp.toUTC();
             if (d->stampType == DelayedDelivery) {
                 // XEP-0203: Delayed Delivery
-                writer->writeStartElement(QStringLiteral("delay"));
-                writer->writeDefaultNamespace(ns_delayed_delivery);
-                helperToXmlAddAttribute(writer, QStringLiteral("stamp"), QXmppUtils::datetimeToString(utcStamp));
+                writer->writeStartElement(QSL65("delay"));
+                writer->writeDefaultNamespace(toString65(ns_delayed_delivery));
+                writeOptionalXmlAttribute(writer, u"stamp", QXmppUtils::datetimeToString(utcStamp));
                 writer->writeEndElement();
             } else {
                 // XEP-0091: Legacy Delayed Delivery
-                writer->writeStartElement(QStringLiteral("x"));
-                writer->writeDefaultNamespace(ns_legacy_delayed_delivery);
-                helperToXmlAddAttribute(writer, QStringLiteral("stamp"), utcStamp.toString(QStringLiteral("yyyyMMddThh:mm:ss")));
+                writer->writeStartElement(QSL65("x"));
+                writer->writeDefaultNamespace(toString65(ns_legacy_delayed_delivery));
+                writeOptionalXmlAttribute(writer, u"stamp", utcStamp.toString(QStringView(u"yyyyMMddThh:mm:ss")));
                 writer->writeEndElement();
             }
         }

@@ -5,7 +5,8 @@
 #ifndef QXMPPCONSTANTS_H
 #define QXMPPCONSTANTS_H
 
-#if defined (SFOS)
+#include <QtGlobal>
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
 #include "../../3rdparty/QEmuStringView/qemustringview2.h"
 #else
 #include <QStringView>
@@ -229,6 +230,10 @@ inline constexpr QStringView ns_omemo_1 = u"urn:xmpp:omemo:1";
 inline constexpr QStringView ns_omemo_2 = u"urn:xmpp:omemo:2";
 inline constexpr QStringView ns_omemo_2_bundles = u"urn:xmpp:omemo:2:bundles";
 inline constexpr QStringView ns_omemo_2_devices = u"urn:xmpp:omemo:2:devices";
+#if defined(WITH_OMEMO_V03)
+inline constexpr QStringView ns_omemo_bundles = u"eu.siacs.conversations.axolotl.bundles";
+inline constexpr QStringView ns_omemo_devices = u"eu.siacs.conversations.axolotl.devicelist";
+#endif
 // XEP-0386: Bind 2
 inline constexpr QStringView ns_bind2 = u"urn:xmpp:bind:0";
 // XEP-0388: Extensible SASL Profile

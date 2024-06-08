@@ -714,7 +714,11 @@ void QXmppMixIq::toXmlElementFromChild(QXmlStreamWriter *writer) const
 }
 /// \endcond
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 ///
 /// Converts a nodes flag to a list of nodes.
@@ -756,4 +760,8 @@ QXmppMixConfigItem::Nodes listToMixNodes(const QVector<QString> &nodeList)
     return nodes;
 }
 
+#if defined(SFOS)
+}  } // namespace QXmpp::Private
+#else
 }  // namespace QXmpp::Private
+#endif

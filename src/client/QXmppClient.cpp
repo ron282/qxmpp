@@ -134,10 +134,18 @@ void QXmppClientPrivate::onErrorOccurred(const QString &text, const QXmppOutgoin
             }
         } else if (oldError == QXmppClient::SocketError && !receivedConflict) {
             // schedule reconnect
-            reconnectionTimer->start(getNextReconnectTime());
-        } else if (oldError == QXmppClient::KeepAliveError) {
+#if QT_VERSION < QT_VERSION_CHECK(5,8,0)
+			reconnectionTimer->start(getNextReconnectTime().count());
+#else
+			reconnectionTimer->start(getNextReconnectTime());
+#endif
+		} else if (oldError == QXmppClient::KeepAliveError) {
             // if we got a keepalive error, reconnect in one second
+#if QT_VERSION < QT_VERSION_CHECK(5,8,0)
+			reconnectionTimer->start(1000);
+#else
             reconnectionTimer->start(1s);
+#endif
         }
     }
 
@@ -726,8 +734,12 @@ void QXmppClient::setActive(bool active)
     if (active != d->isActive && isConnected() && d->stream->isClientStateIndicationEnabled()) {
         d->isActive = active;
         QStringView packet = u"<%1 xmlns='%2'/>";
-        d->stream->xmppSocket().sendData(packet.arg(active ? u"active" : u"inactive", ns_csi).toUtf8());
-    }
+#if QT_VERSION >= QT_VERSION_CHECK(5,10,0)
+		d->stream->xmppSocket().sendData(packet.arg(active ? u"active" : u"inactive", ns_csi).toUtf8());
+#else
+		d->stream->xmppSocket().sendData(packet.toString().arg(QStringView(active ? u"active" : u"inactive")).arg(ns_csi).toUtf8());
+#endif
+	}
 }
 
 ///

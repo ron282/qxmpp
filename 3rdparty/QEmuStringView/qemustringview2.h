@@ -42,6 +42,7 @@
 #ifndef QT_STRINGVIEW_LEVEL
 #  define QT_STRINGVIEW_LEVEL 1
 #endif
+
 #include <QtCore/qchar.h>
 #include <QtCore/qbytearray.h>
 #include <string>
@@ -169,7 +170,7 @@ public:
     typedef const_pointer const_iterator;
     typedef std::reverse_iterator<iterator> reverse_iterator;
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
-private:
+private:	
     template <typename Char>
     using if_compatible_char = typename std::enable_if<QEmuPrivate::IsCompatibleCharType<Char>::value, bool>::type;
     template <typename Array>
@@ -222,9 +223,8 @@ public:
         : m_size(0), m_data(nullptr) {}
     Q_DECL_CONSTEXPR QEmuStringView(std::nullptr_t) noexcept
         : QEmuStringView() {}
-
 	template <typename Char, if_compatible_char<Char> = true>
-    Q_DECL_CONSTEXPR QEmuStringView(const Char *str, qsizetype len)
+	Q_DECL_CONSTEXPR QEmuStringView(const Char *str, qsizetype len)
         : m_size((Q_ASSERT10(len >= 0), Q_ASSERT10(str || !len), len)),
           m_data(castHelper(str)) {}
 
@@ -266,6 +266,8 @@ public:
     Q_DECL_CONSTEXPR QEmuStringView(const StdBasicString &str) noexcept
         : QEmuStringView(str.data(), qsizetype(str.size())) {}
     Q_REQUIRED_RESULT inline QString toString() const; // defined below
+	Q_REQUIRED_RESULT inline operator QString() const; // defined below
+
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR qsizetype size() const noexcept { return m_size; }
     Q_REQUIRED_RESULT const_pointer data() const noexcept { return reinterpret_cast<const_pointer>(m_data); }
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR const storage_type *utf16() const noexcept { return m_data; }
@@ -275,7 +277,7 @@ public:
     // QString API
     //
 //    template <typename...Args>
-//    Q_REQUIRED_RESULT inline QString arg(Args &&...args) const; // defined in qstring.h
+//	Q_REQUIRED_RESULT inline QString arg(Args &&...args) const;
     Q_REQUIRED_RESULT QByteArray toLatin1() const { return (*this).toString().toLatin1(); }
     Q_REQUIRED_RESULT QByteArray toUtf8() const {  return (*this).toString().toUtf8(); }
 	Q_REQUIRED_RESULT QByteArray toLocal8Bit() const { return (*this).toString().toLocal8Bit(); }
@@ -308,7 +310,7 @@ m_size));
     Q_DECL_RELAXED_CONSTEXPR void chop(qsizetype n)
     { Q_ASSERT10(n >= 0); Q_ASSERT10(n <= size()); m_size -= n; }
 //    Q_REQUIRED_RESULT QEmuStringView trimmed() const noexcept { return QEmuPrivate::trimmed(
-//*this); }
+// *this); }
 //    Q_REQUIRED_RESULT int compare(QEmuStringView other, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
 //    { return QEmuPrivate::compareStrings(*this,
 //other, cs); }
@@ -340,14 +342,12 @@ m_size));
     { return QEmuPrivate::findString(*this, from, QEmuStringView(&c, 1), cs); }
     Q_REQUIRED_RESULT qsizetype indexOf(QEmuStringView s, qsizetype from = 0, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
     { return QEmuPrivate::findString(*this, from, s, cs); }
-//    Q_REQUIRED_RESULT inline qsizetype indexOf(QLatin1String s, qsizetype from = 0, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
-//    Q_REQUIRED_RESULT bool contains(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
-//    { return indexOf(QEmuStringView(&c, 1),
-//0, cs) != qsizetype(-1); }
-//    Q_REQUIRED_RESULT bool contains(QEmuStringView s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
-//    { return indexOf(s,
-//0, cs) != qsizetype(-1); }
-//    Q_REQUIRED_RESULT inline bool contains(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
+    Q_REQUIRED_RESULT inline qsizetype indexOf(QLatin1String s, qsizetype from = 0, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
+    Q_REQUIRED_RESULT bool contains(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
+    { return indexOf(QEmuStringView(&c, 1), 0, cs) != qsizetype(-1); }
+    Q_REQUIRED_RESULT bool contains(QEmuStringView s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
+    { return indexOf(s, 0, cs) != qsizetype(-1); }
+    Q_REQUIRED_RESULT inline bool contains(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
 //    Q_REQUIRED_RESULT inline qsizetype count(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
 //    Q_REQUIRED_RESULT inline qsizetype count(QEmuStringView s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
 //    Q_REQUIRED_RESULT qsizetype lastIndexOf(QChar c, qsizetype from = -1, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
@@ -359,20 +359,39 @@ m_size));
 //    Q_REQUIRED_RESULT inline qsizetype lastIndexOf(QLatin1String s, qsizetype from = -1, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
 //    Q_REQUIRED_RESULT bool isRightToLeft() const noexcept
 //    { return QEmuPrivate::isRightToLeft(
-//*this); }
+// *this); }
 //    Q_REQUIRED_RESULT bool isValidUtf16() const noexcept
-//    { return QEmuPrivate::isValidUtf16(
-//*this); }
-    Q_REQUIRED_RESULT inline short toShort(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline ushort toUShort(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline int toInt(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline uint toUInt(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline long toLong(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline ulong toULong(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline qlonglong toLongLong(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline qulonglong toULongLong(bool *ok = nullptr, int base = 10) const;
-    Q_REQUIRED_RESULT inline float toFloat(bool *ok = nullptr) const;
-    Q_REQUIRED_RESULT inline double toDouble(bool *ok = nullptr) const;
+//    { return QEmuPrivate::isValidUtf16(*this); }
+	Q_REQUIRED_RESULT inline short toShort(bool *ok = nullptr, int base = 10) const {
+		return toString().toShort(ok, base);
+	}
+	Q_REQUIRED_RESULT inline ushort toUShort(bool *ok = nullptr, int base = 10) const {
+		return toString().toUShort(ok, base);
+}
+    Q_REQUIRED_RESULT inline int toInt(bool *ok = nullptr, int base = 10) const {
+		return toString().toInt(ok, base);
+}
+    Q_REQUIRED_RESULT inline uint toUInt(bool *ok = nullptr, int base = 10) const {
+		return toString().toUInt(ok, base);
+}
+    Q_REQUIRED_RESULT inline long toLong(bool *ok = nullptr, int base = 10) const {
+		return toString().toLong(ok, base);
+}
+	Q_REQUIRED_RESULT inline ulong toULong(bool *ok = nullptr, int base = 10) const {
+		return toString().toULong(ok, base);
+}
+    Q_REQUIRED_RESULT inline qlonglong toLongLong(bool *ok = nullptr, int base = 10) const {
+		return toString().toLongLong(ok, base);
+}
+    Q_REQUIRED_RESULT inline qulonglong toULongLong(bool *ok = nullptr, int base = 10) const {
+		return toString().toULongLong(ok, base);
+}
+	Q_REQUIRED_RESULT inline float toFloat(bool *ok = nullptr) const {
+		return toString().toFloat(ok);
+}
+    Q_REQUIRED_RESULT inline double toDouble(bool *ok = nullptr) const {
+		return toString().toFloat(ok);
+}
     Q_REQUIRED_RESULT inline int toWCharArray(wchar_t *array) const; // defined in qstring.h
     Q_REQUIRED_RESULT inline
     QList<QEmuStringView> split(QEmuStringView sep,
@@ -380,11 +399,11 @@ m_size));
                              Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
     Q_REQUIRED_RESULT inline
     QList<QEmuStringView> split(QChar sep, QString::SplitBehavior behavior = QString::KeepEmptyParts,
-                             Qt::CaseSensitivity cs = Qt::CaseSensitive) const;/*
-#if QT_CONFIG(regularexpression)
-    Q_REQUIRED_RESULT inline
-    QList<QEmuStringView> split(const QRegularExpression &sep, Qt::SplitBehavior behavior = Qt::KeepEmptyParts) const;
-#endif*/
+                             Qt::CaseSensitivity cs = Qt::CaseSensitive) const;
+//#if QT_CONFIG(regularexpression)
+//    Q_REQUIRED_RESULT inline
+//    QList<QEmuStringView> split(const QRegularExpression &sep, Qt::SplitBehavior behavior = Qt::KeepEmptyParts) const;
+//#endif
     //
     // STL compatibility API:
     //
@@ -404,7 +423,7 @@ m_size));
     //
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR bool isNull() const noexcept { return !m_data; }
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR bool isEmpty() const noexcept { return empty(); }
-    Q_REQUIRED_RESULT Q_DECL_CONSTEXPR int length() const /* not nothrow! */
+    Q_REQUIRED_RESULT Q_DECL_CONSTEXPR int length() const // not nothrow!
     { return Q_ASSERT10(int(size()) == size()), int(size()); }
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR QChar first() const { return front(); }
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR QChar last()  const { return back(); }
@@ -424,6 +443,9 @@ inline QEmuStringView qToStringViewIgnoringNull(const QStringLike &s) noexcept
 QString QEmuStringView::toString() const
 { return Q_ASSERT10(size() == length()), QString(data(), length()); }
 
+inline QEmuStringView::operator QString() const
+{ return toString(); }
+
 Q_ALWAYS_INLINE QString to_string(QEmuStringView s) noexcept { return s.toString(); }
 
 inline QT_ASCII_CAST_WARN QString operator+(const QString s, const char16_t c)
@@ -441,6 +463,9 @@ inline QT_ASCII_CAST_WARN bool operator==(const QString s1, const QEmuStringView
 inline QT_ASCII_CAST_WARN bool operator!=(const QString s1, const QEmuStringView s2)
 { return s1 != s2.toString(); }
 
+inline QT_ASCII_CAST_WARN bool operator!=(const QEmuStringView s1, const QString s2)
+{ return s1.toString() != s2; }
+
 // QStringView <> QStringView
 inline bool operator==(QEmuStringView lhs, QEmuStringView rhs) noexcept { return lhs.size() == rhs.size() &&lhs.toString() == rhs.toString(); }
 inline bool operator!=(QEmuStringView lhs, QEmuStringView rhs) noexcept { return !(lhs == rhs); }
@@ -450,7 +475,7 @@ inline bool operator> (QEmuStringView lhs, QEmuStringView rhs) noexcept { return
 inline bool operator>=(QEmuStringView lhs, QEmuStringView rhs) noexcept { return lhs.toString() >= rhs.toString(); }
 
 // QEmuStringView <> QChar
-inline bool operator==(QEmuStringView lhs, QChar rhs) noexcept { return lhs == QEmuStringView(&rhs, 1); }
+//inline bool operator==(QEmuStringView lhs, QChar rhs) noexcept { return lhs == QEmuStringView(&rhs, 1); }
 inline bool operator!=(QEmuStringView lhs, QChar rhs) noexcept { return lhs != QEmuStringView(&rhs, 1); }
 inline bool operator< (QEmuStringView lhs, QChar rhs) noexcept { return lhs <  QEmuStringView(&rhs, 1); }
 inline bool operator<=(QEmuStringView lhs, QChar rhs) noexcept { return lhs <= QEmuStringView(&rhs, 1); }
@@ -465,11 +490,17 @@ inline bool operator>=(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStri
 
 inline QString operator+(QString lhs, QEmuStringView rhs) noexcept { return lhs+rhs.toString(); }
 inline QString operator+=(QString lhs, const char16_t *rhs) noexcept { return lhs+QEmuStringView(rhs).toString(); }
+inline QString operator+=(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }
+inline QString operator+(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }
 inline QString operator+(char16_t lhs, QString rhs) noexcept { return QString(lhs)+rhs; }
+inline QString operator+(QString lhs, const char16_t *rhs) noexcept { return lhs+QEmuStringView(rhs).toString(); }
 inline QString operator%(QString lhs, char16_t rhs) noexcept { return lhs+QString(rhs); }
+inline QString operator%(char16_t lhs, QString rhs) noexcept { return QString(lhs)+rhs; }
+inline QString operator%(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }
 
 #define QStringView QEmuStringView
 #undef QStringViewLiteral
 #define QStringViewLiteral(str) QEmuStringView(QStringLiteral(str))
+
 
 #endif /* QEmuStringView_H */

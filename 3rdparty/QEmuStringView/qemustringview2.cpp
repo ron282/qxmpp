@@ -115,3 +115,42 @@ Qt::CaseInsensitive) == 0)
     }
     return -1;
 }
+
+template <typename Haystack>
+static inline qsizetype qLastIndexOf(Haystack haystack, QChar needle,
+                                     qsizetype from, Qt::CaseSensitivity cs) noexcept
+{
+    if (haystack.size() == 0)
+        return -1;
+    if (from < 0)
+        from += haystack.size();
+    else if (std::size_t(from) > std::size_t(haystack.size()))
+        from = haystack.size() - 1;
+    if (from >= 0) {
+        char16_t c = needle.unicode();
+        const auto b = haystack.data();
+        auto n = b + from;
+        if (cs == Qt::CaseSensitive) {
+            for (; n >= b; --n)
+                if (valueTypeToUtf16(*n) == c)
+                    return n - b;
+        } else {
+            c = foldCase(c);
+            for (; n >= b; --n)
+                if (foldCase(valueTypeToUtf16(*n)) == c)
+                    return n - b;
+        }
+    }
+    return -1;
+}
+
+qsizetype QEmuPrivate::lastIndexOf(QStringView haystack, qsizetype from, char16_t needle, Qt::CaseSensitivity cs) noexcept
+{
+    return qLastIndexOf(haystack, QChar(needle), from, cs);
+}
+
+qsizetype QEmuPrivate::lastIndexOf(QStringView haystack, qsizetype from, QStringView needle, Qt::CaseSensitivity cs) noexcept
+{
+    return qLastIndexOf(haystack, from, needle, cs);
+}
+

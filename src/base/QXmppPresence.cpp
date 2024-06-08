@@ -16,23 +16,23 @@
 using namespace QXmpp::Private;
 
 constexpr auto PRESENCE_TYPES = to_array<QStringView>({
-    u"error",
-    {},
-    u"unavailable",
-    u"subscribe",
-    u"subscribed",
-    u"unsubscribe",
-    u"unsubscribed",
-    u"probe",
+    QStringView(u"error"),
+    QStringView({}),
+    QStringView(u"unavailable"),
+    QStringView(u"subscribe"),
+    QStringView(u"subscribed"),
+    QStringView(u"unsubscribe"),
+    QStringView(u"unsubscribed"),
+    QStringView(u"probe"),
 });
 
 constexpr auto AVAILABLE_STATUS_TYPES = to_array<QStringView>({
-    {},
-    u"away",
-    u"xa",
-    u"dnd",
-    u"chat",
-    u"invisible",
+    QStringView({}),
+    QStringView(u"away"),
+    QStringView(u"xa"),
+    QStringView(u"dnd"),
+    QStringView(u"chat"),
+    QStringView(u"invisible"),
 });
 
 class QXmppPresencePrivate : public QSharedData
