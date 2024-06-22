@@ -2000,6 +2000,11 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
             d->jingleMessageInitiationElement->toXml(writer);
         }
 
+        // XEP-0353: Jingle Message Initiation
+        if (d->jingleMessageInitiationElement) {
+            d->jingleMessageInitiationElement->toXml(writer);
+        }
+
         // XEP-0367: Message Attaching
         if (!d->attachId.isEmpty()) {
             writer->writeStartElement(QStringLiteral("attach-to"));

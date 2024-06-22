@@ -7,8 +7,10 @@ name: tests
 on: [push, pull_request]
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
+  linux:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:stable
     env:
       CONFIG: ${{ matrix.config }}
       QT_VERSION: ${{ matrix.qt_version }}
@@ -17,7 +19,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         config: [minimal]
-        qt_version: ['5.9.*']
+        qt_version: ['5.6.*']
         include:
           - os: ubuntu-latest
             config: minimal
@@ -28,11 +30,11 @@ jobs:
         uses: jurplel/install-qt-action@v3
         with:
           version: ${{ matrix.qt_version }}
+          modules: ${{ matrix.qt_version[0] == '6' && 'qt5compat' || '' }}
           setup-python: false
       - name: Install extra packages
-        run: tests/travis/install-build-depends
+        run: tests/travis/install-build-depends-macos
       - name: Disable OS X firewall
-        if: matrix.os == 'macos-latest'
         run: |
           sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
       - name: Run tests
@@ -46,6 +48,7 @@ jobs:
       - uses: actions/checkout@v3
       - run: sudo apt update && sudo apt install -y libxml2-utils
       - run: xmllint --noout $(find . -type f -name *.xml)
+
   reuse:
     runs-on: ubuntu-latest
     steps:

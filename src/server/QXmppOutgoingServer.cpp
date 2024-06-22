@@ -48,7 +48,7 @@ QXmppOutgoingServer::QXmppOutgoingServer(const QString &domain, QObject *parent)
 
     connect(socket, &QAbstractSocket::disconnected, this, &QXmppOutgoingServer::_q_socketDisconnected);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    connect(socket, &QSslSocket::errorOccurred, this, &QXmppOutgoingServer::socketError);
+	connect(socket, &QSslSocket::errorOccurred, this, &QXmppOutgoingServer::socketError);
 #elif QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
     connect(socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::error), this, &QXmppOutgoingServer::socketError);
 #else
