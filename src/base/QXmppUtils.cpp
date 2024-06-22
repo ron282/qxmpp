@@ -260,7 +260,7 @@ int QXmppUtils::generateRandomInteger(int N)
     Q_ASSERT(N > 0 && N <= RAND_MAX);
     int val;
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-    while (N <= (val = QRandomGenerator::global()->generate() / (RAND_MAX / N))) {
+	while (N <= (val = QRandomGenerator::global()->generate() / (RAND_MAX / N))) {
     }
 #else
     qsrand(QTime::currentTime().msec());
@@ -363,7 +363,7 @@ QByteArray QXmpp::Private::generateRandomBytes(uint32_t minimumByteCount, uint32
 #else
     const auto byteCount = (qrand() % (maximumByteCount - minimumByteCount)) + minimumByteCount;
 #endif
-    QByteArray bytes;
+	QByteArray bytes;
     bytes.resize(byteCount);
     generateRandomBytes(reinterpret_cast<uint8_t *>(bytes.data()), byteCount);
 

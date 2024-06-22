@@ -1600,7 +1600,6 @@ void tst_QXmppJingleData::testJingleMessageInitiationElement()
     QCOMPARE(proposeElement.description()->media(), QStringLiteral("audio"));
     QCOMPARE(proposeElement.containsTieBreak(), false);  // single check if containsTieBreak is set correctly when unused
     QVERIFY(!proposeElement.reason().has_value());
-    //    QCOMPARE(proposeElement.reason(), std::nullopt);     // single check if reason is set correctly when unused
     serializePacket(proposeElement, proposeXml);
 
     // --- Ringing ---

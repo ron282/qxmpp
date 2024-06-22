@@ -21,7 +21,6 @@
 #include <protocol.h>
 
 #include "OmemoCryptoProvider.h"
-
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
@@ -1161,17 +1160,6 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
                     const auto &deviceId = itr.key();
                     const auto &device = itr.value();
 
-                    // Skip encrypting for a device if it does not respond for a while.
-                    if (const auto unrespondedSentStanzasCount = device.unrespondedSentStanzasCount; unrespondedSentStanzasCount == UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED) {
-                        if (++(*skippedDevicesCount) == devicesCount) {
-                            warning("OMEMO element could not be created because no recipient device responded to " %
-                                    QString::number(unrespondedSentStanzasCount) % " sent stanzas");
-                            interface.finish(std::nullopt);
-                        }
-
-                        continue;
-                    }
-
                     auto controlDeviceProcessing = [=](bool isSuccessful = true) mutable {
                         if (isSuccessful) {
                             ++(*successfullyProcessedDevicesCount);
@@ -1190,6 +1178,19 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
                         }
                     };
 
+                    // Skip encrypting for a device if it does not respond for a while.
+                    if (const auto unrespondedSentStanzasCount = device.unrespondedSentStanzasCount; unrespondedSentStanzasCount == UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED) {
+                        if (++(*skippedDevicesCount) == devicesCount) {
+                            warning("OMEMO element could not be created because no recipient device responded to " %
+                                    QString::number(unrespondedSentStanzasCount) % " sent stanzas");
+                            interface.finish(std::nullopt);
+                        } else {
+                            controlDeviceProcessing(false);
+                        }
+
+                        continue;
+                    }
+
                     const auto address = Address(jid, deviceId);
 
                     auto addOmemoEnvelope = [=](bool isKeyExchange = false) mutable {
@@ -1205,7 +1206,11 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
                         else if (devices.value(jid).contains(deviceId)) {
                             auto &deviceBeingModified = devices[jid][deviceId];
                             deviceBeingModified.unrespondedReceivedStanzasCount = 0;
-                            ++deviceBeingModified.unrespondedSentStanzasCount;
+
+                            if (auto &unrespondedSentStanzasCount = deviceBeingModified.unrespondedSentStanzasCount; unrespondedSentStanzasCount + 1 <= UNRESPONDED_STANZAS_UNTIL_ENCRYPTION_IS_STOPPED) {
+                                ++unrespondedSentStanzasCount;
+                            }
+
                             omemoStorage->addDevice(jid, deviceId, deviceBeingModified);
 
                             QXmppOmemoEnvelope omemoEnvelope;
@@ -1538,7 +1543,8 @@ QXmppTask<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessa
     if (const auto omemoEnvelope = omemoElement.searchEnvelope(ownBareJid(), ownDevice.id)) {
         QXmppPromise<std::optional<QXmppMessage>> interface;
 
-        const auto senderJid = QXmppUtils::jidToBareJid(stanza.from());
+        const auto mixUserJid = stanza.mixUserJid();
+        const auto senderJid = mixUserJid.isEmpty() ? QXmppUtils::jidToBareJid(stanza.from()) : mixUserJid;
         const auto senderDeviceId = omemoElement.senderDeviceId();
         const auto omemoPayload = omemoElement.payload();
         subscribeToNewDeviceLists(senderJid, senderDeviceId);
@@ -1665,13 +1671,15 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
             if (sceEnvelopeReader.from() != senderJid) {
                 q->info("Sender '" % senderJid % "' of stanza does not match SCE 'from' affix element '" % sceEnvelopeReader.from() % "'");
             }
-            if (const auto recipientJid = QXmppUtils::jidToBareJid(stanza.to()); isMessageStanza) {
-                if (const auto &message = dynamic_cast<const QXmppMessage &>(stanza); message.type() == QXmppMessage::GroupChat && (sceEnvelopeReader.to() != recipientJid)) {
+
+            if (isMessageStanza) {
+                // For messages from group chats, their "from" element corresponds to the SCE affix element "to".
+                if (const auto &message = dynamic_cast<const QXmppMessage &>(stanza); message.type() == QXmppMessage::GroupChat && (sceEnvelopeReader.to() != QXmppUtils::jidToBareJid(stanza.from()))) {
                     warning("Recipient of group chat message does not match SCE affix element '<to/>'");
                     interface.finish(std::nullopt);
                     return;
                 }
-            } else if (sceEnvelopeReader.to() != recipientJid) {
+            } else if (sceEnvelopeReader.to() != QXmppUtils::jidToBareJid(stanza.to())) {
                 q->info("Recipient of IQ does not match SCE affix element '<to/>'");
             }
 
@@ -1812,15 +1820,13 @@ QXmppTask<std::optional<QCA::SecureArray>> ManagerPrivate::extractPayloadDecrypt
         if(retVal<0) {
             warning("OMEMO envelope data could not be deserialized:");
             interface.finish(std::nullopt);
-        }
-        else {
-            BufferPtr publicIdentityKeyBuffer;
+        } else {
+            BufferPtr publicIdentityKeyBuffer(ec_public_key_get_ed(pre_key_signal_message_get_identity_key(omemoEnvelopeData.get())));
 
-            if (ec_public_key_serialize(publicIdentityKeyBuffer.ptrRef(), pre_key_signal_message_get_identity_key(omemoEnvelopeData.get())) < 0) {
+            if (const auto key = publicIdentityKeyBuffer.toByteArray(); key.isEmpty()) {
                 warning("Public Identity key could not be retrieved");
                 interface.finish(std::nullopt);
             } else {
-                const auto key = publicIdentityKeyBuffer.toByteArray();
                 auto &device = devices[senderJid][senderDeviceId];
                 auto &storedKeyId = device.keyId;
 
@@ -3780,8 +3786,8 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
         warning("No public pre key could be found in device bundle");
     }
     const auto publicPreKeyIds = publicPreKeys.keys();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-    const auto publicPreKeyIndex = QRandomGenerator::system()->bounded(publicPreKeyIds.size());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	const auto publicPreKeyIndex = QRandomGenerator::system()->bounded(publicPreKeyIds.size());
 	q->debug("buildSession with index="+QString::number(publicPreKeyIndex));
 #else
     const auto publicPreKeyIndex = publicPreKeyIds.size() > 0 ? rand() % publicPreKeyIds.size() : 0;

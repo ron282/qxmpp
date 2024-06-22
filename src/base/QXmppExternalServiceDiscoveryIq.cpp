@@ -396,9 +396,6 @@ QXmppExternalServiceDiscoveryIq &QXmppExternalServiceDiscoveryIq::operator=(cons
 QXmppExternalServiceDiscoveryIq &QXmppExternalServiceDiscoveryIq::operator=(QXmppExternalServiceDiscoveryIq &&) = default;
 #endif
 
-
-//#endif
-
 ///
 /// Returns the external services of the IQ.
 ///

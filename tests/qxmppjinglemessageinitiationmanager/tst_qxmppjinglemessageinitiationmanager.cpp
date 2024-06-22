@@ -644,7 +644,7 @@ void tst_QXmppJingleMessageInitiationManager::testHandleExistingJmi()
         QVERIFY(std::holds_alternative<ResultType>(result));
         const ResultType &rejectedJmiElement { std::get<ResultType>(result) };
 
-        QVERIFY(rejectedJmiElement.reason.has_value());
+		QVERIFY(rejectedJmiElement.reason.has_value());
         QCOMPARE(rejectedJmiElement.reason->type(), jmiElement.reason()->type());
         QCOMPARE(rejectedJmiElement.reason->text(), jmiElement.reason()->text());
         QCOMPARE(rejectedJmiElement.migratedTo, jmiElement.migratedTo());

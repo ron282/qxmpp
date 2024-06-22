@@ -4,10 +4,44 @@ SPDX-FileCopyrightText: 2010 Jeremy Lainé <jeremy.laine@m4x.org>
 SPDX-License-Identifier: CC0-1.0
 -->
 
-QXmpp 1.6.0 (UNRELEASED)
-------------------------
+QXmpp 1.6.1 (May 16, 2024)
+--------------------------
 
-*under development*
+Fixes:
+ - Fix handling of XMPP redirects (introduced in aaa6497) (@lnjX)
+ - Fix compilation with Qt 6 + C++17 (not C++20) in OmemoData (@lnjX)
+ - Fix OMEMO decryption of group chat messages (@melvo, #617)
+ - Fix stream resumption (@lnjX)<br/>
+   This has been an issue since the initial implementation of stream mangement. The xmlns was
+   missing in the &lt;resume/&gt; element and the stream ID was not parsed in the &lt;enabled/&gt;
+   element.
+
+QXmpp 1.6.0 (Feb 6, 2024)
+-------------------------
+
+QXmpp requires Qt 5.15 or 6.0+ now, the previous release was still compatible with Qt 5.9.
+
+New features:
+ - First QXmpp logo (#528, @raghu-kamath)
+ - Implement XEP-0215: External Service Discovery (#542, @taiBsu)
+ - Implement XEP-0353: Jingle Message Initiation (#570, @taiBsu)
+ - Implement XEP-0482: Call Invites (#575, @taiBsu)
+ - Implement XEP-0191: Blocking Command (#577, @lnjX)
+ - Client: New constructor for creating without any extensions (@lnjX)
+
+QXmpp 1.5.6 (Feb 4, 2024)
+-------------------------
+
+Changes:
+ - Behaviour change: sendIq() automatically parses stanza errors (returned as QXmppError) (@lnjX)
+ - CMake: "QXmpp" legacy cmake package is now only installed for Qt 5 builds (@lnjX)
+ - Fix unit test with Qt 6! (@lnjX)
+ - EncryptedFileSharingProvider: Fix wrong cipher set in sent file share element (@lnjX)
+ - Fix SCE parsing mode when parsing encrypted messages (@lnjX)
+ - Fix file encryption with QCA issues (@lnjX)
+ - Fix picking by strength of hashing algorithms (@lnjX)
+ - Fix github ci (@lnjX)
+ - Add unit tests for all file encryption ciphers (@lnjX)
 
 QXmpp 1.5.5 (Apr 30, 2023)
 --------------------------

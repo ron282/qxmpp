@@ -3,6 +3,9 @@ SPDX-FileCopyrightText: 2009 Manjeet Dahiya <manjeetdahiya@gmail.com>
 
 SPDX-License-Identifier: CC0-1.0
 -->
+
+# QXmpp - Cross-platform C++/Qt XMPP library
+
 <h1 align="center">
 <picture>
     <img alt="QXmpp logo" src="./logo.svg" height="150">
@@ -32,38 +35,40 @@ SPDX-License-Identifier: CC0-1.0
     <a href="https://liberapay.com/QXmpp/donate">
         <img alt="Donate using Liberapay" src="https://img.shields.io/liberapay/patrons/QXmpp.svg?logo=liberapay">
     </a>
+    <a href="https://api.reuse.software/info/github.com/qxmpp-project/qxmpp">
+        <img alt="REUSE status" src="https://api.reuse.software/badge/github.com/qxmpp-project/qxmpp">
+    </a>
 </p>
 
 QXmpp is a cross-platform C++ XMPP client and server library. It is written
-in C++ and uses Qt framework.
+in C++ and uses the Qt framework.
 
-QXmpp strives to be as easy to use as possible, the underlying TCP socket, the
-core XMPP RFCs (RFC6120 and RFC6121) and XMPP extensions have been nicely
-encapsulated into classes. QXmpp is ready to build XMPP clients complying with
-the [XMPP Compliance Suites 2022][xmpp-compliance] for IM and Advanced Mobile.
-It comes with full API documentation, automatic tests and some examples.
+QXmpp strives to be as easy to use as possible. The underlying TCP socket, the core XMPP RFCs
+(RFC6120 and RFC6121) and the [supported XMPP extensions][xeps] have been nicely encapsulated in
+classes.
+With QXmpp, it is possible to build XMPP clients complying with the
+[XMPP Compliance Suites 2022][xmpp-compliance] for IM and Advanced Mobile.
+It comes with full API documentation, automatic tests and examples.
 
-QXmpp uses Qt extensively, and as such users need to a have working knowledge of
-C++ and Qt basics (Signals and Slots and Qt data types).
+QXmpp uses Qt extensively. Thus, users need to have a good knowledge of C++ and Qt basics
+(including the concept of signals/slots and Qt's data types).
+Qt is the only third party library required to build QXmpp, but libraries such as GStreamer enable
+additional features.
 
-Qt is the only third party library which is required to build QXmpp, but
-libraries such as GStreamer enable additional features.
-
-QXmpp is released under the terms of the GNU Lesser General Public License,
-version 2.1 or later.
-
-Building QXmpp
-==============
+QXmpp is released under the terms of the GNU Lesser General Public License, version 2.1 or later.
 
 QXmpp requires Qt 5.15 or Qt 6.0 or higher with SSL enabled.
 It uses CMake as build system.
 
-Build from command line:
+QXmpp requires **Qt 5.15** or **Qt 6.0 or higher** with SSL enabled.
 
-    mkdir build
-    cd build
-    cmake ..
-    cmake --build .
+You can build QXmpp with CMake:
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
 
 You can pass the following arguments to CMake:
 
@@ -86,52 +91,57 @@ Installing QXmpp
 After building QXmpp, you can install the Headers, Libraries
 and Documentation using the following command:
 
-Install from command line:
+For example, to build without unit tests you could do:
+```
+cmake .. -DBUILD_TESTS=OFF
+```
 
-    cmake --build . --target install
+## Installing
 
-Examples
-========
+After building QXmpp, you can install it using the following command:
+```
+cmake --build . --target install
+```
 
-Look at the example directory for various examples. Here is a description of
-a few.
+## Examples
 
-* *example_0_connected*
-This example just connects to the xmpp server and start receiving presences
-(updates) from the server. After running this example, you can see this user
-online, if it's added in your roster (friends list).
+There are various [examples][examples] in order to quickly start using QXmpp.
 
-* *example_1_echoClient*
-This is a very simple bot which echoes the message sent to it. Run this
-example, send it a message from a friend of this bot and you will
-receive the message back. This example shows how to receive and send messages.
+### `example_0_connected`
 
-Documentation
-=============
+This example connects to the XMPP server and starts receiving presences from the server.
+You can see whether the user is online and if the user is in your roster (contact list).
 
-You can find the API documentation for the latest stable QXmpp version here:
+### `example_1_echoClient`
 
-https://doc.qxmpp.org/
+This is a very simple bot which echoes the message sent to it.
+The example helps to understand how to receive and send messages.
 
-The API documentation of the master branch is also available:
+## Documentation
 
-https://doc.qxmpp.org/qxmpp-dev/
+There is an API documentation for the [latest stable QXmpp version][qxmpp-documentation] and one
+for the [master branch][qxmpp-master-documentation].
 
-Supported Platforms
-===================
+## Supported Platforms
 
-It should work on all the platforms supported by Qt. For a complete list of
-platforms support by Qt, see:
+QXmpp should work on all [platforms supported by Qt][supported-platforms].
 
-https://doc.qt.io/qt-5/supported-platforms.html
+## Bugs
 
-How to report a bug
-===================
+If you think you have found a bug in QXmpp, we would like to hear about it.
+That way, we can fix it.
+Before [reporting a bug][issues], please check if the issue is already known at.
 
-If you think you have found a bug in QXmpp, we would like to hear about
-it so that we can fix it. Before reporting a bug, please check if the issue
-is already know at:
+## Contributing
 
-https://github.com/qxmpp-project/qxmpp/issues
+If you are interested in contributing to QXmpp, please have a look at our [contribution guidelines][contributing].
 
+[xeps]: https://doc.qxmpp.org/qxmpp-1/xep.html
+[contributing]: /CONTRIBUTING.md
+[examples]: /examples
+[issues]: https://github.com/qxmpp-project/qxmpp/issues
+[omemo]: /src/omemo/README.md
+[qxmpp-documentation]: https://doc.qxmpp.org
+[qxmpp-master-documentation]: https://doc.qxmpp.org/qxmpp-dev/
+[supported-platforms]: https://doc.qt.io/qt-5/supported-platforms.html
 [xmpp-compliance]: https://xmpp.org/extensions/xep-0459.html

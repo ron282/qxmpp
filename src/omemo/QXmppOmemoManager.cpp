@@ -694,7 +694,7 @@ QXmppOmemoOwnDevice Manager::ownDevice()
 ///
 /// You must build sessions before you can get devices with corresponding keys.
 ///
-/// /\return all devices except the own device
+/// \return all devices except the own device
 ///
 QXmppTask<QVector<QXmppOmemoDevice>> Manager::devices()
 {
@@ -1054,8 +1054,7 @@ QXmppTask<QXmppE2eeExtension::MessageDecryptResult> QXmppOmemoManager::decryptMe
             SendError::EncryptionError });
     }
 
-    auto omemoElement = message.omemoElement();
-    if (!omemoElement) {
+    if (!message.omemoElement()) {
         return makeReadyTask<MessageDecryptResult>(NotEncrypted());
     }
 
@@ -1204,9 +1203,11 @@ bool Manager::handleMessage(const QXmppMessage &message)
 {
     if (d->isStarted && message.omemoElement()) {
         auto future = d->decryptMessage(message);
-        future.then(this, [=](std::optional<QXmppMessage> optionalDecryptedMessage) mutable {
+        future.then(this, [this, message](std::optional<QXmppMessage> optionalDecryptedMessage) {
             if (optionalDecryptedMessage) {
                 injectMessage(std::move(*optionalDecryptedMessage));
+            } else {
+                Q_EMIT client()->messageReceived(message);
             }
         });
 

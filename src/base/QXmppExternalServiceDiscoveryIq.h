@@ -24,7 +24,6 @@ public:
     QXmppExternalServiceDiscoveryIq &operator=(const QXmppExternalServiceDiscoveryIq &);
     QXmppExternalServiceDiscoveryIq &operator=(QXmppExternalServiceDiscoveryIq &&);
 #endif
-
     QVector<QXmppExternalService> externalServices();
     void setExternalServices(const QVector<QXmppExternalService> &);
     void addExternalService(const QXmppExternalService &);
