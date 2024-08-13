@@ -91,7 +91,7 @@ constexpr auto DEVICE_REMOVAL_INTERVAL = 24h * 7 * 12;
 // interval to check for devices removed from their servers
 constexpr auto DEVICE_REMOVAL_CHECK_INTERVAL = 24h;
 #if defined(WITH_OMEMO_V03)
-constexpr auto PAYLOAD_CIPHER_TYPE = "aes128";
+constexpr QStringView PAYLOAD_CIPHER_TYPE = u"aes128";
 constexpr QCA::Cipher::Mode PAYLOAD_CIPHER_MODE = QCA::Cipher::GCM;
 constexpr QCA::Cipher::Padding PAYLOAD_CIPHER_PADDING = QCA::Cipher::NoPadding;
 
@@ -100,14 +100,13 @@ constexpr int HKDF_KEY_SIZE = 16;
 constexpr int HKDF_SALT_SIZE = 16;
 constexpr int HKDF_OUTPUT_SIZE = 48;
 
-extern const QString PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE;
+inline constexpr QStringView PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE = u"hmac(sha256)";
 constexpr uint32_t PAYLOAD_MESSAGE_AUTHENTICATION_CODE_SIZE = 16;
 
 constexpr int PAYLOAD_KEY_SIZE = 16;
 constexpr uint32_t PAYLOAD_INITIALIZATION_VECTOR_SIZE = 12;
 constexpr uint32_t PAYLOAD_AUTHENTICATION_KEY_SIZE = 16;
 #else
-constexpr auto PAYLOAD_CIPHER_TYPE = "aes256";
 constexpr QStringView PAYLOAD_CIPHER_TYPE = u"aes256";
 constexpr QCA::Cipher::Mode PAYLOAD_CIPHER_MODE = QCA::Cipher::CBC;
 constexpr QCA::Cipher::Padding PAYLOAD_CIPHER_PADDING = QCA::Cipher::PKCS7;

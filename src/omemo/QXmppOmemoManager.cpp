@@ -1160,7 +1160,7 @@ QStringList Manager::discoveryFeatures() const
 {
 #if defined(WITH_OMEMO_V03)
     return {
-        QString(ns_omemo_devices) % "+notify"
+        ns_omemo_devices + QStringView(u"+notify")
     };
 #else
     return {

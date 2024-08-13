@@ -11,7 +11,9 @@
 #include <cstring>
 #include <gst/gst.h>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
+#endif
 
 /// \cond
 QXmppCallStreamPrivate::QXmppCallStreamPrivate(QXmppCallStream *parent, GstElement *pipeline_,

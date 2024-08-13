@@ -207,7 +207,8 @@ auto mapToSuccess(std::variant<T, Err> var)
 template<typename T, typename Err>
 auto chainSuccess(QXmppTask<std::variant<T, Err>> &&source, QObject *context) -> QXmppTask<std::variant<QXmpp::Success, QXmppError>>
 {
-    return chain<std::variant<QXmpp::Success, QXmppError>>(std::move(source), context, mapToSuccess<T, Err>);
+	using SucessErrVariant = decltype(mapToSuccess<T, Err>);
+    return chain<std::variant<QXmpp::Success, QXmppError>, std::variant<T, Err>, SucessErrVariant>(std::move(source), context, mapToSuccess<T, Err>);
 }
 
 template<typename Input, typename Converter>

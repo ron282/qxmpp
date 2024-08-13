@@ -2122,6 +2122,13 @@ struct QXmppFallbackPrivate : QSharedData {
 
 QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppFallback)
 
+#if defined (SFOS)
+QXmppFallback::QXmppFallback()
+{
+//
+}
+#endif
+
 /// Creates a fallback marker.
 QXmppFallback::QXmppFallback(const QString &forNamespace, const QVector<Reference> &references)
     : d(new QXmppFallbackPrivate { {}, forNamespace, references })
