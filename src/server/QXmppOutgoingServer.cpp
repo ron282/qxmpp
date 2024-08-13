@@ -131,9 +131,9 @@ void QXmppOutgoingServer::handleStart()
                                   " xmlns='%1' xmlns:db='%2' xmlns:stream='%3' version='1.0'"
                                   " from='%4' to='%5'>")
                        .arg(
-                           ns_server,
-                           ns_server_dialback,
-                           ns_stream,
+                           ns_server.toString(),
+                           ns_server_dialback.toString(),
+                           ns_stream.toString(),
                            d->localDomain,
                            d->remoteDomain);
     sendData(data.toUtf8());

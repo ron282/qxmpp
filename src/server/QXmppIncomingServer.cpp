@@ -92,9 +92,9 @@ void QXmppIncomingServer::handleStream(const QDomElement &streamElement)
                                   " xmlns='%1' xmlns:db='%2' xmlns:stream='%3'"
                                   " id='%4' version=\"1.0\">")
                        .arg(
-                           ns_server,
-                           ns_server_dialback,
-                           ns_stream,
+                           ns_server.toString(),
+                           ns_server_dialback.toString(),
+                           ns_stream.toString(),
                            d->localStreamId);
     sendData(data.toUtf8());
 

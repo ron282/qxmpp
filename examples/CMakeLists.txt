@@ -7,6 +7,7 @@ macro(add_simple_example EXAMPLE_NAME)
     target_link_libraries(${EXAMPLE_NAME} ${QXMPP_TARGET})
 endmacro()
 
+include_directories(${PROJECT_SOURCE_DIR}/src/3rdparty/QEmuStringView)
 include_directories(${PROJECT_SOURCE_DIR}/src/base)
 include_directories(${PROJECT_SOURCE_DIR}/src/client)
 include_directories(${PROJECT_SOURCE_DIR}/src/server)

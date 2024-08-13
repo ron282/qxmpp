@@ -608,7 +608,7 @@ void PubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
 
         writer->writeEndElement();  // query type
 
-        if(d->queryNode.contains(ns_omemo_bundles) == false)
+        if(d->queryNode.contains(ns_omemo_bundles.toString()) == false)
         {
             // add extra element with data form
             if (auto form = d->dataForm) {
@@ -639,7 +639,7 @@ void PubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
         }
 
         // Result Set Management
-        if (d->queryType == Items && d->itemsContinuation.has_value() && (d->queryNode.contains(ns_omemo_bundles) == false)) {
+        if (d->queryType == Items && d->itemsContinuation.has_value() && (d->queryNode.contains(ns_omemo_bundles.toString()) == false)) {
             d->itemsContinuation->toXml(writer);
         }
     }

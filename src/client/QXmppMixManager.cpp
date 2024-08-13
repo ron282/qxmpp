@@ -1218,11 +1218,11 @@ void QXmppMixManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
     // Check the server's functionality to support MIX clients.
     if (iq.from().isEmpty() || iq.from() == client()->configuration().domain()) {
         // Check whether MIX is supported.
-        if (iq.features().contains(ns_mix_pam)) {
+        if (iq.features().contains(ns_mix_pam.toString())) {
             setParticipantSupport(QXmppMixManager::Support::Supported);
 
             // Check whether MIX archiving is supported.
-            if (iq.features().contains(ns_mix_pam_archiving)) {
+            if (iq.features().contains(ns_mix_pam_archiving.toString())) {
                 setMessageArchivingSupport(QXmppMixManager::Support::Supported);
             }
         } else {
@@ -1234,7 +1234,7 @@ void QXmppMixManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
     const auto jid = iq.from().isEmpty() ? client()->configuration().domain() : iq.from();
 
     // If no MIX service is provided by the JID, remove it from the cache.
-    if (!iq.features().contains(ns_mix)) {
+    if (!iq.features().contains(ns_mix.toString())) {
         removeService(jid);
         return;
     }
@@ -1247,8 +1247,8 @@ void QXmppMixManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
         if (identity.category() == u"conference" && (identity.type() == MIX_SERVICE_DISCOVERY_NODE || identity.type() == u"text")) {
             Service service;
             service.jid = iq.from().isEmpty() ? client()->configuration().domain() : iq.from();
-            service.channelsSearchable = iq.features().contains(ns_mix_searchable);
-            service.channelCreationAllowed = iq.features().contains(ns_mix_create_channel);
+            service.channelsSearchable = iq.features().contains(ns_mix_searchable.toString());
+            service.channelCreationAllowed = iq.features().contains(ns_mix_create_channel.toString());
 
             addService(service);
             return;

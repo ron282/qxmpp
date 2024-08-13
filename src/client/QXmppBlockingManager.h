@@ -13,10 +13,6 @@
 
 #include <QVector>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-#include "../../3rdparty/QEmuStringView/qemustringview2.h"
-#endif
-
 struct QXmppBlockingManagerPrivate;
 
 class QXMPP_EXPORT QXmppBlocklist

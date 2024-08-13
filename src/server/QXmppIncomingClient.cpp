@@ -168,8 +168,8 @@ void QXmppIncomingClient::handleStream(const QDomElement &streamElement)
                                       "xmlns:stream=\"%2\" id=\"%3\" from=\"%4\" "
                                       "version=\"1.0\" xml:lang=\"en\">")
                            .arg(
-                               ns_client,
-                               ns_stream,
+                               ns_client.toString(),
+                               ns_stream.toString(),
                                QString::fromUtf8(sessionId),
                                d->domain);
     sendData(response.toUtf8());

@@ -30,9 +30,6 @@
 #include <QTextStream>
 #include <QXmlStreamWriter>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-#include "../../3rdparty/QEmuStringView/qemustringview2.h"
-#endif
 using namespace QXmpp::Private;
 
 constexpr auto CHAT_STATES = to_array<QStringView>({
@@ -1779,8 +1776,8 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
 #if defined(WITH_OMEMO_V03)
         // XEP-0085: Chat State Notifications
         if (d->state > None && d->state <= Paused) {
-            writer->writeStartElement(CHAT_STATES.at(d->state));
-            writer->writeDefaultNamespace(ns_chat_states);
+            writer->writeStartElement(toString65(CHAT_STATES.at(d->state)));
+            writer->writeDefaultNamespace(toString65(ns_chat_states));
             writer->writeEndElement();
         }
 #endif
@@ -1792,12 +1789,12 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         // looping.
         if (!d->receiptId.isEmpty()) {
             writer->writeStartElement(QStringLiteral("received"));
-            writer->writeDefaultNamespace(ns_message_receipts);
+            writer->writeDefaultNamespace(toString65(ns_message_receipts));
             writer->writeAttribute(QStringLiteral("id"), d->receiptId);
             writer->writeEndElement();
         } else if (d->receiptRequested) {
             writer->writeStartElement(QStringLiteral("request"));
-            writer->writeDefaultNamespace(ns_message_receipts);
+            writer->writeDefaultNamespace(toString65(ns_message_receipts));
             writer->writeEndElement();
         }
 #endif
@@ -1806,12 +1803,12 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
         // XEP-0333: Chat Markers
         if (d->markable) {
             writer->writeStartElement(QStringLiteral("markable"));
-            writer->writeDefaultNamespace(ns_chat_markers);
+            writer->writeDefaultNamespace(toString65(ns_chat_markers));
             writer->writeEndElement();
         }
         if (d->marker != NoMarker) {
-            writer->writeStartElement(MARKER_TYPES.at(d->marker));
-            writer->writeDefaultNamespace(ns_chat_markers);
+            writer->writeStartElement(toString65(MARKER_TYPES.at(d->marker)));
+            writer->writeDefaultNamespace(toString65(ns_chat_markers));
             writer->writeAttribute(QStringLiteral("id"), d->markedId);
             if (!d->markedThread.isNull() && !d->markedThread.isEmpty()) {
                 writer->writeAttribute(QStringLiteral("thread"), d->markedThread);
@@ -1834,7 +1831,7 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
                 // XEP-0091: Legacy Delayed Delivery
                 writer->writeStartElement(QSL65("x"));
                 writer->writeDefaultNamespace(toString65(ns_legacy_delayed_delivery));
-                writeOptionalXmlAttribute(writer, u"stamp", utcStamp.toString(QStringView(u"yyyyMMddThh:mm:ss")));
+                writeOptionalXmlAttribute(writer, u"stamp", utcStamp.toString(QSL65("yyyyMMddThh:mm:ss")));
                 writer->writeEndElement();
             }
         }
@@ -2121,6 +2118,13 @@ struct QXmppFallbackPrivate : QSharedData {
 ///
 
 QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppFallback)
+
+#if defined (SFOS)
+QXmppFallback::QXmppFallback()
+{
+//
+}
+#endif
 
 /// Creates a fallback marker.
 QXmppFallback::QXmppFallback(const QString &forNamespace, const QVector<Reference> &references)

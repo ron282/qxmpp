@@ -271,7 +271,11 @@ public:
         QXmppMixConfigItem::Nodes nodes;
 
         for (auto itr = NODES.cbegin(); itr != NODES.cend(); ++itr) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+			if (nodeList.contains(itr.value().toString())) {
+#else
             if (nodeList.contains(itr.value())) {
+#endif
                 nodes |= itr.key();
             }
         }

@@ -239,12 +239,6 @@ public:
     template <typename Char>
     Q_DECL_CONSTEXPR QEmuStringView(const Char *str) noexcept;
 #else
-#if QT_DEPRECATED_SINCE(5, 14)
-    template <typename Array, if_compatible_array<Array> = true>
-    QT_DEPRECATED_VERSION_X_5_14(R"(Use u"~~~" or QEmuStringView(u"~~~") instead of QEmuStringViewLiteral("~~~"))")
-    Q_DECL_CONSTEXPR QEmuStringView(const Array &str, QEmuPrivate::Deprecated_t) noexcept
-        : QEmuStringView(str, lengthHelperArray(str)) {}
-#endif // QT_DEPRECATED_SINCE
     template <typename Array, if_compatible_array<Array> = true>
     Q_DECL_CONSTEXPR QEmuStringView(const Array &str) noexcept
         : QEmuStringView(str, lengthHelperArray(str)) {}
@@ -264,7 +258,7 @@ public:
     Q_DECL_CONSTEXPR QEmuStringView(const StdBasicString &str) noexcept
         : QEmuStringView(str.data(), qsizetype(str.size())) {}
     Q_REQUIRED_RESULT inline QString toString() const; // defined below
-	Q_REQUIRED_RESULT inline operator QString() const; // defined below
+//	Q_REQUIRED_RESULT inline operator QString() const; // defined below
 
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR qsizetype size() const noexcept { return m_size; }
     Q_REQUIRED_RESULT const_pointer data() const noexcept { return reinterpret_cast<const_pointer>(m_data); }
@@ -274,7 +268,7 @@ public:
     //
     // QString API
     //
-//    template <typename...Args>
+//	template <typename...Args>
 //	Q_REQUIRED_RESULT inline QString arg(Args &&...args) const;
     Q_REQUIRED_RESULT QByteArray toLatin1() const { return (*this).toString().toLatin1(); }
     Q_REQUIRED_RESULT QByteArray toUtf8() const {  return (*this).toString().toUtf8(); }
@@ -441,8 +435,8 @@ inline QEmuStringView qToStringViewIgnoringNull(const QStringLike &s) noexcept
 QString QEmuStringView::toString() const
 { return Q_ASSERT10(size() == length()), QString(data(), length()); }
 
-inline QEmuStringView::operator QString() const
-{ return toString(); }
+//inline QEmuStringView::operator QString() const
+//{ return toString(); }
 
 Q_ALWAYS_INLINE QString to_string(QEmuStringView s) noexcept { return s.toString(); }
 
@@ -479,7 +473,7 @@ inline bool operator< (QEmuStringView lhs, QChar rhs) noexcept { return lhs <  Q
 inline bool operator<=(QEmuStringView lhs, QChar rhs) noexcept { return lhs <= QEmuStringView(&rhs, 1); }
 inline bool operator> (QEmuStringView lhs, QChar rhs) noexcept { return lhs >  QEmuStringView(&rhs, 1); }
 inline bool operator>=(QEmuStringView lhs, QChar rhs) noexcept { return lhs >= QEmuStringView(&rhs, 1); }
-inline bool operator==(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) == rhs; }
+//inline bool operator==(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) == rhs; }
 inline bool operator!=(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) != rhs; }
 inline bool operator< (QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) <  rhs; }
 inline bool operator<=(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) <= rhs; }
@@ -487,11 +481,15 @@ inline bool operator> (QChar lhs, QEmuStringView rhs) noexcept { return QEmuStri
 inline bool operator>=(QChar lhs, QEmuStringView rhs) noexcept { return QEmuStringView(&lhs, 1) >= rhs; }
 
 inline QString operator+(QString lhs, QEmuStringView rhs) noexcept { return lhs+rhs.toString(); }
+inline QString operator+(QEmuStringView lhs, QString rhs) noexcept { return lhs.toString()+rhs; }
 inline QString operator+=(QString lhs, const char16_t *rhs) noexcept { return lhs+QEmuStringView(rhs).toString(); }
 inline QString operator+=(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }
 inline QString operator+(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }
 inline QString operator+(char16_t lhs, QString rhs) noexcept { return QString(lhs)+rhs; }
 inline QString operator+(QString lhs, const char16_t *rhs) noexcept { return lhs+QEmuStringView(rhs).toString(); }
+inline QString operator+(char16_t lhs, QEmuStringView rhs) noexcept { return QString(lhs)+rhs; }
+inline QString operator+(QEmuStringView lhs, const char16_t *rhs) noexcept { return lhs+QEmuStringView(rhs).toString(); }
+inline QString operator+(const char16_t *lhs, QEmuStringView rhs) noexcept { return QEmuStringView(lhs).toString()+lhs; }
 inline QString operator%(QString lhs, char16_t rhs) noexcept { return lhs+QString(rhs); }
 inline QString operator%(char16_t lhs, QString rhs) noexcept { return QString(lhs)+rhs; }
 inline QString operator%(const char16_t *lhs, QString rhs) noexcept { return QEmuStringView(lhs).toString()+rhs; }

@@ -1000,8 +1000,7 @@ QXmppTask<QXmpp::TrustSecurityPolicy> Manager::securityPolicy()
 QXmppTask<void> Manager::setTrustLevel(const QMultiHash<QString, QByteArray> &keyIds, QXmpp::TrustLevel trustLevel)
 {
 #if defined(WITH_OMEMO_V03)
-	return d->trustManager->setTrustLevel(ns_omemo.toString(), keyIds, trustLevel);
-    return d->trustManager->setTrustLevel(ns_omemo, keyIds, trustLevel);
+    return d->trustManager->setTrustLevel(ns_omemo.toString(), keyIds, trustLevel);
 #else
 	return d->trustManager->setTrustLevel(ns_omemo_2.toString(), keyIds, trustLevel);
 #endif
@@ -1160,7 +1159,7 @@ QStringList Manager::discoveryFeatures() const
 {
 #if defined(WITH_OMEMO_V03)
     return {
-        QString(ns_omemo_devices) % "+notify"
+        ns_omemo_devices + u"+notify"
     };
 #else
     return {

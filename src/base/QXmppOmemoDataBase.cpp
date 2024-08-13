@@ -316,7 +316,7 @@ void QXmppOmemoElement::toXml(QXmlStreamWriter *writer) const
 {
 #if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("encrypted"));
-    writer->writeDefaultNamespace(ns_omemo);
+    writer->writeDefaultNamespace(ns_omemo.toString());
 
     writer->writeStartElement(QStringLiteral("header"));
     writer->writeAttribute(QStringLiteral("sid"), QString::number(m_senderDeviceId));

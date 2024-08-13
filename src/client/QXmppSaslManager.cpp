@@ -98,7 +98,7 @@ static InitSaslAuthResult initSaslAuthentication(const QXmppConfiguration &confi
     if (mechanism.isEmpty()) {
         auto text = disabled.empty()
             ? QStringLiteral("No supported SASL mechanism available")
-            : QStringLiteral("No supported SASL mechanism available (%1 is disabled)").arg(disabled.join(QStringView(u", ")));
+            : QStringLiteral("No supported SASL mechanism available (%1 is disabled)").arg(disabled.join(QStringView(u", ").toString()));
 
         return error(std::move(text), { AuthenticationError::MechanismMismatch, {}, {} });
     }

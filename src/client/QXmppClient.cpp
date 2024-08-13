@@ -737,7 +737,7 @@ void QXmppClient::setActive(bool active)
 #if QT_VERSION >= QT_VERSION_CHECK(5,10,0)
 		d->stream->xmppSocket().sendData(packet.arg(active ? u"active" : u"inactive", ns_csi).toUtf8());
 #else
-		d->stream->xmppSocket().sendData(packet.toString().arg(QStringView(active ? u"active" : u"inactive")).arg(ns_csi).toUtf8());
+		d->stream->xmppSocket().sendData(packet.toString().arg(active ? QStringView(u"active").toString() : QStringView(u"inactive").toString(), ns_csi.toString()).toUtf8());
 #endif
 	}
 }

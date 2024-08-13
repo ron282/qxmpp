@@ -355,25 +355,25 @@ void QXmppOmemoDeviceBundle::toXml(QXmlStreamWriter *writer) const
 {
 #if defined(WITH_OMEMO_V03)
     writer->writeStartElement(QStringLiteral("bundle"));
-    writer->writeDefaultNamespace(ns_omemo);
+    writer->writeDefaultNamespace(toString65(ns_omemo));
     writer->writeStartElement(QStringLiteral("identityKey"));
-    writer->writeCharacters(publicIdentityKey().toBase64());
+    writer->writeCharacters(QString::fromUtf8(publicIdentityKey().toBase64()));
     writer->writeEndElement();
 
     writer->writeStartElement(QStringLiteral("signedPreKeyPublic"));
     writer->writeAttribute(QStringLiteral("signedPreKeyId"), QString::number(signedPublicPreKeyId()));
-    writer->writeCharacters(signedPublicPreKey().toBase64());
+    writer->writeCharacters(QString::fromUtf8(signedPublicPreKey().toBase64()));
     writer->writeEndElement();
 
     writer->writeStartElement(QStringLiteral("signedPreKeySignature"));
-    writer->writeCharacters(signedPublicPreKeySignature().toBase64());
+    writer->writeCharacters(QString::fromUtf8(signedPublicPreKeySignature().toBase64()));
     writer->writeEndElement();
 
     writer->writeStartElement(QStringLiteral("prekeys"));
     for (auto it = m_publicPreKeys.cbegin(); it != m_publicPreKeys.cend(); it++) {
         writer->writeStartElement(QStringLiteral("preKeyPublic"));
         writer->writeAttribute(QStringLiteral("preKeyId"), QString::number(it.key()));
-        writer->writeCharacters(it.value().toBase64());
+        writer->writeCharacters(QString::fromUtf8(it.value().toBase64()));
         writer->writeEndElement();
     }
     writer->writeEndElement();  // prekeys

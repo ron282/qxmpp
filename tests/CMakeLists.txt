@@ -15,6 +15,7 @@ macro(add_simple_test TEST_NAME)
     endif()
 endmacro()
 
+include_directories(${PROJECT_SOURCE_DIR}/src/3rdparty/QEmuStringView)
 include_directories(${PROJECT_SOURCE_DIR}/src/base)
 include_directories(${PROJECT_SOURCE_DIR}/src/client)
 include_directories(${PROJECT_SOURCE_DIR}/src/omemo)

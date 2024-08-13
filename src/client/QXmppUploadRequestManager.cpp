@@ -288,7 +288,7 @@ bool QXmppUploadRequestManager::handleStanza(const QDomElement &element)
 
 void QXmppUploadRequestManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
 {
-    if (!iq.features().contains(ns_http_upload)) {
+    if (!iq.features().contains(ns_http_upload.toString())) {
         return;
     }
 

@@ -27,7 +27,7 @@ int hmac_sha256_init_func(void **hmac_context, const uint8_t *key, size_t key_le
 {
     auto *d = managerPrivate(user_data);
 
-    if (!QCA::MessageAuthenticationCode::supportedTypes().contains(PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE)) {
+    if (!QCA::MessageAuthenticationCode::supportedTypes().contains(PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE.toString())) {
         d->warning(u"Message authentication code type '" + PAYLOAD_MESSAGE_AUTHENTICATION_CODE_TYPE + u"' is not supported by this system");
         return -1;
     }
