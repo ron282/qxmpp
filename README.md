@@ -3,12 +3,9 @@ SPDX-FileCopyrightText: 2009 Manjeet Dahiya <manjeetdahiya@gmail.com>
 
 SPDX-License-Identifier: CC0-1.0
 -->
-<<<<<<< HEAD
 
 # QXmpp - Cross-platform C++/Qt XMPP library
 
-=======
->>>>>>> 1.6
 <h1 align="center">
 <picture>
     <img alt="QXmpp logo" src="./logo.svg" height="150">
@@ -60,16 +57,21 @@ additional features.
 
 QXmpp is released under the terms of the GNU Lesser General Public License, version 2.1 or later.
 
-<<<<<<< HEAD
 ## Building
-=======
-QXmpp requires Qt 5.15 or Qt 6.0 or higher with SSL enabled.
-It uses CMake as build system.
->>>>>>> 1.6
 
-QXmpp requires **Qt 5.15** or **Qt 6.0 or higher** with SSL enabled.
+This QXmpp version **requires Qt 5.6 or higher** with SSL enabled.
+It is dedicated to SailfishOS.
+
+You can build QXmpp with sfdk for SailfishOS:
+
+```
+sfdk build
+```
+
+Default arguments used for compilation are defined in [spec file](src/rpm/qxmpp.spec) 
 
 You can build QXmpp with CMake:
+
 ```
 mkdir build
 cd build
@@ -79,25 +81,13 @@ cmake --build .
 
 You can pass the following arguments to CMake:
 
-<<<<<<< HEAD
-Option | Default | Description
----|---|---
-`BUILD_SHARED` | `ON` | Build as shared library, otherwise static
-`BUILD_DOCUMENTATION` | `ON` | Build documentation, requires Doxygen
-`BUILD_EXAMPLES` | `ON` | Build examples
-`BUILD_TESTS` | `ON` | Build unit tests
-`BUILD_INTERNAL_TESTS` | `OFF` | Build unit tests testing private parts of the API
-`BUILD_OMEMO` | `OFF` | Build the [OMEMO module][omemo]
-`WITH_GSTREAMER` | `OFF` | Enable audio/video over Jingle
-`QT_VERSION_MAJOR=5/6` | | to build with a specific Qt major version, prefers Qt 6 if undefined
-=======
     BUILD_SHARED                  to build with shared type library, otherwise static (default: true)
     BUILD_DOCUMENTATION           to build the documentation, requires Doxygen (default: false)
     BUILD_EXAMPLES                to build the examples (default: true)
     BUILD_TESTS                   to build the unit tests (default: true)
     BUILD_INTERNAL_TESTS          to build the unit tests testing private parts of the API (default: false)
     BUILD_OMEMO                   to build the OMEMO module (default: false)
-    WITH_OMEMO_V03                to get compatibility with OMEMO v0.3  
+    WITH_OMEMO_V03                to get compatibility with OMEMO v0.3  (default: false)
     WITH_GSTREAMER                to enable audio/video over jingle (default: false)
     QT_VERSION_MAJOR=5/6          to build with a specific Qt major version (default behaviour: prefer 6)
 
@@ -109,7 +99,6 @@ Installing QXmpp
 
 After building QXmpp, you can install the Headers, Libraries
 and Documentation using the following command:
->>>>>>> 1.6
 
 For example, to build without unit tests you could do:
 ```
