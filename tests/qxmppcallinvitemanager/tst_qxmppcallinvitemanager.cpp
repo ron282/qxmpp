@@ -97,7 +97,7 @@ void tst_QXmppCallInviteManager::testAccept()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == callInviteCallPartnerJid) {
-                QVERIFY(message.callInviteElement());
+                QVERIFY(message.callInviteElement().has_value());
                 QCOMPARE(message.callInviteElement()->type(), CallInviteType::Accept);
             }
         }
@@ -124,7 +124,7 @@ void tst_QXmppCallInviteManager::testReject()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == callInviteCallPartnerJid) {
-                QVERIFY(message.callInviteElement());
+                QVERIFY(message.callInviteElement().has_value());
                 QCOMPARE(message.callInviteElement()->id(), QStringLiteral("id1_testReject"));
                 QCOMPARE(message.callInviteElement()->type(), CallInviteType::Reject);
             }
@@ -180,7 +180,7 @@ void tst_QXmppCallInviteManager::testLeft()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == callInviteCallPartnerJid) {
-                QVERIFY(message.callInviteElement());
+                QVERIFY(message.callInviteElement().has_value());
                 QCOMPARE(message.callInviteElement()->id(), QStringLiteral("id1_testLeft"));
                 QCOMPARE(message.callInviteElement()->type(), CallInviteType::Left);
             }
@@ -218,15 +218,15 @@ void tst_QXmppCallInviteManager::testInvite()
 
             if (message.to() == jid) {
                 const auto &callInviteElement { message.callInviteElement() };
-                QVERIFY(callInviteElement);
+                QVERIFY(callInviteElement.has_value());
 
                 QCOMPARE(callInviteElement->type(), CallInviteType::Invite);
                 QVERIFY(!callInviteElement->id().isEmpty());
                 QCOMPARE(callInviteElement->video(), video);
                 QCOMPARE(callInviteElement->audio(), audio);
-                QVERIFY(callInviteElement->jingle());
+                QVERIFY(callInviteElement->jingle().has_value());
                 QCOMPARE(callInviteElement->jingle().value(), jingle);
-                QVERIFY(callInviteElement->external());
+                QVERIFY(callInviteElement->external().has_value());
                 QCOMPARE(callInviteElement->external().value(), external);
 
                 SKIP_IF_INTEGRATION_TESTS_DISABLED()
@@ -261,7 +261,7 @@ void tst_QXmppCallInviteManager::testSendMessage()
             parsePacket(message, text.toUtf8());
 
             if (message.to() == jid) {
-                QVERIFY(message.callInviteElement());
+                QVERIFY(message.callInviteElement().has_value());
                 QCOMPARE(message.callInviteElement()->type(), callInviteElement.type());
                 QCOMPARE(message.callInviteElement()->id(), callInviteElement.id());
             }

@@ -1054,7 +1054,7 @@ void tst_QXmppMessage::testFallbackIndication()
     parsePacket(message, xml);
     QCOMPARE(message.fallbackMarkers().size(), 1);
     auto marker = message.fallbackMarkers().first();
-    QCOMPARE(marker.forNamespace(), "urn:xmpp:reply:0");
+    QCOMPARE(marker.forNamespace(), QString("urn:xmpp:reply:0"));
     const auto &refs = marker.references();
     QCOMPARE(refs.size(), 3);
     QCOMPARE(refs.at(0).element, Fallback::Body);
@@ -1063,8 +1063,8 @@ void tst_QXmppMessage::testFallbackIndication()
     QVERIFY(refs.at(0).range.has_value());
     QVERIFY(refs.at(1).range.has_value());
     QVERIFY(!refs.at(2).range.has_value());
-    QCOMPARE(refs.at(0).range->start, 0);
-    QCOMPARE(refs.at(0).range->end, 33);
+    QCOMPARE(refs.at(0).range->start, (uint32_t)0);
+    QCOMPARE(refs.at(0).range->end, (uint32_t)33);
 
     serializePacket(message, xml);
 
@@ -1305,7 +1305,7 @@ void tst_QXmppMessage::testFileSharing()
     QXmppMessage message;
     parsePacket(message, xml);
     QVERIFY(!message.sharedFiles().empty());
-    QCOMPARE(message.sharedFiles().first().id(), "abc23");
+    QCOMPARE(message.sharedFiles().first().id(), QString("abc23"));
     serializePacket(message, xml);
 
     xml = "<message id='adding-photo1' to='juliet@shakespeare.lit' from='romeo@montague.lit/resource' type='normal'>"

@@ -963,7 +963,7 @@ void tst_QXmppMixManager::testJoinChannelWithNodes()
                                  "</iq>"));
 
     auto result = expectFutureVariant<QXmppMixManager::Participation>(task);
-    QCOMPARE(result.participantId, "123456");
+    QCOMPARE(result.participantId, QString("123456"));
     QVERIFY(result.nickname.isEmpty());
     QCOMPARE(result.subscriptions, QXmppMixConfigItem::Node::Messages | QXmppMixConfigItem::Node::Presence);
 }
@@ -1112,7 +1112,7 @@ void tst_QXmppMixManager::testJoinChannelViaInvitationWithNodes()
                                  "</iq>"));
 
     auto result = expectFutureVariant<QXmppMixManager::Participation>(task);
-    QCOMPARE(result.participantId, "123457");
+    QCOMPARE(result.participantId, QString("123457"));
     QVERIFY(result.nickname.isEmpty());
     QCOMPARE(result.subscriptions, QXmppMixConfigItem::Node::Messages | QXmppMixConfigItem::Node::Presence);
 }
@@ -1141,7 +1141,7 @@ void tst_QXmppMixManager::testUpdateNickname()
                                  "</iq>"));
 
     auto nickname = expectFutureVariant<QXmppMixManager::Nickname>(task);
-    QCOMPARE(nickname, "third witch 2");
+    QCOMPARE(nickname, QString("third witch 2"));
 
     testErrorFromChannel(task = call(), client);
 }

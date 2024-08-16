@@ -79,7 +79,7 @@ void tst_QXmppExternalServiceDiscoveryManager::testDiscoveryFeatures()
     TestClient test;
     auto *m = test.addNewExtension<QXmppExternalServiceDiscoveryManager>();
 
-    QVERIFY(m->discoveryFeatures().contains(u"urn:xmpp:extdisco:2"));
+    QVERIFY(m->discoveryFeatures().contains(QStringView(u"urn:xmpp:extdisco:2").toString()));
 }
 
 QTEST_MAIN(tst_QXmppExternalServiceDiscoveryManager)

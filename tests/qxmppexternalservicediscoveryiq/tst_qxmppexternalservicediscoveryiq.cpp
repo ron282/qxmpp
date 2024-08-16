@@ -70,11 +70,11 @@ void tst_QXmppExternalServiceDiscoveryIq::testExternalService()
 
     QXmppExternalService service;
     parsePacket(service, xml);
-    QCOMPARE(service.host(), "stun.shakespeare.lit");
-    QCOMPARE(service.port(), 9998);
+    QCOMPARE(service.host(), QString("stun.shakespeare.lit"));
+    QCOMPARE(service.port().value(), 9998);
     QCOMPARE(service.transport().has_value(), true);
     QCOMPARE(service.transport().value(), QXmppExternalService::Transport::Udp);
-    QCOMPARE(service.type(), "stun");
+    QCOMPARE(service.type(), QString("stun"));
     serializePacket(service, xml);
 }
 

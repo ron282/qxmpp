@@ -510,7 +510,7 @@ void tst_QXmppMixIq::testSetters()
     QT_WARNING_POP
 
     iq.setParticipantId("123456");
-    QCOMPARE(iq.participantId(), "123456");
+    QCOMPARE(iq.participantId(), QStringLiteral("123456"));
 
     QT_WARNING_PUSH
     QT_WARNING_DISABLE_DEPRECATED
@@ -519,10 +519,10 @@ void tst_QXmppMixIq::testSetters()
     QT_WARNING_POP
 
     iq.setChannelId("coven");
-    QCOMPARE(iq.channelId(), "coven");
+    QCOMPARE(iq.channelId(), QStringLiteral("coven"));
 
     iq.setChannelJid("coven@mix.shakespeare.example");
-    QCOMPARE(iq.channelJid(), "coven@mix.shakespeare.example");
+    QCOMPARE(iq.channelJid(), QStringLiteral("coven@mix.shakespeare.example"));
 
     QT_WARNING_PUSH
     QT_WARNING_DISABLE_DEPRECATED
