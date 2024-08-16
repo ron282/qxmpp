@@ -1129,7 +1129,7 @@ void PingManager::sendPing()
     const int timeout = q->configuration().keepAliveTimeout();
     if (timeout > 0) {
 #if QT_VERSION < QT_VERSION_CHECK(5,12,0)
-            pingTimer->setInterval(timeout * 1000);
+	    timeoutTimer->setInterval(timeout * 1000);
 #else
         timeoutTimer->setInterval(timeout * 1s);
 #endif
