@@ -1624,9 +1624,9 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
             interface.finish(std::nullopt);
         } else {
             QDomDocument document;
-#if defined(WITH_OMEMO_V03) 
+#if defined(WITH_OMEMO_V03)
             QByteArray serializedBody;
-            QXmlStreamWriter(&serializedBody).writeCharacters(QString::fromLatin1(serializedSceEnvelope));
+            QXmlStreamWriter(&serializedBody).writeCharacters(QString::fromUtf8(serializedSceEnvelope));
             serializedSceEnvelope =  QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
                     serializedBody + QByteArray("</body></content><from jid='")+senderJid.toUtf8()+QByteArray("' /></envelope>");
 #endif
@@ -1662,7 +1662,7 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
 
             QXmppE2eeMetadata e2eeMetadata;
             e2eeMetadata.setSceTimestamp(sceEnvelopeReader.timestamp());
-#if defined(WITH_OMEMO_V03)
+#if defined(MEMO_V03)
             e2eeMetadata.setEncryption(QXmpp::Omemo0);
 #else
             e2eeMetadata.setEncryption(QXmpp::Omemo2);
@@ -1939,7 +1939,7 @@ QByteArray ManagerPrivate::decryptPayload(const QCA::SecureArray &payloadDecrypt
     auto decryptedPayload = reverseCipher.process(QCA::MemoryRegion(payload));
 
     if (decryptedPayload.isEmpty()) {
-        warning(QStringLiteral("Following payload could not be decrypted: ") + QString::fromLatin1(payload));
+        warning(QStringLiteral("Following payload could not be decrypted: ") + QString::fromUtf8(payload));
         return {};
     }
 
