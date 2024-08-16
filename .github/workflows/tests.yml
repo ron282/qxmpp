@@ -30,7 +30,8 @@ jobs:
         uses: jurplel/install-qt-action@v3
         with:
           version: ${{ matrix.qt_version }}
-          modules: ${{ matrix.qt_version[0] == '6' && 'qt5compat' || '' }}
+          modules: ${{ matrix.qt_version[0] == '5' || '' }}
+          setup-python: true
       - name: Install extra packages
         run: tests/travis/install-build-depends-macos
       - name: Disable OS X firewall
