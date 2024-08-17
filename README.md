@@ -71,9 +71,9 @@ They differ from default settings when using CMake directly.
 
 To deploy the built package: 
 
-...
+```
 sfdk deploy --sdk QXmpp
-...
+```
 
 
 ## Building
