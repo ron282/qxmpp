@@ -57,10 +57,8 @@ additional features.
 
 QXmpp is released under the terms of the GNU Lesser General Public License, version 2.1 or later.
 
-## Building
 
-This QXmpp version **requires Qt 5.6 or higher** with SSL enabled.
-It is dedicated to SailfishOS.
+## SailfishOS
 
 You can build QXmpp with sfdk for SailfishOS:
 
@@ -68,7 +66,19 @@ You can build QXmpp with sfdk for SailfishOS:
 sfdk build
 ```
 
-Default arguments used for compilation are defined in [spec file](src/rpm/qxmpp.spec) 
+Arguments used for compilation are defined in [spec file](src/rpm/qxmpp.spec) 
+They differ from default settings when using CMake directly.
+
+To deploy the built package: 
+
+...
+sfdk deploy --sdk QXmpp
+...
+
+
+## Building
+
+This QXmpp version **requires Qt 5.6 or higher** with SSL enabled and **C++17 or higher**. 
 
 You can build QXmpp with CMake:
 
