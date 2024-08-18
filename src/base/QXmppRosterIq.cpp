@@ -8,6 +8,8 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QSharedData>
 #include <QXmlStreamWriter>
@@ -55,6 +57,16 @@ void QXmppRosterIq::addItem(const Item &item)
 QList<QXmppRosterIq::Item> QXmppRosterIq::items() const
 {
     return d->items;
+}
+
+///
+/// Sets the roster IQ's items.
+///
+/// \since QXmpp 1.8
+///
+void QXmppRosterIq::setItems(const QList<Item> &items)
+{
+    d->items = items;
 }
 
 ///
@@ -110,8 +122,8 @@ bool QXmppRosterIq::isRosterIq(const QDomElement &element)
 
 void QXmppRosterIq::parseElementFromChild(const QDomElement &element)
 {
-    QDomElement queryElement = element.firstChildElement(QStringLiteral("query"));
-    setVersion(queryElement.attribute(QStringLiteral("ver")));
+    QDomElement queryElement = element.firstChildElement(u"query"_s);
+    setVersion(queryElement.attribute(u"ver"_s));
 
     for (const auto &itemElement : iterChildElements(queryElement, u"item")) {
         QXmppRosterIq::Item item;
@@ -317,17 +329,17 @@ QString QXmppRosterIq::Item::getSubscriptionTypeStr() const
 {
     switch (d->type) {
     case NotSet:
-        return QStringLiteral("");
+        return u""_s;
     case None:
-        return QStringLiteral("none");
+        return u"none"_s;
     case Both:
-        return QStringLiteral("both");
+        return u"both"_s;
     case From:
-        return QStringLiteral("from");
+        return u"from"_s;
     case To:
-        return QStringLiteral("to");
+        return u"to"_s;
     case Remove:
-        return QStringLiteral("remove");
+        return u"remove"_s;
     default: {
         qWarning("QXmppRosterIq::Item::getTypeStr(): invalid type");
         return QString();
@@ -397,14 +409,14 @@ void QXmppRosterIq::Item::setMixParticipantId(const QString &participantId)
 /// \cond
 void QXmppRosterIq::Item::parse(const QDomElement &element)
 {
-    d->name = element.attribute(QStringLiteral("name"));
-    d->bareJid = element.attribute(QStringLiteral("jid"));
-    setSubscriptionTypeFromStr(element.attribute(QStringLiteral("subscription")));
-    setSubscriptionStatus(element.attribute(QStringLiteral("ask")));
+    d->name = element.attribute(u"name"_s);
+    d->bareJid = element.attribute(u"jid"_s);
+    setSubscriptionTypeFromStr(element.attribute(u"subscription"_s));
+    setSubscriptionStatus(element.attribute(u"ask"_s));
 
     // pre-approved
-    const QString approved = element.attribute(QStringLiteral("approved"));
-    d->approved = (approved == QStringLiteral("1") || approved == QStringLiteral("true"));
+    const QString approved = element.attribute(u"approved"_s);
+    d->approved = (approved == u"1" || approved == u"true");
 
     // groups
     for (const auto &groupElement : iterChildElements(element, u"group")) {
@@ -415,19 +427,27 @@ void QXmppRosterIq::Item::parse(const QDomElement &element)
     auto channelElement = firstChildElement(element, u"channel", ns_mix_roster);
     if (!channelElement.isNull()) {
         d->isMixChannel = true;
-        d->mixParticipantId = channelElement.attribute(QStringLiteral("participant-id"));
+        d->mixParticipantId = channelElement.attribute(u"participant-id"_s);
     }
 }
 
 void QXmppRosterIq::Item::toXml(QXmlStreamWriter *writer) const
 {
+    toXml(writer, false);
+}
+
+void QXmppRosterIq::Item::toXml(QXmlStreamWriter *writer, bool external) const
+{
     writer->writeStartElement(QSL65("item"));
+    if (external) {
+        writer->writeDefaultNamespace(toString65(ns_roster));
+    }
     writeOptionalXmlAttribute(writer, u"jid", d->bareJid);
     writeOptionalXmlAttribute(writer, u"name", d->name);
     writeOptionalXmlAttribute(writer, u"subscription", getSubscriptionTypeStr());
     writeOptionalXmlAttribute(writer, u"ask", subscriptionStatus());
     if (d->approved) {
-        writer->writeAttribute(QSL65("approved"), QStringLiteral("true"));
+        writer->writeAttribute(QSL65("approved"), u"true"_s);
     }
 
     QSet<QString>::const_iterator i = d->groups.constBegin();

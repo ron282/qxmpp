@@ -9,6 +9,8 @@
 #include "QXmppSasl_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 
 using namespace QXmpp::Private;
@@ -283,7 +285,7 @@ void QXmppStreamFeatures::setRosterVersioningSupported(bool supported)
 bool QXmppStreamFeatures::isStreamFeatures(const QDomElement &element)
 {
     return element.namespaceURI() == ns_stream &&
-        element.tagName() == QStringLiteral("features");
+        element.tagName() == u"features";
 }
 
 static QXmppStreamFeatures::Mode readFeature(const QDomElement &element, QStringView tagName, QStringView tagNs)
@@ -330,7 +332,7 @@ static void writeFeature(QXmlStreamWriter *writer, QStringView tagName, QStringV
         writer->writeStartElement(toString65(tagName));
         writer->writeDefaultNamespace(toString65(tagNs));
         if (mode == QXmppStreamFeatures::Required) {
-            writer->writeEmptyElement(QStringLiteral("required"));
+            writer->writeEmptyElement(u"required"_s);
         }
         writer->writeEndElement();
     }

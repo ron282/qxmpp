@@ -5,20 +5,22 @@
 #ifndef QXMPPOUTGOINGSERVER_H
 #define QXMPPOUTGOINGSERVER_H
 
-#include "QXmppStream.h"
+#include "QXmppLogger.h"
 
 #include <QAbstractSocket>
 
+class QDomElement;
 class QSslError;
 class QXmppDialback;
+class QXmppNonza;
 class QXmppOutgoingServer;
 class QXmppOutgoingServerPrivate;
 
+///
 /// \brief The QXmppOutgoingServer class represents an outgoing XMPP stream
 /// to another XMPP server.
 ///
-
-class QXMPP_EXPORT QXmppOutgoingServer : public QXmppStream
+class QXMPP_EXPORT QXmppOutgoingServer : public QXmppLoggable
 {
     Q_OBJECT
 
@@ -26,7 +28,18 @@ public:
     QXmppOutgoingServer(const QString &domain, QObject *parent);
     ~QXmppOutgoingServer() override;
 
-    bool isConnected() const override;
+    bool isConnected() const;
+    Q_SLOT void connectToHost(const QString &domain);
+    void disconnectFromHost();
+    Q_SLOT void queueData(const QByteArray &data);
+
+    /// This signal is emitted when the stream is connected.
+    Q_SIGNAL void connected();
+    /// This signal is emitted when the stream is disconnected.
+    Q_SIGNAL void disconnected();
+
+    bool sendData(const QByteArray &);
+    bool sendPacket(const QXmppNonza &);
 
     QString localStreamKey() const;
     void setLocalStreamKey(const QString &key);
@@ -34,29 +47,20 @@ public:
 
     QString remoteDomain() const;
 
-Q_SIGNALS:
     /// This signal is emitted when a dialback verify response is received.
-    void dialbackResponseReceived(const QXmppDialback &response);
+    Q_SIGNAL void dialbackResponseReceived(const QXmppDialback &response);
 
-protected:
-    /// \cond
-    void handleStart() override;
-    void handleStream(const QDomElement &streamElement) override;
-    void handleStanza(const QDomElement &stanzaElement) override;
-    /// \endcond
+private:
+    void handleStart();
+    void handleStream(const QDomElement &streamElement);
+    void handleStanza(const QDomElement &stanzaElement);
 
-public Q_SLOTS:
-    void connectToHost(const QString &domain);
-    void queueData(const QByteArray &data);
-
-private Q_SLOTS:
-    void _q_dnsLookupFinished();
-    void _q_socketDisconnected();
+    void onDnsLookupFinished();
+    void onSocketDisconnected();
     void sendDialback();
     void slotSslErrors(const QList<QSslError> &errors);
     void socketError(QAbstractSocket::SocketError error);
 
-private:
     const std::unique_ptr<QXmppOutgoingServerPrivate> d;
 };
 

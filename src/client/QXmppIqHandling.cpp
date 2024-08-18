@@ -4,6 +4,8 @@
 
 #include "QXmppIqHandling.h"
 
+#include "StringLiterals.h"
+
 void QXmpp::Private::sendIqReply(QXmppClient *client,
                                  const QString &requestId,
                                  const QString &requestFrom,
@@ -28,11 +30,11 @@ void QXmpp::Private::sendIqReply(QXmppClient *client,
 
 std::tuple<bool, QString, QString> QXmpp::Private::checkIsIqRequest(const QDomElement &el)
 {
-    if (el.tagName() != QStringLiteral("iq")) {
+    if (el.tagName() != u"iq") {
         return { false, {}, {} };
     }
     auto queryElement = el.firstChildElement();
-    auto iqType = el.attribute(QStringLiteral("type"));
+    auto iqType = el.attribute(u"type"_s);
     if (iqType != u"get" && iqType != u"set") {
         return { false, {}, {} };
     }

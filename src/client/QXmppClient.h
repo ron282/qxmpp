@@ -25,17 +25,26 @@ class QXmppTask;
 class QXmppE2eeExtension;
 class QXmppClientExtension;
 class QXmppClientPrivate;
-class QXmppPresence;
 class QXmppMessage;
+class QXmppOutgoingClient;
+class QXmppPresence;
 class QXmppIq;
-class QXmppStream;
-class QXmppInternalClientExtension;
 
 // managers
 class QXmppDiscoveryIq;
 class QXmppRosterManager;
 class QXmppVCardManager;
 class QXmppVersionManager;
+
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+struct SessionBegin;
+}  }
+#else
+namespace QXmpp::Private {
+struct SessionBegin;
+}
+#endif
 
 ///
 /// \defgroup Core Core classes
@@ -53,34 +62,6 @@ class QXmppVersionManager;
 /// QXmppClient::addExtension().
 ///
 
-///
-/// \brief The QXmppClient class is the main class for using QXmpp.
-///
-/// It provides the user all the required functionality to connect to the
-/// server and perform operations afterwards.
-///
-/// This class will provide the handle/reference to QXmppRosterManager
-/// (roster management), QXmppVCardManager (vCard manager), and
-/// QXmppVersionManager (software version information).
-///
-/// By default, the client will automatically try reconnecting to the server.
-/// You can change that behaviour using
-/// QXmppConfiguration::setAutoReconnectionEnabled().
-///
-/// Not all the managers or extensions have been enabled by default. One can
-/// enable/disable the managers using the functions \c addExtension() and
-/// \c removeExtension(). \c findExtension() can be used to find a
-/// reference/pointer to a particular instantiated and enabled manager.
-///
-/// List of managers enabled by default:
-/// - QXmppRosterManager
-/// - QXmppVCardManager
-/// - QXmppVersionManager
-/// - QXmppDiscoveryManager
-/// - QXmppEntityTimeManager
-///
-/// \ingroup Core
-///
 class QXMPP_EXPORT QXmppClient : public QXmppLoggable
 {
     Q_OBJECT
@@ -324,6 +305,13 @@ Q_SIGNALS:
     /// This signal is emitted when the client state changes.
     void stateChanged(QXmppClient::State state);
 
+    /// Emitted when the credentials, e.g. tokens have changed.
+    ///
+    /// This means that the QXmppCredentials in the QXmppConfiguration of this client has changed.
+    ///
+    /// \since QXmpp 1.8
+    Q_SIGNAL void credentialsChanged();
+
 public Q_SLOTS:
     void connectToServer(const QXmppConfiguration &,
                          const QXmppPresence &initialPresence =
@@ -335,6 +323,7 @@ public Q_SLOTS:
     void sendMessage(const QString &bareJid, const QString &message);
 
 private:
+    QXmppOutgoingClient *stream() const;
     void injectIq(const QDomElement &element, const std::optional<QXmppE2eeMetadata> &e2eeMetadata);
     bool injectMessage(QXmppMessage &&message);
 
@@ -342,14 +331,15 @@ private Q_SLOTS:
     void _q_elementReceived(const QDomElement &element, bool &handled);
     void _q_reconnect();
     void _q_socketStateChanged(QAbstractSocket::SocketState state);
-    void _q_streamConnected();
+    void _q_streamConnected(const QXmpp::Private::SessionBegin &);
     void _q_streamDisconnected();
 
 private:
     const std::unique_ptr<QXmppClientPrivate> d;
 
     friend class QXmppClientExtension;
-    friend class QXmppInternalClientExtension;
+    friend class QXmppCarbonManagerV2;
+    friend class QXmppRegistrationManager;
     friend class TestClient;
 };
 

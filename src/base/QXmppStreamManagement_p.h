@@ -13,17 +13,14 @@
 #include <QDomDocument>
 #include <QXmlStreamWriter>
 
-class QXmppStream;
 class QXmppPacket;
 
 #if defined(SFOS)
 namespace QXmpp {  namespace Private {
 class XmppSocket;
-}  }
 #else
 namespace QXmpp::Private {
 class XmppSocket;
-}
 #endif
 
 //
@@ -39,165 +36,75 @@ class XmppSocket;
 // We mean it.
 //
 
-/// \cond
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementEnable : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementEnable(const bool resume = false, const unsigned max = 0);
 
-    bool resume() const;
-    void setResume(const bool resume);
+struct SmEnable {
+    static std::optional<SmEnable> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    unsigned max() const;
-    void setMax(const unsigned max);
-
-    static bool isStreamManagementEnable(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    bool m_resume;
-    unsigned m_max;
+    bool resume = false;
+    quint64 max = 0;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementEnabled : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementEnabled(const bool resume = false, const QString id = QString(),
-                                          const unsigned max = 0, const QString location = QString());
+struct SmEnabled {
+    static std::optional<SmEnabled> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    bool resume() const;
-    void setResume(const bool resume);
-
-    QString id() const;
-    void setId(const QString id);
-
-    unsigned max() const;
-    void setMax(const unsigned max);
-
-    QString location() const;
-    void setLocation(const QString location);
-
-    static bool isStreamManagementEnabled(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    bool m_resume;
-    QString m_id;
-    unsigned m_max;
-    QString m_location;
+    bool resume = false;
+    QString id;
+    quint64 max = 0;
+    QString location;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementResume : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementResume(const unsigned h = 0, const QString &previd = QString());
+struct SmResume {
+    static std::optional<SmResume> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    unsigned h() const;
-    void setH(const unsigned h);
-
-    QString prevId() const;
-    void setPrevId(const QString &id);
-
-    static bool isStreamManagementResume(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    unsigned m_h;
-    QString m_previd;
+    quint32 h = 0;
+    QString previd;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementResumed : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementResumed(const unsigned h = 0, const QString &previd = QString());
+struct SmResumed {
+    static std::optional<SmResumed> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    unsigned h() const;
-    void setH(const unsigned h);
-
-    QString prevId() const;
-    void setPrevId(const QString &id);
-
-    static bool isStreamManagementResumed(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    unsigned m_h;
-    QString m_previd;
+    quint32 h = 0;
+    QString previd;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementFailed : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementFailed(const QXmppStanza::Error::Condition error = QXmppStanza::Error::UndefinedCondition);
+struct SmFailed {
+    static std::optional<SmFailed> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    QXmppStanza::Error::Condition error() const;
-    void setError(const QXmppStanza::Error::Condition error);
-
-    static bool isStreamManagementFailed(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    QXmppStanza::Error::Condition m_error;
+    std::optional<QXmppStanza::Error::Condition> error;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementAck : public QXmppNonza
-{
-public:
-    explicit QXmppStreamManagementAck(const unsigned seqNo = 0);
+struct SmAck {
+    static std::optional<SmAck> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 
-    unsigned seqNo() const;
-    void setSeqNo(const unsigned seqNo);
-
-    static bool isStreamManagementAck(const QDomElement &element);
-
-    void parse(const QDomElement &element) override;
-    void toXml(QXmlStreamWriter *writer) const override;
-
-private:
-    unsigned m_seqNo;
+    quint32 seqNo = 0;
 };
 
-class QXMPP_AUTOTEST_EXPORT QXmppStreamManagementReq
-{
-public:
-    static bool isStreamManagementReq(const QDomElement &element);
-
-    static void toXml(QXmlStreamWriter *writer);
+struct SmRequest {
+    static std::optional<SmRequest> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *w) const;
 };
-
-#if defined(SFOS)
-namespace QXmpp { namespace Private {
-#else
-namespace QXmpp::Private {
-#endif
 
 //
-// This manager is used in the QXmppStream. It contains the parts of stream
-// management that are shared between server and client connections.
+// This manager handles sending and receiving of stream management acks.
+// Enabling of stream management and stream resumption is done in the C2sStreamManager.
 //
 class StreamAckManager
 {
 public:
     explicit StreamAckManager(XmppSocket &socket);
-    ~StreamAckManager();
 
-    bool enabled() const;
-    unsigned int lastIncomingSequenceNumber() const;
+    bool enabled() const { return m_enabled; }
+    unsigned int lastIncomingSequenceNumber() const { return m_lastIncomingSequenceNumber; }
 
-    void handleDisconnect();
-    void handleStart();
     void handlePacketSent(QXmppPacket &packet, bool sentData);
     bool handleStanza(const QDomElement &stanza);
+    void onSessionClosed();
 
     void resetCache();
     void enableStreamManagement(bool resetSequenceNumber);
@@ -207,11 +114,12 @@ public:
     bool sendPacketCompat(QXmppPacket &&);
     std::tuple<bool, QXmppTask<QXmpp::SendResult>> internalSend(QXmppPacket &&);
 
+    void sendAcknowledgementRequest();
+
 private:
-    void handleAcknowledgement(const QDomElement &element);
+    void handleAcknowledgement(SmAck ack);
 
     void sendAcknowledgement();
-    void sendAcknowledgementRequest();
 
     QXmpp::Private::XmppSocket &socket;
 

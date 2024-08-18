@@ -4,42 +4,44 @@
 
 #include "QXmppPubSubNodeConfig.h"
 
-static const auto NODE_CONFIG_FORM_TYPE = QStringLiteral(u"http://jabber.org/protocol/pubsub#node_config");
-static const auto PUBLISH_OPTIONS_FORM_TYPE = QStringLiteral("http://jabber.org/protocol/pubsub#publish-options");
+#include "StringLiterals.h"
 
-static const auto ACCESS_MODEL = QStringLiteral("pubsub#access_model");
-static const auto BODY_XSLT = QStringLiteral("pubsub#body_xslt");
-static const auto CHILD_ASSOCIATION_POLICY = QStringLiteral("pubsub#children_association_policy");
-static const auto CHILD_ASSOCIATION_ALLOWLIST = QStringLiteral("pubsub#children_association_whitelist");
-static const auto CHILD_NODES = QStringLiteral("pubsub#children");
-static const auto CHILD_NODES_MAX = QStringLiteral("pubsub#children_max");
-static const auto COLLECTIONS = QStringLiteral("pubsub#collection");
-static const auto CONTACT_JIDS = QStringLiteral("pubsub#contact");
-static const auto DATA_FORM_XSLT = QStringLiteral("pubsub#dataform_xslt");
-static const auto NOTIFICATIONS_ENABLED = QStringLiteral("pubsub#deliver_notifications");
-static const auto INCLUDE_PAYLOADS = QStringLiteral("pubsub#deliver_payloads");
-static const auto DESCRIPTION = QStringLiteral("pubsub#description");
-static const auto ITEM_EXPIRY = QStringLiteral("pubsub#item_expire");
-static const auto NOTIFICATION_ITEM_PUBLISHER = QStringLiteral("pubsub#itemreply");
-static const auto LANGUAGE = QStringLiteral("pubsub#language");
-static const auto MAX_ITEMS = QStringLiteral("pubsub#max_items");
-static const auto MAX_PAYLOAD_SIZE = QStringLiteral("pubsub#max_payload_size");
-static const auto NODE_TYPE = QStringLiteral("pubsub#node_type");
-static const auto NOTIFICATION_TYPE = QStringLiteral("pubsub#notification_type");
-static const auto CONFIG_NOTIFICATIONS_ENABLED = QStringLiteral("pubsub#notify_config");
-static const auto NODE_DELETE_NOTIFICATIONS_ENABLED = QStringLiteral("pubsub#notify_delete");
-static const auto RETRACT_NOTIFICATIONS_ENABLED = QStringLiteral("pubsub#notify_retract");
-static const auto SUB_NOTIFICATIONS_ENABLED = QStringLiteral("pubsub#notify_sub");
-static const auto PERSIST_ITEMS = QStringLiteral("pubsub#persist_items");
-static const auto PRESENCE_BASED_NOTIFICATIONS = QStringLiteral("pubsub#presence_based_delivery");
-static const auto PUBLISH_MODEL = QStringLiteral("pubsub#publish_model");
-static const auto PURGE_WHEN_OFFLINE = QStringLiteral("pubsub#purge_offline");
-static const auto ALLOWED_ROSTER_GROUPS = QStringLiteral("pubsub#roster_groups_allowed");
-static const auto SEND_LAST_ITEM = QStringLiteral("pubsub#send_last_published_item");
-static const auto TEMPORARY_SUBSCRIPTIONS = QStringLiteral("pubsub#tempsub");
-static const auto ALLOW_SUBSCRIPTIONS = QStringLiteral("pubsub#subscribe");
-static const auto TITLE = QStringLiteral("pubsub#title");
-static const auto PAYLOAD_TYPE = QStringLiteral("pubsub#type");
+static const auto NODE_CONFIG_FORM_TYPE = u"http://jabber.org/protocol/pubsub#node_config"_s;
+static const auto PUBLISH_OPTIONS_FORM_TYPE = u"http://jabber.org/protocol/pubsub#publish-options"_s;
+
+static const auto ACCESS_MODEL = u"pubsub#access_model"_s;
+static const auto BODY_XSLT = u"pubsub#body_xslt"_s;
+static const auto CHILD_ASSOCIATION_POLICY = u"pubsub#children_association_policy"_s;
+static const auto CHILD_ASSOCIATION_ALLOWLIST = u"pubsub#children_association_whitelist"_s;
+static const auto CHILD_NODES = u"pubsub#children"_s;
+static const auto CHILD_NODES_MAX = u"pubsub#children_max"_s;
+static const auto COLLECTIONS = u"pubsub#collection"_s;
+static const auto CONTACT_JIDS = u"pubsub#contact"_s;
+static const auto DATA_FORM_XSLT = u"pubsub#dataform_xslt"_s;
+static const auto NOTIFICATIONS_ENABLED = u"pubsub#deliver_notifications"_s;
+static const auto INCLUDE_PAYLOADS = u"pubsub#deliver_payloads"_s;
+static const auto DESCRIPTION = u"pubsub#description"_s;
+static const auto ITEM_EXPIRY = u"pubsub#item_expire"_s;
+static const auto NOTIFICATION_ITEM_PUBLISHER = u"pubsub#itemreply"_s;
+static const auto LANGUAGE = u"pubsub#language"_s;
+static const auto MAX_ITEMS = u"pubsub#max_items"_s;
+static const auto MAX_PAYLOAD_SIZE = u"pubsub#max_payload_size"_s;
+static const auto NODE_TYPE = u"pubsub#node_type"_s;
+static const auto NOTIFICATION_TYPE = u"pubsub#notification_type"_s;
+static const auto CONFIG_NOTIFICATIONS_ENABLED = u"pubsub#notify_config"_s;
+static const auto NODE_DELETE_NOTIFICATIONS_ENABLED = u"pubsub#notify_delete"_s;
+static const auto RETRACT_NOTIFICATIONS_ENABLED = u"pubsub#notify_retract"_s;
+static const auto SUB_NOTIFICATIONS_ENABLED = u"pubsub#notify_sub"_s;
+static const auto PERSIST_ITEMS = u"pubsub#persist_items"_s;
+static const auto PRESENCE_BASED_NOTIFICATIONS = u"pubsub#presence_based_delivery"_s;
+static const auto PUBLISH_MODEL = u"pubsub#publish_model"_s;
+static const auto PURGE_WHEN_OFFLINE = u"pubsub#purge_offline"_s;
+static const auto ALLOWED_ROSTER_GROUPS = u"pubsub#roster_groups_allowed"_s;
+static const auto SEND_LAST_ITEM = u"pubsub#send_last_published_item"_s;
+static const auto TEMPORARY_SUBSCRIPTIONS = u"pubsub#tempsub"_s;
+static const auto ALLOW_SUBSCRIPTIONS = u"pubsub#subscribe"_s;
+static const auto TITLE = u"pubsub#title"_s;
+static const auto PAYLOAD_TYPE = u"pubsub#type"_s;
 
 // helper for std::visit
 template<class... Ts>
@@ -90,19 +92,19 @@ public:
 
 std::optional<QXmppPubSubNodeConfig::AccessModel> QXmppPubSubNodeConfig::accessModelFromString(const QString &string)
 {
-    if (string == QStringLiteral("open")) {
+    if (string == u"open") {
         return Open;
     }
-    if (string == QStringLiteral("presence")) {
+    if (string == u"presence") {
         return Presence;
     }
-    if (string == QStringLiteral("roster")) {
+    if (string == u"roster") {
         return Roster;
     }
-    if (string == QStringLiteral("authorize")) {
+    if (string == u"authorize") {
         return Authorize;
     }
-    if (string == QStringLiteral("whitelist")) {
+    if (string == u"whitelist") {
         return Allowlist;
     }
     return std::nullopt;
@@ -112,28 +114,28 @@ QString QXmppPubSubNodeConfig::accessModelToString(AccessModel model)
 {
     switch (model) {
     case Open:
-        return QStringLiteral("open");
+        return u"open"_s;
     case Presence:
-        return QStringLiteral("presence");
+        return u"presence"_s;
     case Roster:
-        return QStringLiteral("roster");
+        return u"roster"_s;
     case Authorize:
-        return QStringLiteral("authorize");
+        return u"authorize"_s;
     case Allowlist:
-        return QStringLiteral("whitelist");
+        return u"whitelist"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::PublishModel> QXmppPubSubNodeConfig::publishModelFromString(const QString &string)
 {
-    if (string == QStringLiteral("publishers")) {
+    if (string == u"publishers") {
         return Publishers;
     }
-    if (string == QStringLiteral("subscribers")) {
+    if (string == u"subscribers") {
         return Subscribers;
     }
-    if (string == QStringLiteral("open")) {
+    if (string == u"open") {
         return Anyone;
     }
     return std::nullopt;
@@ -143,24 +145,24 @@ QString QXmppPubSubNodeConfig::publishModelToString(QXmppPubSubNodeConfig::Publi
 {
     switch (model) {
     case Publishers:
-        return QStringLiteral("publishers");
+        return u"publishers"_s;
     case Subscribers:
-        return QStringLiteral("subscribers");
+        return u"subscribers"_s;
     case Anyone:
-        return QStringLiteral("open");
+        return u"open"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::ChildAssociationPolicy> QXmppPubSubNodeConfig::childAssociatationPolicyFromString(const QString &string)
 {
-    if (string == QStringLiteral("all")) {
+    if (string == u"all") {
         return ChildAssociationPolicy::All;
     }
-    if (string == QStringLiteral("owners")) {
+    if (string == u"owners") {
         return ChildAssociationPolicy::Owners;
     }
-    if (string == QStringLiteral("whitelist")) {
+    if (string == u"whitelist") {
         return ChildAssociationPolicy::Whitelist;
     }
     return std::nullopt;
@@ -170,21 +172,21 @@ QString QXmppPubSubNodeConfig::childAssociationPolicyToString(QXmppPubSubNodeCon
 {
     switch (policy) {
     case ChildAssociationPolicy::All:
-        return QStringLiteral("all");
+        return u"all"_s;
     case ChildAssociationPolicy::Owners:
-        return QStringLiteral("owners");
+        return u"owners"_s;
     case ChildAssociationPolicy::Whitelist:
-        return QStringLiteral("whitelist");
+        return u"whitelist"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::ItemPublisher> QXmppPubSubNodeConfig::itemPublisherFromString(const QString &string)
 {
-    if (string == QStringLiteral("owner")) {
+    if (string == u"owner") {
         return NodeOwner;
     }
-    if (string == QStringLiteral("publisher")) {
+    if (string == u"publisher") {
         return Publisher;
     }
     return std::nullopt;
@@ -194,19 +196,19 @@ QString QXmppPubSubNodeConfig::itemPublisherToString(ItemPublisher publisher)
 {
     switch (publisher) {
     case NodeOwner:
-        return QStringLiteral("owner");
+        return u"owner"_s;
     case Publisher:
-        return QStringLiteral("publisher");
+        return u"publisher"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::NodeType> QXmppPubSubNodeConfig::nodeTypeFromString(const QString &string)
 {
-    if (string == QStringLiteral("leaf")) {
+    if (string == u"leaf") {
         return Leaf;
     }
-    if (string == QStringLiteral("collection")) {
+    if (string == u"collection") {
         return Collection;
     }
     return std::nullopt;
@@ -216,19 +218,19 @@ QString QXmppPubSubNodeConfig::nodeTypeToString(NodeType type)
 {
     switch (type) {
     case Leaf:
-        return QStringLiteral("leaf");
+        return u"leaf"_s;
     case Collection:
-        return QStringLiteral("collection");
+        return u"collection"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::NotificationType> QXmppPubSubNodeConfig::notificationTypeFromString(const QString &string)
 {
-    if (string == QStringLiteral("normal")) {
+    if (string == u"normal") {
         return Normal;
     }
-    if (string == QStringLiteral("headline")) {
+    if (string == u"headline") {
         return Headline;
     }
     return std::nullopt;
@@ -238,22 +240,22 @@ QString QXmppPubSubNodeConfig::notificationTypeToString(NotificationType type)
 {
     switch (type) {
     case Normal:
-        return QStringLiteral("normal");
+        return u"normal"_s;
     case Headline:
-        return QStringLiteral("headline");
+        return u"headline"_s;
     }
     return {};
 }
 
 std::optional<QXmppPubSubNodeConfig::SendLastItemType> QXmppPubSubNodeConfig::sendLastItemTypeFromString(const QString &string)
 {
-    if (string == QStringLiteral("never")) {
+    if (string == u"never") {
         return Never;
     }
-    if (string == QStringLiteral("on_sub")) {
+    if (string == u"on_sub") {
         return OnSubscription;
     }
-    if (string == QStringLiteral("on_sub_and_presence")) {
+    if (string == u"on_sub_and_presence") {
         return OnSubscriptionAndPresence;
     }
     return std::nullopt;
@@ -263,11 +265,11 @@ QString QXmppPubSubNodeConfig::sendLastItemTypeToString(SendLastItemType type)
 {
     switch (type) {
     case Never:
-        return QStringLiteral("never");
+        return u"never"_s;
     case OnSubscription:
-        return QStringLiteral("on_sub");
+        return u"on_sub"_s;
     case OnSubscriptionAndPresence:
-        return QStringLiteral("on_sub_and_presence");
+        return u"on_sub_and_presence"_s;
     }
     return {};
 }
@@ -676,7 +678,7 @@ bool QXmppPubSubNodeConfig::parseField(const QXmppDataForm::Field &field)
         bool ok = false;
         if (const auto maxItems = value.toULongLong(&ok); ok) {
             d->maxItems = maxItems;
-        } else if (value.type() == QVariant::String && value.toString() == QStringLiteral("max")) {
+        } else if (value.type() == QVariant::String && value.toString() == u"max") {
             d->maxItems = Max();
         } else {
             d->maxItems = Unset();
@@ -791,7 +793,7 @@ void QXmppPubSubNodeConfig::serializeForm(QXmppDataForm &form) const
                        serializeValue(form, Type::TextSingleField, MAX_ITEMS, QString::number(value));
                    },
                    [&](Max) {
-                       serializeValue(form, Type::TextSingleField, MAX_ITEMS, QStringLiteral("max"));
+                       serializeValue(form, Type::TextSingleField, MAX_ITEMS, u"max"_s);
                    } },
                d->maxItems);
 

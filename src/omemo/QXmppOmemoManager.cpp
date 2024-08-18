@@ -13,6 +13,8 @@
 #include "QXmppUtils.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QStringBuilder>
 #undef max
 #undef interface
@@ -25,7 +27,7 @@ using Manager = QXmppOmemoManager;
 using ManagerPrivate = QXmppOmemoManagerPrivate;
 
 // default label used for the own device
-const auto DEVICE_LABEL = QStringLiteral("QXmpp");
+const auto DEVICE_LABEL = u"QXmpp"_s;
 
 class QXmppOmemoOwnDevicePrivate : public QSharedData
 {
@@ -355,19 +357,19 @@ QXmppTask<bool> Manager::load()
     QXmppPromise<bool> interface;
 
     auto future = d->omemoStorage->allData();
-    future.then(this, [=](QXmppOmemoStorage::OmemoData omemoData) mutable {
+    future.then(this, [=, this](QXmppOmemoStorage::OmemoData omemoData) mutable {
         const auto &optionalOwnDevice = omemoData.ownDevice;
         if (optionalOwnDevice) {
             d->ownDevice = *optionalOwnDevice;
         } else {
-            debug(QStringLiteral("Device could not be loaded because it is not stored"));
+            debug(u"Device could not be loaded because it is not stored"_s);
             interface.finish(false);
             return;
         }
 
         const auto &signedPreKeyPairs = omemoData.signedPreKeyPairs;
         if (signedPreKeyPairs.isEmpty()) {
-            warning(QStringLiteral("Signed Pre keys could not be loaded because none is stored"));
+            warning(u"Signed Pre keys could not be loaded because none is stored"_s);
             interface.finish(false);
             return;
         } else {
@@ -377,7 +379,7 @@ QXmppTask<bool> Manager::load()
 
         const auto &preKeyPairs = omemoData.preKeyPairs;
         if (preKeyPairs.isEmpty()) {
-            warning(QStringLiteral("Pre keys could not be loaded because none is stored"));
+            warning(u"Pre keys could not be loaded because none is stored"_s);
             interface.finish(false);
             return;
         } else {
@@ -406,7 +408,7 @@ QXmppTask<bool> Manager::setUp()
     QXmppPromise<bool> interface;
 
     auto future = d->setUpDeviceId();
-    future.then(this, [=](bool isDeviceIdSetUp) mutable {
+    future.then(this, [=, this](bool isDeviceIdSetUp) mutable {
         if (isDeviceIdSetUp) {
             // The identity key pair in its deserialized form is not stored as a
             // member variable because it is only needed by
@@ -417,9 +419,9 @@ QXmppTask<bool> Manager::setUp()
                 d->updateSignedPreKeyPair(identityKeyPair.get()) &&
                 d->updatePreKeyPairs(PRE_KEY_INITIAL_CREATION_COUNT)) {
                 auto future = d->omemoStorage->setOwnDevice(d->ownDevice);
-                future.then(this, [=]() mutable {
+                future.then(this, [=, this]() mutable {
                     auto future = d->publishOmemoData();
-                    future.then(this, [=](bool isPublished) mutable {
+                    future.then(this, [=, this](bool isPublished) mutable {
                         d->isStarted = isPublished;
                         interface.finish(std::move(isPublished));
                     });
@@ -451,7 +453,7 @@ QXmppTask<QByteArray> Manager::ownKey()
 
 ///
 /// Returns the JIDs of all key owners mapped to the IDs of their keys with
-/// specific trust levels.
+/// specific trust levels except for the own key.
 ///
 /// If no trust levels are passed, all keys are returned.
 ///
@@ -461,7 +463,8 @@ QXmppTask<QByteArray> Manager::ownKey()
 ///
 /// \param trustLevels trust levels of the keys
 ///
-/// \return the key owner JIDs mapped to their keys with specific trust levels
+/// \return the key owner JIDs mapped to their keys with specific trust levels except for the own
+///         key
 ///
 QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::keys(QXmpp::TrustLevels trustLevels)
 {
@@ -474,7 +477,7 @@ QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::ke
 
 ///
 /// Returns the IDs of keys mapped to their trust levels for specific key
-/// owners.
+/// owners except for the own key.
 ///
 /// If no trust levels are passed, all keys for jids are returned.
 ///
@@ -485,7 +488,7 @@ QXmppTask<QHash<QXmpp::TrustLevel, QMultiHash<QString, QByteArray>>> Manager::ke
 /// \param jids key owners' bare JIDs
 /// \param trustLevels trust levels of the keys
 ///
-/// \return the key IDs mapped to their trust levels for specific key owners
+/// \return the key IDs mapped to their trust levels for specific key owners except for the own key
 ///
 QXmppTask<QHash<QString, QHash<QByteArray, QXmpp::TrustLevel>>> Manager::keys(const QList<QString> &jids, QXmpp::TrustLevels trustLevels)
 {
@@ -722,7 +725,7 @@ QXmppTask<QVector<QXmppOmemoDevice>> Manager::devices(const QList<QString> &jids
     QXmppPromise<QVector<QXmppOmemoDevice>> interface;
 
     auto future = keys(jids);
-    future.then(this, [=](QHash<QString, QHash<QByteArray, TrustLevel>> keys) mutable {
+    future.then(this, [=, this](QHash<QString, QHash<QByteArray, TrustLevel>> keys) mutable {
         QVector<QXmppOmemoDevice> devices;
 
         for (const auto &jid : jids) {
@@ -771,7 +774,7 @@ QXmppTask<QXmppPubSubManager::Result> Manager::removeContactDevices(const QStrin
     Q_ASSERT_X(jid != d->ownBareJid(), "Removing contact device", "Own JID passed");
 
     auto future = d->unsubscribeFromDeviceList(jid);
-    future.then(this, [=](QXmppPubSubManager::Result result) mutable {
+    future.then(this, [=, this](QXmppPubSubManager::Result result) mutable {
         if (std::holds_alternative<QXmppError>(result)) {
             warning(u"Contact '" + jid + u"' could not be removed because the device list subscription could not be removed");
             interface.finish(std::move(result));
@@ -934,6 +937,8 @@ QXmppTask<void> Manager::buildMissingSessions(const QList<QString> &jids)
 /// Existing sessions are reset, which might lead to undecryptable incoming
 /// stanzas until everything is set up again.
 ///
+/// \return whether the action was successful
+///
 QXmppTask<bool> Manager::resetOwnDevice()
 {
     return d->resetOwnDevice();
@@ -955,6 +960,8 @@ QXmppTask<bool> Manager::resetOwnDevice()
 /// everything again.
 /// Existing sessions are reset, which might lead to undecryptable incoming
 /// stanzas until everything is set up again.
+///
+/// \return whether the action was successful
 ///
 QXmppTask<bool> Manager::resetAll()
 {
@@ -1052,12 +1059,11 @@ QXmppTask<QXmppE2eeExtension::MessageDecryptResult> QXmppOmemoManager::decryptMe
 {
     if (!d->isStarted) {
         return makeReadyTask<MessageDecryptResult>(QXmppError {
-            QStringLiteral("OMEMO manager must be started before decrypting"),
+            u"OMEMO manager must be started before decrypting"_s,
             SendError::EncryptionError });
     }
 
-    auto omemoElement = message.omemoElement();
-    if (!omemoElement) {
+    if (!message.omemoElement()) {
         return makeReadyTask<MessageDecryptResult>(NotEncrypted());
     }
 
@@ -1066,7 +1072,7 @@ QXmppTask<QXmppE2eeExtension::MessageDecryptResult> QXmppOmemoManager::decryptMe
             return std::move(*message);
         }
         return QXmppError {
-            QStringLiteral("Couldn't decrypt message"),
+            u"Couldn't decrypt message"_s,
             {}
         };
     });
@@ -1078,7 +1084,7 @@ QXmppTask<QXmppE2eeExtension::IqEncryptResult> Manager::encryptIq(QXmppIq &&iq, 
 
     if (!d->isStarted) {
         interface.finish(QXmppError {
-            QStringLiteral("OMEMO manager must be started before encrypting"),
+            u"OMEMO manager must be started before encrypting"_s,
             SendError::EncryptionError });
     } else {
         std::optional<TrustLevels> acceptedTrustLevels;
@@ -1095,7 +1101,7 @@ QXmppTask<QXmppE2eeExtension::IqEncryptResult> Manager::encryptIq(QXmppIq &&iq, 
         future.then(this, [=, iq = std::move(iq)](std::optional<QXmppOmemoElement> omemoElement) mutable {
             if (!omemoElement) {
                 interface.finish(QXmppError {
-                    QStringLiteral("OMEMO element could not be created"),
+                    u"OMEMO element could not be created"_s,
                     SendError::EncryptionError });
 
             } else {
@@ -1120,7 +1126,7 @@ QXmppTask<QXmppE2eeExtension::IqDecryptResult> Manager::decryptIq(const QDomElem
     if (!d->isStarted) {
         // TODO: Add decryption queue to avoid this error
         return makeReadyTask<IqDecryptResult>(QXmppError {
-            QStringLiteral("OMEMO manager must be started before decrypting"),
+            u"OMEMO manager must be started before decrypting"_s,
             SendError::EncryptionError });
     }
 
@@ -1131,7 +1137,7 @@ QXmppTask<QXmppE2eeExtension::IqDecryptResult> Manager::decryptIq(const QDomElem
                 return result->iq;
             }
             return QXmppError {
-                QStringLiteral("OMEMO message could not be decrypted"),
+                u"OMEMO message could not be decrypted"_s,
                 SendError::EncryptionError
             };
         });
@@ -1176,21 +1182,21 @@ bool Manager::handleStanza(const QDomElement &stanza)
 
     // TODO: Queue incoming IQs until OMEMO is initialized
     if (!d->isStarted) {
-        warning(QStringLiteral("Couldn't decrypt incoming IQ because the manager isn't initialized yet."));
+        warning(u"Couldn't decrypt incoming IQ because the manager isn't initialized yet."_s);
         return false;
     }
 
-    auto type = stanza.attribute(QStringLiteral("type"));
+    auto type = stanza.attribute(u"type"_s);
     if (type != u"get" && type != u"set") {
         // ignore incoming result and error IQs (they are handled via Client::sendIq())
         return false;
     }
 
-    d->decryptIq(stanza).then(this, [=](auto result) {
+    d->decryptIq(stanza).then(this, [=, this](auto result) {
         if (result) {
             injectIq(result->iq, result->e2eeMetadata);
         } else {
-            warning(QStringLiteral("Could not decrypt incoming OMEMO IQ."));
+            warning(u"Could not decrypt incoming OMEMO IQ."_s);
         }
     });
     return true;
@@ -1200,9 +1206,11 @@ bool Manager::handleMessage(const QXmppMessage &message)
 {
     if (d->isStarted && message.omemoElement()) {
         auto future = d->decryptMessage(message);
-        future.then(this, [=](std::optional<QXmppMessage> optionalDecryptedMessage) mutable {
+        future.then(this, [this, message](std::optional<QXmppMessage> optionalDecryptedMessage) {
             if (optionalDecryptedMessage) {
                 injectMessage(std::move(*optionalDecryptedMessage));
+            } else {
+                Q_EMIT client() -> messageReceived(message);
             }
         });
 
@@ -1276,7 +1284,6 @@ void Manager::onRegistered(QXmppClient *client)
     }
 
     connect(d->trustManager, &QXmppTrustManager::trustLevelsChanged, this, [=](const QHash<QString, QMultiHash<QString, QByteArray>> &modifiedKeys) {
-
 #if defined(WITH_OMEMO_V03)
 		const auto &modifiedOmemoKeys = modifiedKeys.value(ns_omemo.toString());
 #else

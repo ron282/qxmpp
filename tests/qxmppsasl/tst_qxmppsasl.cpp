@@ -8,6 +8,7 @@
 #include "QXmppSasl2UserAgent.h"
 #include "QXmppSaslManager_p.h"
 #include "QXmppSasl_p.h"
+#include "QXmppUtils_p.h"
 
 #include "XmppSocket.h"
 #include "util.h"
@@ -64,6 +65,8 @@ private:
     Q_SLOT void sasl2ContinueElement();
     Q_SLOT void sasl2Abort();
 
+    Q_SLOT void htAlgorithmParsing();
+
     // client
     Q_SLOT void testClientAvailableMechanisms();
     Q_SLOT void testClientBadMechanism();
@@ -78,6 +81,7 @@ private:
     Q_SLOT void testClientScramSha1_bad();
     Q_SLOT void testClientScramSha256();
     Q_SLOT void testClientWindowsLive();
+    Q_SLOT void clientHtSha256();
 
     // server
     Q_SLOT void testServerBadMechanism();
@@ -93,6 +97,9 @@ private:
     Q_SLOT void sasl2ManagerPlain();
     Q_SLOT void sasl2ManagerFailure();
     Q_SLOT void sasl2ManagerUnsupportedTasks();
+
+    // SASL 2 + FAST
+    Q_SLOT void sasl2Fast();
 };
 
 void tst_QXmppSasl::testParsing()
@@ -239,7 +246,13 @@ void tst_QXmppSasl::sasl2StreamFeature()
         "<mechanism>SCRAM-SHA-1</mechanism>"
         "<mechanism>SCRAM-SHA-1-PLUS</mechanism>"
         "<inline>"
-        "<bind xmlns='urn:xmpp:bind:0'/>"
+        "<bind xmlns='urn:xmpp:bind:0'>"
+        "<inline>"
+        "<feature var='urn:xmpp:carbons:2'/>"
+        "<feature var='urn:xmpp:csi:0'/>"
+        "<feature var='urn:xmpp:sm:3'/>"
+        "</inline>"
+        "</bind>"
         "<sm xmlns='urn:xmpp:sm:3'/>"
         "</inline>"
         "</authentication>";
@@ -249,7 +262,8 @@ void tst_QXmppSasl::sasl2StreamFeature()
     QCOMPARE(feature->mechanisms.size(), 2);
     QCOMPARE(feature->mechanisms, (QList<QString> { "SCRAM-SHA-1", "SCRAM-SHA-1-PLUS" }));
     QCOMPARE(feature->streamResumptionAvailable, true);
-    QCOMPARE(feature->bind2Available, true);
+    QVERIFY(feature->bind2Feature.has_value());
+    QCOMPARE(feature->bind2Feature->features, (std::vector<QString> { "urn:xmpp:carbons:2", "urn:xmpp:csi:0", "urn:xmpp:sm:3" }));
     serializePacket(*feature, xml);
 }
 
@@ -260,12 +274,12 @@ void tst_QXmppSasl::sasl2UserAgent()
         "<software>AwesomeXMPP</software>"
         "<device>Kiva&apos;s Phone</device>"
         "</user-agent>";
-    auto namespaceWrapper = QStringLiteral("<authenticate xmlns='%1'>%2</authenticate>");
+    auto namespaceWrapper = u"<authenticate xmlns='%1'>%2</authenticate>"_s;
 
     auto userAgentDom = xmlToDom(namespaceWrapper.arg(ns_sasl_2, xml)).firstChildElement();
     auto userAgent = Sasl2::UserAgent::fromDom(userAgentDom);
     QVERIFY(userAgent.has_value());
-    QCOMPARE(userAgent->id, QUuid::fromString(QStringLiteral("d4565fa7-4d72-4749-b3d3-740edbf87770")));
+    QCOMPARE(userAgent->id, QUuid::fromString(u"d4565fa7-4d72-4749-b3d3-740edbf87770"_s));
     QVERIFY(!userAgent->id.isNull());
     QCOMPARE(userAgent->software, "AwesomeXMPP");
     QCOMPARE(userAgent->device, "Kiva's Phone");
@@ -282,6 +296,9 @@ void tst_QXmppSasl::sasl2Authenticate()
         "<software>AwesomeXMPP</software>"
         "<device>Kiva&apos;s Phone</device>"
         "</user-agent>"
+        "<bind xmlns='urn:xmpp:bind:0'>"
+        "<tag>AwesomeXMPP</tag>"
+        "</bind>"
         "</authenticate>";
 
     auto auth = Sasl2::Authenticate::fromDom(xmlToDom(xml));
@@ -289,9 +306,11 @@ void tst_QXmppSasl::sasl2Authenticate()
     QCOMPARE(auth->mechanism, "SCRAM-SHA-1-PLUS");
     QCOMPARE(auth->initialResponse, "p=tls-exporter,,n=user,r=12C4CD5C-E38E-4A98-8F6D-15C38F51CCC6");
     QVERIFY(auth->userAgent);
-    QCOMPARE(auth->userAgent->id, QUuid::fromString(QStringLiteral("d4565fa7-4d72-4749-b3d3-740edbf87770")));
+    QCOMPARE(auth->userAgent->id, QUuid::fromString(u"d4565fa7-4d72-4749-b3d3-740edbf87770"_s));
     QCOMPARE(auth->userAgent->software, "AwesomeXMPP");
     QCOMPARE(auth->userAgent->device, "Kiva's Phone");
+    QVERIFY(auth->bindRequest);
+    QCOMPARE(auth->bindRequest->tag, "AwesomeXMPP");
     serializePacket(*auth, xml);
 }
 
@@ -328,13 +347,15 @@ void tst_QXmppSasl::sasl2Success()
         "<additional-data>"
         "dj1tc1ZIcy9CeklPSERxWGVWSDdFbW1EdTlpZDg9"
         "</additional-data>"
-        "<authorization-identifier>user@example.org</authorization-identifier>"
+        "<authorization-identifier>user@example.org/abc</authorization-identifier>"
+        "<bound xmlns='urn:xmpp:bind:0'/>"
         "</success>";
 
     auto success = Sasl2::Success::fromDom(xmlToDom(xml));
     QVERIFY(success.has_value());
     QCOMPARE(success->additionalData, "v=msVHs/BzIOHDqXeVH7EmmDu9id8=");
-    QCOMPARE(success->authorizationIdentifier, "user@example.org");
+    QCOMPARE(success->authorizationIdentifier, "user@example.org/abc");
+    QVERIFY(success->bound);
     serializePacket(*success, xml);
 }
 
@@ -385,8 +406,30 @@ void tst_QXmppSasl::sasl2Abort()
     serializePacket(*abort, xml);
 }
 
+void tst_QXmppSasl::htAlgorithmParsing()
+{
+    constexpr auto testValues = to_array<std::tuple<QStringView, SaslHtMechanism>>({
+        { u"HT-SHA-256-ENDP", { IanaHashAlgorithm::Sha256, SaslHtMechanism::TlsServerEndpoint } },
+        { u"HT-SHA-256-EXPR", { IanaHashAlgorithm::Sha256, SaslHtMechanism::TlsExporter } },
+        { u"HT-SHA-256-UNIQ", { IanaHashAlgorithm::Sha256, SaslHtMechanism::TlsUnique } },
+        { u"HT-SHA-256-NONE", { IanaHashAlgorithm::Sha256, SaslHtMechanism::None } },
+        { u"HT-SHA3-256-ENDP", { IanaHashAlgorithm::Sha3_256, SaslHtMechanism::TlsServerEndpoint } },
+        { u"HT-SHA3-512-EXPR", { IanaHashAlgorithm::Sha3_512, SaslHtMechanism::TlsExporter } },
+        { u"HT-SHA-512-UNIQ", { IanaHashAlgorithm::Sha512, SaslHtMechanism::TlsUnique } },
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        { u"HT-BLAKE2B-256-NONE", { IanaHashAlgorithm::Blake2b_256, SaslHtMechanism::None } },
+#endif
+    });
+
+    for (const auto &[string, htAlg] : testValues) {
+        QCOMPARE(htAlg.toString(), string);
+        QCOMPARE(unwrap(SaslHtMechanism::fromString(string)), htAlg);
+    }
+}
+
 void tst_QXmppSasl::testClientAvailableMechanisms()
 {
+    QObject context;
     const QStringList expectedMechanisms = {
         "SCRAM-SHA3-512",
         "SCRAM-SHA-512",
@@ -400,7 +443,11 @@ void tst_QXmppSasl::testClientAvailableMechanisms()
         "X-OAUTH2"
     };
 
-    QCOMPARE(QXmppSaslClient::availableMechanisms(), expectedMechanisms);
+    for (const auto &mechanism : expectedMechanisms) {
+        auto parsed = SaslMechanism::fromString(mechanism);
+        QVERIFY(parsed);
+        QVERIFY(QXmppSaslClient::create(*parsed, &context) != nullptr);
+    }
 }
 
 void tst_QXmppSasl::testClientBadMechanism()
@@ -412,7 +459,7 @@ void tst_QXmppSasl::testClientAnonymous()
 {
     auto client = QXmppSaslClient::create("ANONYMOUS");
     QVERIFY(client);
-    QCOMPARE(client->mechanism(), "ANONYMOUS");
+    QCOMPARE(client->mechanism().toString(), u"ANONYMOUS");
 
     // initial step returns nothing
     QCOMPARE(client->respond(QByteArray()), QByteArray());
@@ -446,10 +493,10 @@ void tst_QXmppSasl::testClientDigestMd5()
 
     auto client = QXmppSaslClient::create("DIGEST-MD5");
     QVERIFY(client);
-    QCOMPARE(client->mechanism(), "DIGEST-MD5");
+    QCOMPARE(client->mechanism().toString(), "DIGEST-MD5");
 
     client->setUsername("qxmpp1");
-    client->setPassword("qxmpp123");
+    client->setCredentials(Credentials { .password = "qxmpp123" });
     client->setHost("jabber.ru");
     client->setServiceType("xmpp");
 
@@ -469,10 +516,12 @@ void tst_QXmppSasl::testClientFacebook()
 {
     auto client = QXmppSaslClient::create("X-FACEBOOK-PLATFORM");
     QVERIFY(client);
-    QCOMPARE(client->mechanism(), QLatin1String("X-FACEBOOK-PLATFORM"));
+    QCOMPARE(client->mechanism().toString(), u"X-FACEBOOK-PLATFORM");
 
-    client->setUsername("123456789012345");
-    client->setPassword("abcdefghijlkmno");
+    client->setCredentials(Credentials {
+        .facebookAccessToken = "abcdefghijlkmno",
+        .facebookAppId = "123456789012345",
+    });
 
     // initial step returns nothing
     QCOMPARE(client->respond(QByteArray()), QByteArray());
@@ -489,10 +538,10 @@ void tst_QXmppSasl::testClientGoogle()
 {
     auto client = QXmppSaslClient::create("X-OAUTH2");
     QVERIFY(client);
-    QCOMPARE(client->mechanism(), QLatin1String("X-OAUTH2"));
+    QCOMPARE(client->mechanism().toString(), u"X-OAUTH2");
 
     client->setUsername("foo");
-    client->setPassword("bar");
+    client->setCredentials(Credentials { .googleAccessToken = "bar" });
 
     // initial step returns data
     QCOMPARE(client->respond(QByteArray()), QByteArray("\0foo\0bar", 8));
@@ -505,10 +554,10 @@ void tst_QXmppSasl::testClientPlain()
 {
     auto client = QXmppSaslClient::create("PLAIN");
     QVERIFY(client);
-    QCOMPARE(client->mechanism(), QLatin1String("PLAIN"));
+    QCOMPARE(client->mechanism().toString(), u"PLAIN");
 
     client->setUsername("foo");
-    client->setPassword("bar");
+    client->setCredentials(Credentials { .password = "bar" });
 
     // initial step returns data
     QCOMPARE(client->respond(QByteArray()), QByteArray("\0foo\0bar", 8));
@@ -522,10 +571,10 @@ void tst_QXmppSasl::testClientScramSha1()
     QXmppSaslDigestMd5::setNonce("fyko+d2lbbFgONRv9qkxdawL");
 
     auto client = QXmppSaslClient::create("SCRAM-SHA-1");
-    QCOMPARE(client->mechanism(), QLatin1String("SCRAM-SHA-1"));
+    QCOMPARE(client->mechanism().toString(), u"SCRAM-SHA-1");
 
     client->setUsername("user");
-    client->setPassword("pencil");
+    client->setCredentials(Credentials { .password = "pencil" });
 
     // first step
     QCOMPARE(client->respond(QByteArray()), QByteArray("n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL"));
@@ -546,10 +595,10 @@ void tst_QXmppSasl::testClientScramSha1_bad()
     QXmppSaslDigestMd5::setNonce("fyko+d2lbbFgONRv9qkxdawL");
 
     auto client = QXmppSaslClient::create("SCRAM-SHA-1");
-    QCOMPARE(client->mechanism(), QLatin1String("SCRAM-SHA-1"));
+    QCOMPARE(client->mechanism().toString(), u"SCRAM-SHA-1");
 
     client->setUsername("user");
-    client->setPassword("pencil");
+    client->setCredentials(Credentials { .password = "pencil" });
 
     // first step
     QCOMPARE(client->respond(QByteArray()), QByteArray("n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL"));
@@ -570,10 +619,10 @@ void tst_QXmppSasl::testClientScramSha256()
 
     auto client = QXmppSaslClient::create("SCRAM-SHA-256");
     QVERIFY(client != 0);
-    QCOMPARE(client->mechanism(), QLatin1String("SCRAM-SHA-256"));
+    QCOMPARE(client->mechanism().toString(), u"SCRAM-SHA-256");
 
     client->setUsername("user");
-    client->setPassword("pencil");
+    client->setCredentials(Credentials { .password = "pencil" });
 
     // first step
     QCOMPARE(client->respond(QByteArray()), QByteArray("n,,n=user,r=rOprNGfwEbeRWgbNEkqO"));
@@ -593,15 +642,40 @@ void tst_QXmppSasl::testClientWindowsLive()
 {
     auto client = QXmppSaslClient::create("X-MESSENGER-OAUTH2");
     QVERIFY(client != 0);
-    QCOMPARE(client->mechanism(), QLatin1String("X-MESSENGER-OAUTH2"));
+    QCOMPARE(client->mechanism().toString(), u"X-MESSENGER-OAUTH2");
 
-    client->setPassword(QByteArray("footoken").toBase64());
+    client->setCredentials(Credentials {
+        .windowsLiveAccessToken = QByteArray("footoken").toBase64(),
+    });
 
     // initial step returns data
     QCOMPARE(client->respond(QByteArray()), QByteArray("footoken", 8));
 
     // any further step is an error
     QVERIFY(!client->respond(QByteArray()));
+}
+
+void tst_QXmppSasl::clientHtSha256()
+{
+    auto client = QXmppSaslClient::create({ SaslHtMechanism(IanaHashAlgorithm::Sha256, SaslHtMechanism::None) });
+    QVERIFY(client != nullptr);
+    QCOMPARE(client->mechanism().toString(), u"HT-SHA-256-NONE"_s);
+
+    client->setUsername(u"lnj"_s);
+    client->setCredentials(Credentials {
+        .htToken = HtToken {
+            SaslHtMechanism(IanaHashAlgorithm::Sha256, SaslHtMechanism::None),
+            u"secret-token:fast-Oeie4nmlUoLHXca_YhkjwkEBgCEKKHKCArT8"_s,
+            QDateTime(),
+        },
+    });
+
+    auto response = client->respond({});
+    QVERIFY(response.has_value());
+    QCOMPARE(response->toBase64(), "bG5qAKq/BuI7mZiZ6fByiqP1ARkYUI/WyFSh7tsYik1uUiB5");
+
+    // any further step is an error
+    QVERIFY(!client->respond({}));
 }
 
 void tst_QXmppSasl::testServerBadMechanism()
@@ -703,7 +777,7 @@ void tst_QXmppSasl::saslManagerNoMechanisms()
     config.setPassword("1234");
     config.setDisabledSaslMechanisms({ "SCRAM-SHA-1" });
 
-    QVERIFY(QXmppSaslClient::availableMechanisms().contains("SCRAM-SHA-1"));
+    QVERIFY(QXmppSaslClient::isMechanismAvailable({ SaslScramMechanism(SaslScramMechanism::Sha1) }, config.credentialData()));
 
     auto task = test.manager.authenticate(config, { "SCRAM-SHA-1" }, test.loggable.get());
 
@@ -723,14 +797,15 @@ void tst_QXmppSasl::sasl2ManagerPlain()
     config.setSaslAuthMechanism("PLAIN");
     config.setDisabledSaslMechanisms({});
     config.setSasl2UserAgent(QXmppSasl2UserAgent {
-        QUuid::fromString(QStringLiteral("d4565fa7-4d72-4749-b3d3-740edbf87770")),
+        QUuid::fromString(u"d4565fa7-4d72-4749-b3d3-740edbf87770"_s),
         "QXmpp",
         "HAL 9000",
     });
 
     auto task = test.manager.authenticate(
+        Sasl2::Authenticate(),
         config,
-        Sasl2::StreamFeature { { "PLAIN", "SCRAM-SHA-1" }, false, false },
+        Sasl2::StreamFeature { { "PLAIN", "SCRAM-SHA-1" }, {}, {}, false },
         test.loggable.get());
 
     QVERIFY(!task.isFinished());
@@ -756,8 +831,9 @@ void tst_QXmppSasl::sasl2ManagerFailure()
     config.setPassword("1234");
 
     auto task = test.manager.authenticate(
+        Sasl2::Authenticate(),
         config,
-        Sasl2::StreamFeature { { "SCRAM-SHA-1" }, false, false },
+        Sasl2::StreamFeature { { "SCRAM-SHA-1" }, {}, {}, false },
         test.loggable.get());
 
     QVERIFY(!task.isFinished());
@@ -787,8 +863,9 @@ void tst_QXmppSasl::sasl2ManagerUnsupportedTasks()
     config.setPassword("1234");
 
     auto task = test.manager.authenticate(
+        Sasl2::Authenticate(),
         config,
-        Sasl2::StreamFeature { { "SCRAM-SHA-1" }, false, false },
+        Sasl2::StreamFeature { { "SCRAM-SHA-1" }, {}, {}, false },
         test.loggable.get());
 
     auto handled = test.manager.handleElement(xmlToDom(
@@ -815,6 +892,82 @@ void tst_QXmppSasl::sasl2ManagerUnsupportedTasks()
     auto [text, err] = expectFutureVariant<Sasl2Manager::AuthError>(task);
     QCOMPARE(err.type, QXmpp::AuthenticationError::RequiredTasks);
     QCOMPARE(err.text, "This account requires 2FA");
+}
+
+void tst_QXmppSasl::sasl2Fast()
+{
+    Sasl2ManagerTest test;
+    auto &sent = test.socket.sent;
+
+    QXmppConfiguration config;
+    config.setUser("bowman");
+    config.setPassword("1234");
+    config.setDisabledSaslMechanisms({});
+    config.setSasl2UserAgent(QXmppSasl2UserAgent {
+        QUuid::fromString(u"d4565fa7-4d72-4749-b3d3-740edbf87770"_s),
+        "QXmpp",
+        "HAL 9000",
+    });
+
+    Sasl2::StreamFeature sasl2Feature {
+        { "PLAIN" },
+        {},
+        FastFeature { { "HT-SHA-256-NONE", "HT-SHA3-512-NONE" }, false },
+        false
+    };
+
+    Sasl2::Authenticate auth;
+
+    FastTokenManager fast(config);
+    fast.onSasl2Authenticate(auth, sasl2Feature);
+
+    // first: authenticate without fast, but request token
+    auto task = test.manager.authenticate(std::move(auth), config, sasl2Feature, test.loggable.get());
+
+    QVERIFY(!task.isFinished());
+    QCOMPARE(sent.size(), 1);
+    QByteArray authenticateXml =
+        "<authenticate xmlns=\"urn:xmpp:sasl:2\" mechanism=\"PLAIN\">"
+        "<initial-response>AGJvd21hbgAxMjM0</initial-response>"
+        "<user-agent id=\"d4565fa7-4d72-4749-b3d3-740edbf87770\"><software>QXmpp</software><device>HAL 9000</device></user-agent>"
+        "<request-token xmlns=\"urn:xmpp:fast:0\" mechanism=\"HT-SHA3-512-NONE\"/>"
+        "</authenticate>";
+    QCOMPARE(sent.at(0), authenticateXml);
+
+    test.manager.handleElement(xmlToDom("<success xmlns='urn:xmpp:sasl:2'><authorization-identifier>bowman@example.org</authorization-identifier><token xmlns='urn:xmpp:fast:0' token='s3cr3tt0k3n' expiry='2024-07-11T14:00:00Z'/></success>"));
+
+    QVERIFY(task.isFinished());
+    auto success = expectFutureVariant<Sasl2::Success>(task);
+    fast.onSasl2Success(success);
+    QVERIFY(fast.tokenChanged());
+
+    QVERIFY(config.credentialData().htToken.has_value());
+    auto token = unwrap(config.credentialData().htToken);
+    QCOMPARE(token.secret, u"s3cr3tt0k3n");
+    QCOMPARE(token.mechanism, SaslHtMechanism(IanaHashAlgorithm::Sha3_512, SaslHtMechanism::None));
+
+    // Now authenticate with FAST token
+    auth = Sasl2::Authenticate();
+    fast.onSasl2Authenticate(auth, sasl2Feature);
+    task = test.manager.authenticate(std::move(auth), config, sasl2Feature, test.loggable.get());
+    QVERIFY(!task.isFinished());
+    QCOMPARE(sent.size(), 2);
+    authenticateXml =
+        "<authenticate xmlns=\"urn:xmpp:sasl:2\" mechanism=\"HT-SHA3-512-NONE\">"
+        "<initial-response>Ym93bWFuAJvHQZJynTMTHwKpXP0AYsGYWSIJMiQn/esiN1G6daGDry+2Fruyr11JLvyWPEmP1VxEZ6qBdNd/es7G1pRpmDg=</initial-response>"
+        "<user-agent id=\"d4565fa7-4d72-4749-b3d3-740edbf87770\"><software>QXmpp</software><device>HAL 9000</device></user-agent>"
+        "<fast xmlns=\"urn:xmpp:fast:0\"/>"
+        "</authenticate>";
+    QCOMPARE(sent.at(1), authenticateXml);
+    test.manager.handleElement(xmlToDom("<success xmlns='urn:xmpp:sasl:2'><authorization-identifier>bowman@example.org</authorization-identifier><token xmlns='urn:xmpp:fast:0' token='t0k3n-rotation-token' expiry='2024-07-30T14:00:00Z'/></success>"));
+
+    QVERIFY(task.isFinished());
+    success = expectFutureVariant<Sasl2::Success>(task);
+    fast.onSasl2Success(success);
+    QVERIFY(fast.tokenChanged());
+    token = unwrap(config.credentialData().htToken);
+    QCOMPARE(token.secret, u"t0k3n-rotation-token");
+    QCOMPARE(token.mechanism, SaslHtMechanism(IanaHashAlgorithm::Sha3_512, SaslHtMechanism::None));
 }
 
 QTEST_MAIN(tst_QXmppSasl)

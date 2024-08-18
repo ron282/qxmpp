@@ -29,7 +29,9 @@ namespace QXmpp { namespace Private {
 namespace QXmpp::Private {
 #endif
 
-constexpr int XMPP_DEFAULT_PORT = 5222;
+constexpr quint16 XMPP_DEFAULT_PORT = 5222;
+constexpr quint16 XMPPS_DEFAULT_PORT = 5223;
+constexpr quint16 XMPP_SERVER_DEFAULT_PORT = 5269;
 
 #if defined(SFOS)
 } }
@@ -37,6 +39,10 @@ constexpr int XMPP_DEFAULT_PORT = 5222;
 }
 #endif
 
+// QXmpp
+inline constexpr QStringView ns_qxmpp_credentials = u"org.qxmpp.credentials";
+inline constexpr QStringView ns_qxmpp_export = u"org.qxmpp.export";
+// XMPP
 inline constexpr QStringView ns_stream = u"http://etherx.jabber.org/streams";
 inline constexpr QStringView ns_client = u"jabber:client";
 inline constexpr QStringView ns_server = u"jabber:server";
@@ -151,6 +157,8 @@ inline constexpr QStringView ns_jingle_rtp_info = u"urn:xmpp:jingle:apps:rtp:inf
 inline constexpr QStringView ns_jingle_rtp_errors = u"urn:xmpp:jingle:apps:rtp:errors:1";
 // XEP-0184: Message Receipts
 inline constexpr QStringView ns_message_receipts = u"urn:xmpp:receipts";
+// XEP-0191 Blocking Command
+inline constexpr QStringView ns_blocking = u"urn:xmpp:blocking";
 // XEP-0198: Stream Management
 inline constexpr QStringView ns_stream_management = u"urn:xmpp:sm:3";
 // XEP-0199: XMPP Ping
@@ -270,5 +278,7 @@ inline constexpr QStringView ns_esfs = u"urn:xmpp:esfs:0";
 inline constexpr QStringView ns_atm = u"urn:xmpp:atm:1";
 // XEP-0482: Call Invites
 inline constexpr QStringView ns_call_invites = u"urn:xmpp:call-invites:0";
+// XEP-0484: Fast Authentication Streamlining Tokens
+inline constexpr auto ns_fast = u"urn:xmpp:fast:0";
 
 #endif  // QXMPPCONSTANTS_H

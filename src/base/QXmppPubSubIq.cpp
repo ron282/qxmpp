@@ -11,6 +11,8 @@
 #include "QXmppResultSet.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QSharedData>
 
 using namespace QXmpp::Private;
@@ -330,7 +332,7 @@ bool PubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemValid)(co
 {
     // IQs must have only one direct child element.
     const auto pubSubElement = element.firstChildElement();
-    if (pubSubElement.tagName() != QStringLiteral("pubsub")) {
+    if (pubSubElement.tagName() != u"pubsub") {
         return false;
     }
 
@@ -356,7 +358,7 @@ bool PubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemValid)(co
     case Retract:
     case Delete:
     case Purge:
-        if (!queryElement.hasAttribute(QStringLiteral("node"))) {
+        if (!queryElement.hasAttribute(u"node"_s)) {
             return false;
         }
     default:
@@ -369,7 +371,7 @@ bool PubSubIqBase::isPubSubIq(const QDomElement &element, bool (*isItemValid)(co
     case OwnerSubscriptions:
     case Subscribe:
     case Unsubscribe:
-        if (!queryElement.hasAttribute(QStringLiteral("jid"))) {
+        if (!queryElement.hasAttribute(u"jid"_s)) {
             return false;
         }
     default:
@@ -426,7 +428,7 @@ void PubSubIqBase::parseElementFromChild(const QDomElement &element)
         return {};
     };
 
-    const auto pubSubElement = element.firstChildElement(QStringLiteral("pubsub"));
+    const auto pubSubElement = element.firstChildElement(u"pubsub"_s);
     const auto queryElement = pubSubElement.firstChildElement();
 
     // parse query type
@@ -448,15 +450,15 @@ void PubSubIqBase::parseElementFromChild(const QDomElement &element)
         return;
     }
 
-    d->queryJid = queryElement.attribute(QStringLiteral("jid"));
-    d->queryNode = queryElement.attribute(QStringLiteral("node"));
+    d->queryJid = queryElement.attribute(u"jid"_s);
+    d->queryNode = queryElement.attribute(u"node"_s);
 
     // parse subid
     switch (d->queryType) {
     case Items:
     case Unsubscribe:
     case Options:
-        d->subscriptionId = queryElement.attribute(QStringLiteral("subid"));
+        d->subscriptionId = queryElement.attribute(u"subid"_s);
     default:
         break;
     }
@@ -489,7 +491,7 @@ void PubSubIqBase::parseElementFromChild(const QDomElement &element)
         parseItems(queryElement);
 
         if (d->queryType == Items) {
-            d->maxItems = queryElement.attribute(QStringLiteral("max_items")).toUInt();
+            d->maxItems = queryElement.attribute(u"max_items"_s).toUInt();
         } else if (d->queryType == Publish) {
             // form inside following <publish-options/>
             d->dataForm = parseDataFormFromChild(firstChildElement(pubSubElement, u"publish-options"));
@@ -608,33 +610,30 @@ void PubSubIqBase::toXmlElementFromChild(QXmlStreamWriter *writer) const
 
         writer->writeEndElement();  // query type
 
-        if(d->queryNode.contains(ns_omemo_bundles.toString()) == false)
-        {
-            // add extra element with data form
-            if (auto form = d->dataForm) {
-                const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
-                    writer->writeStartElement(subElementName);
-                    form.toXml(writer);
-                    writer->writeEndElement();
-                };
+        // add extra element with data form
+        if (auto form = d->dataForm) {
+            const auto writeForm = [](QXmlStreamWriter *writer, const QXmppDataForm &form, const QString &subElementName) {
+                writer->writeStartElement(subElementName);
+                form.toXml(writer);
+                writer->writeEndElement();
+            };
 
-                // make sure form type is 'submit'
-                form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
+            // make sure form type is 'submit'
+            form->setType(type() == QXmppIq::Result ? QXmppDataForm::Result : QXmppDataForm::Submit);
 
-                switch (d->queryType) {
-                case Create:
-                    writeForm(writer, *form, QStringLiteral("configure"));
-                    break;
-                case Publish:
-                    writeForm(writer, *form, QStringLiteral("publish-options"));
-                    break;
-                case Subscribe:
-                case Subscription:
-                    writeForm(writer, *form, QStringLiteral("options"));
-                    break;
-                default:
-                    break;
-                }
+            switch (d->queryType) {
+            case Create:
+                writeForm(writer, *form, u"configure"_s);
+                break;
+            case Publish:
+                writeForm(writer, *form, u"publish-options"_s);
+                break;
+            case Subscribe:
+            case Subscription:
+                writeForm(writer, *form, u"options"_s);
+                break;
+            default:
+                break;
             }
         }
 

@@ -6,6 +6,8 @@
 
 #include "QXmppDataForm.h"
 
+#include "StringLiterals.h"
+
 #include <QDateTime>
 
 ///
@@ -39,7 +41,7 @@ QXmppDataForm QXmppDataFormBase::toDataForm() const
     QXmppDataForm form(QXmppDataForm::Form);
 
     // add FORM_TYPE
-    serializeNullable(form, QXmppDataForm::Field::HiddenField, QStringLiteral("FORM_TYPE"), formType());
+    serializeNullable(form, QXmppDataForm::Field::HiddenField, u"FORM_TYPE"_s, formType());
 
     // manual serialization parts
     serializeForm(form);
@@ -193,7 +195,7 @@ void QXmppExtensibleDataFormBase::parseForm(const QXmppDataForm &form)
         // FORM_TYPE fields are not saved (override this function to save them)
         if (!parseField(field) &&
             !(field.type() == QXmppDataForm::Field::HiddenField &&
-              field.key() == QStringLiteral("FORM_TYPE"))) {
+              field.key() == u"FORM_TYPE")) {
             d->unknownFields << field;
         }
     }

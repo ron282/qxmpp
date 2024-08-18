@@ -14,6 +14,8 @@
 #include "QXmppServerPlugin.h"
 #include "QXmppUtils.h"
 
+#include "StringLiterals.h"
+
 #include <QCoreApplication>
 #include <QDomElement>
 #include <QFileInfo>
@@ -152,12 +154,12 @@ bool QXmppServerPrivate::routeData(const QString &to, const QByteArray &data)
         conn->moveToThread(q->thread());
         conn->setParent(q);
 
-        QObject::connect(conn, &QXmppStream::disconnected,
+        QObject::connect(conn, &QXmppOutgoingServer::disconnected,
                          q, &QXmppServer::_q_outgoingServerDisconnected);
 
         // add stream
         outgoingServers.insert(conn);
-        Q_EMIT q->setGauge(QStringLiteral("outgoing-server.count"), outgoingServers.size());
+        Q_EMIT q->setGauge(u"outgoing-server.count"_s, outgoingServers.size());
 
         // queue data and connect to remote server
         QMetaObject::invokeMethod(conn, "queueData", Q_ARG(QByteArray, data));
@@ -184,9 +186,9 @@ static void handleStanza(QXmppServer *server, const QDomElement &element)
 
     // default handlers
     const QString domain = server->domain();
-    const QString to = element.attribute(QStringLiteral("to"));
+    const QString to = element.attribute(u"to"_s);
     if (to == domain) {
-        if (element.tagName() == QLatin1String("iq")) {
+        if (element.tagName() == u"iq") {
             // we do not support the given IQ
             QXmppIq request;
             request.parse(element);
@@ -206,7 +208,7 @@ static void handleStanza(QXmppServer *server, const QDomElement &element)
     } else {
 
         // route element or reply on behalf of missing peer
-        if (!server->sendElement(element) && element.tagName() == QLatin1String("iq")) {
+        if (!server->sendElement(element) && element.tagName() == u"iq") {
             QXmppIq request;
             request.parse(element);
 
@@ -262,7 +264,7 @@ void QXmppServerPrivate::startExtensions()
     if (!started) {
         for (auto *extension : std::as_const(extensions)) {
             if (!extension->start()) {
-                warning(QStringLiteral("Could not start extension %1").arg(extension->extensionName()));
+                warning(u"Could not start extension %1"_s.arg(extension->extensionName()));
             }
         }
         started = true;
@@ -299,7 +301,7 @@ void QXmppServer::addExtension(QXmppServerExtension *extension)
     if (!extension || d->extensions.contains(extension)) {
         return;
     }
-    d->info(QStringLiteral("Added extension %1").arg(extension->extensionName()));
+    d->info(u"Added extension %1"_s.arg(extension->extensionName()));
     extension->setParent(this);
     extension->setServer(this);
 
@@ -381,10 +383,10 @@ void QXmppServer::setPasswordChecker(QXmppPasswordChecker *checker)
 QVariantMap QXmppServer::statistics() const
 {
     QVariantMap stats;
-    stats[QStringLiteral("version")] = qApp->applicationVersion();
-    stats[QStringLiteral("incoming-clients")] = d->incomingClients.size();
-    stats[QStringLiteral("incoming-servers")] = d->incomingServers.size();
-    stats[QStringLiteral("outgoing-servers")] = d->outgoingServers.size();
+    stats[u"version"_s] = qApp->applicationVersion();
+    stats[u"incoming-clients"_s] = d->incomingClients.size();
+    stats[u"incoming-servers"_s] = d->incomingServers.size();
+    stats[u"outgoing-servers"_s] = d->outgoingServers.size();
     return stats;
 }
 
@@ -397,7 +399,7 @@ void QXmppServer::addCaCertificates(const QString &path)
     } else if (QFileInfo(path).isReadable()) {
         d->caCertificates = QSslCertificate::fromPath(path);
     } else {
-        d->warning(QStringLiteral("SSL CA certificates are not readable %1").arg(path));
+        d->warning(u"SSL CA certificates are not readable %1"_s.arg(path));
         d->caCertificates = QList<QSslCertificate>();
     }
 
@@ -421,7 +423,7 @@ void QXmppServer::setLocalCertificate(const QString &path)
     } else if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         d->localCertificate = QSslCertificate(file.readAll());
     } else {
-        d->warning(QStringLiteral("SSL certificate is not readable %1").arg(path));
+        d->warning(u"SSL certificate is not readable %1"_s.arg(path));
         d->localCertificate = QSslCertificate();
     }
 
@@ -465,7 +467,7 @@ void QXmppServer::setPrivateKey(const QString &path)
     } else if (file.open(QIODevice::ReadOnly)) {
         d->privateKey = QSslKey(file.readAll(), QSsl::Rsa);
     } else {
-        d->warning(QStringLiteral("SSL key is not readable %1").arg(path));
+        d->warning(u"SSL key is not readable %1"_s.arg(path));
         d->privateKey = QSslKey();
     }
 
@@ -505,7 +507,7 @@ bool QXmppServer::listenForClients(const QHostAddress &address, quint16 port)
     Q_UNUSED(check)
 
     if (d->domain.isEmpty()) {
-        d->warning(QStringLiteral("No domain was specified!"));
+        d->warning(u"No domain was specified!"_s);
         return false;
     }
 
@@ -520,7 +522,7 @@ bool QXmppServer::listenForClients(const QHostAddress &address, quint16 port)
     Q_ASSERT(check);
 
     if (!server->listen(address, port)) {
-        d->warning(QStringLiteral("Could not start listening for C2S on %1 %2").arg(address.toString(), QString::number(port)));
+        d->warning(u"Could not start listening for C2S on %1 %2"_s.arg(address.toString(), QString::number(port)));
         delete server;
         return false;
     }
@@ -570,7 +572,7 @@ bool QXmppServer::listenForServers(const QHostAddress &address, quint16 port)
     Q_UNUSED(check)
 
     if (d->domain.isEmpty()) {
-        d->warning(QStringLiteral("No domain was specified!"));
+        d->warning(u"No domain was specified!"_s);
         return false;
     }
 
@@ -585,7 +587,7 @@ bool QXmppServer::listenForServers(const QHostAddress &address, quint16 port)
     Q_ASSERT(check);
 
     if (!server->listen(address, port)) {
-        d->warning(QStringLiteral("Could not start listening for S2S on %1 %2").arg(address.toString(), QString::number(port)));
+        d->warning(u"Could not start listening for S2S on %1 %2"_s.arg(address.toString(), QString::number(port)));
         delete server;
         return false;
     }
@@ -606,7 +608,7 @@ bool QXmppServer::sendElement(const QDomElement &element)
     helperToXmlAddDomElement(&xmlStream, element, { ns_client, ns_server });
 
     // route data
-    return d->routeData(element.attribute(QStringLiteral("to")), data);
+    return d->routeData(element.attribute(u"to"_s), data);
 }
 
 /// Route an XMPP packet.
@@ -632,18 +634,13 @@ void QXmppServer::addIncomingClient(QXmppIncomingClient *stream)
 
     stream->setPasswordChecker(d->passwordChecker);
 
-    connect(stream, &QXmppStream::connected,
-            this, &QXmppServer::_q_clientConnected);
-
-    connect(stream, &QXmppStream::disconnected,
-            this, &QXmppServer::_q_clientDisconnected);
-
-    connect(stream, &QXmppIncomingClient::elementReceived,
-            this, &QXmppServer::handleElement);
+    connect(stream, &QXmppIncomingClient::connected, this, &QXmppServer::_q_clientConnected);
+    connect(stream, &QXmppIncomingClient::disconnected, this, &QXmppServer::_q_clientDisconnected);
+    connect(stream, &QXmppIncomingClient::elementReceived, this, &QXmppServer::handleElement);
 
     // add stream
     d->incomingClients.insert(stream);
-    Q_EMIT setGauge(QStringLiteral("incoming-client.count"), d->incomingClients.size());
+    Q_EMIT setGauge(u"incoming-client.count"_s, d->incomingClients.size());
 }
 
 /// Handle a new incoming TCP connection from a client.
@@ -718,7 +715,7 @@ void QXmppServer::_q_clientDisconnected()
         }
 
         // update counter
-        Q_EMIT setGauge(QStringLiteral("incoming-client.count"), d->incomingClients.size());
+        Q_EMIT setGauge(u"incoming-client.count"_s, d->incomingClients.size());
     }
 }
 
@@ -742,7 +739,7 @@ void QXmppServer::_q_dialbackRequestReceived(const QXmppDialback &dialback)
             verify.setId(dialback.id());
             verify.setTo(dialback.from());
             verify.setFrom(d->domain);
-            verify.setType(isValid ? QStringLiteral("valid") : QStringLiteral("invalid"));
+            verify.setType(isValid ? u"valid"_s : u"invalid"_s);
             stream->sendPacket(verify);
             return;
         }
@@ -765,7 +762,7 @@ void QXmppServer::_q_outgoingServerDisconnected()
 
     if (d->outgoingServers.remove(outgoing)) {
         outgoing->deleteLater();
-        Q_EMIT setGauge(QStringLiteral("outgoing-server.count"), d->outgoingServers.size());
+        Q_EMIT setGauge(u"outgoing-server.count"_s, d->outgoingServers.size());
     }
 }
 
@@ -782,7 +779,7 @@ void QXmppServer::_q_serverConnection(QSslSocket *socket)
     auto *stream = new QXmppIncomingServer(socket, d->domain, this);
     socket->setParent(stream);
 
-    connect(stream, &QXmppStream::disconnected,
+    connect(stream, &QXmppIncomingServer::disconnected,
             this, &QXmppServer::_q_serverDisconnected);
 
     connect(stream, &QXmppIncomingServer::dialbackRequestReceived,
@@ -793,7 +790,7 @@ void QXmppServer::_q_serverConnection(QSslSocket *socket)
 
     // add stream
     d->incomingServers.insert(stream);
-    Q_EMIT setGauge(QStringLiteral("incoming-server.count"), d->incomingServers.size());
+    Q_EMIT setGauge(u"incoming-server.count"_s, d->incomingServers.size());
 }
 
 /// Handle a stream disconnection for an incoming server.
@@ -806,7 +803,7 @@ void QXmppServer::_q_serverDisconnected()
 
     if (d->incomingServers.remove(incoming)) {
         incoming->deleteLater();
-        Q_EMIT setGauge(QStringLiteral("incoming-server.count"), d->incomingServers.size());
+        Q_EMIT setGauge(u"incoming-server.count"_s, d->incomingServers.size());
     }
 }
 

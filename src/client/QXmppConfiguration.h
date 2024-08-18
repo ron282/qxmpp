@@ -15,7 +15,18 @@
 class QNetworkProxy;
 class QSslCertificate;
 class QXmppConfigurationPrivate;
+class QXmppCredentials;
 class QXmppSasl2UserAgent;
+
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+struct Credentials;
+}  }
+#else
+namespace QXmpp::Private {
+struct Credentials;
+}
+#endif
 
 ///
 /// \brief The QXmppConfiguration class holds configuration options.
@@ -39,7 +50,9 @@ public:
         TLSDisabled,     ///< No encryption even if the server offers it.
         TLSRequired,     ///< Encryption must be available, otherwise the
                          ///< connection will not be established.
-        LegacySSL        ///< Use only legacy SSL mode.
+        /// Use direct TLS connection only and connect to configured host and port or domain and
+        /// 5223 or 5222. No SRV records are looked up.
+        LegacySSL
     };
 
     /// An enumeration for various Non-SASL authentication mechanisms available.
@@ -49,11 +62,6 @@ public:
         NonSASLPlain = 0,  ///< Plain
         NonSASLDigest      ///< Digest (default)
     };
-
-    /// An enumeration for various SASL authentication mechanisms available.
-    /// The server may or may not allow any particular mechanism. So depending
-    /// upon the availability of mechanisms on the server the library will choose
-    /// a mechanism.
 
     QXmppConfiguration();
     QXmppConfiguration(const QXmppConfiguration &other);
@@ -67,6 +75,7 @@ public:
     void setDomain(const QString &);
 
     int port() const;
+    quint16 port16() const;
     void setPort(int);
 
     QString user() const;
@@ -78,10 +87,16 @@ public:
     QString resource() const;
     void setResource(const QString &);
 
+    QString resourcePrefix() const;
+    void setResourcePrefix(const QString &);
+
     QString jid() const;
     void setJid(const QString &jid);
 
     QString jidBare() const;
+
+    QXmppCredentials credentials() const;
+    void setCredentials(const QXmppCredentials &);
 
     QString facebookAccessToken() const;
     void setFacebookAccessToken(const QString &);
@@ -103,6 +118,9 @@ public:
 
     bool useSasl2Authentication() const;
     void setUseSasl2Authentication(bool);
+
+    bool useFastTokenAuthentication() const;
+    void setUseFastTokenAuthentication(bool);
 
     bool useSASLAuthentication() const;
     void setUseSASLAuthentication(bool);
@@ -140,6 +158,11 @@ public:
 
     QList<QSslCertificate> caCertificates() const;
     void setCaCertificates(const QList<QSslCertificate> &);
+
+    /// \cond
+    const QXmpp::Private::Credentials &credentialData() const;
+    QXmpp::Private::Credentials &credentialData();
+    /// \endcond
 
 private:
     QSharedDataPointer<QXmppConfigurationPrivate> d;

@@ -8,6 +8,9 @@
 #include "QXmppNonza.h"
 #include "QXmppUtils_p.h"
 
+#include "Algorithms.h"
+#include "StringLiterals.h"
+
 #include <QBuffer>
 #include <QByteArray>
 #include <QCryptographicHash>
@@ -22,6 +25,8 @@
 #include <QUrl>
 #include <QUuid>
 #include <QXmlStreamWriter>
+
+using namespace QXmpp::Private;
 
 // adapted from public domain source by Ross Williams and Eric Durbin
 // FIXME : is this valid for big-endian machines?
@@ -93,14 +98,22 @@ static quint32 crctable[256] = {
 };
 
 ///
-/// Parses a date-time from a string according to
-/// \xep{0082}: XMPP Date and Time Profiles.
+/// Parses a date-time from a string according to \xep{0082, XMPP Date and Time Profiles}.
 ///
-QDateTime QXmppUtils::datetimeFromString(const QString &str)
+/// Takes QStringView since QXmpp 1.8.
+///
+QDateTime QXmppUtils::datetimeFromString(QStringView str)
 {
     // Qt::ISODate parses milliseconds, but doesn't output them
+    return QDateTime::fromString(toString60(str), Qt::ISODate).toUTC();
+}
+
+/// \cond
+QDateTime QXmppUtils::datetimeFromString(const QString &str)
+{
     return QDateTime::fromString(str, Qt::ISODate).toUTC();
 }
+/// \endcond
 
 ///
 /// Serializes a date-time to a string according to
@@ -125,7 +138,7 @@ QString QXmppUtils::datetimeToString(const QDateTime &dt)
 ///
 int QXmppUtils::timezoneOffsetFromString(const QString &str)
 {
-    static const QRegularExpression timezoneRegex(QStringLiteral("(Z|([+-])([0-9]{2}):([0-9]{2}))"));
+    static const QRegularExpression timezoneRegex(u"(Z|([+-])([0-9]{2}):([0-9]{2}))"_s);
 
     const auto match = timezoneRegex.match(str);
     if (!match.hasMatch()) {
@@ -154,17 +167,17 @@ int QXmppUtils::timezoneOffsetFromString(const QString &str)
 QString QXmppUtils::timezoneOffsetToString(int secs)
 {
     if (!secs) {
-        return QStringLiteral("Z");
+        return u"Z"_s;
     }
 
     const QTime tzoTime = QTime(0, 0, 0).addSecs(qAbs(secs));
-    return (secs < 0 ? QStringLiteral("-") : QStringLiteral("+")) + tzoTime.toString(QStringLiteral("hh:mm"));
+    return (secs < 0 ? u"-"_s : u"+"_s) + tzoTime.toString(u"hh:mm"_s);
 }
 
 /// Returns the domain for the given \a jid.
 QString QXmppUtils::jidToDomain(const QString &jid)
 {
-    return jidToBareJid(jid).split(QStringLiteral("@")).last();
+    return jidToBareJid(jid).split(u"@"_s).last();
 }
 
 /// Returns the resource for the given \a jid.
@@ -314,7 +327,7 @@ QString QXmppUtils::generateStanzaHash(int length)
         return QXmppUtils::generateStanzaUuid();
     }
 
-    const QString somechars = QStringLiteral("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    const QString somechars = u"1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"_s;
     const int N = somechars.size();
     QString hashResult;
     for (int idx = 0; idx < length; ++idx) {
@@ -429,6 +442,22 @@ template std::optional<uint32_t> QXmpp::Private::parseInt<uint32_t>(QStringView)
 template std::optional<int64_t> QXmpp::Private::parseInt<int64_t>(QStringView);
 template std::optional<uint64_t> QXmpp::Private::parseInt<uint64_t>(QStringView);
 
+std::optional<bool> QXmpp::Private::parseBoolean(const QString &str)
+{
+    if (str == u"1" || str == u"true") {
+        return true;
+    }
+    if (str == u"0" || str == u"false") {
+        return false;
+    }
+    return {};
+}
+
+QString QXmpp::Private::serializeBoolean(bool value)
+{
+    return value ? QStringLiteral("true") : QStringLiteral("false");
+}
+
 bool QXmpp::Private::isIqType(const QDomElement &element, QStringView tagName, QStringView xmlns)
 {
     // IQs must have only one child element, so we do not need to iterate over the child elements.
@@ -460,6 +489,11 @@ QDomElement QXmpp::Private::nextSiblingElement(const QDomElement &el, QStringVie
         }
     }
     return {};
+}
+
+std::vector<QString> QXmpp::Private::parseTextElements(DomChildElements elements)
+{
+    return transform<std::vector<QString>>(elements, &QDomElement::text);
 }
 
 QByteArray QXmpp::Private::serializeXml(const void *packet, void (*toXml)(const void *, QXmlStreamWriter *))

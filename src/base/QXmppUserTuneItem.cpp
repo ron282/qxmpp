@@ -7,6 +7,8 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QUrl>
 #include <QXmlStreamWriter>
@@ -222,7 +224,7 @@ void QXmppTuneItem::setUri(QUrl uri)
 bool QXmppTuneItem::isItem(const QDomElement &itemElement)
 {
     auto isPayloadValid = [](const QDomElement &payload) -> bool {
-        return payload.tagName() == QStringLiteral("tune") &&
+        return payload.tagName() == u"tune" &&
             payload.namespaceURI() == ns_tune;
     };
 

@@ -8,6 +8,8 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDate>
 #include <QDateTime>
 #include <QDomElement>
@@ -90,12 +92,12 @@ static QByteArray parseFingerprint(const QString &fingerprint)
 
 static QString addressToSdp(const QHostAddress &host)
 {
-    return QStringLiteral("IN %1 %2").arg(host.protocol() == QAbstractSocket::IPv6Protocol ? QStringLiteral("IP6") : QStringLiteral("IP4"), host.toString());
+    return u"IN %1 %2"_s.arg(host.protocol() == QAbstractSocket::IPv6Protocol ? u"IP6"_s : u"IP4"_s, host.toString());
 }
 
 static bool candidateParseSdp(QXmppJingleCandidate *candidate, const QString &sdp)
 {
-    if (!sdp.startsWith(QStringLiteral("candidate:"))) {
+    if (!sdp.startsWith(u"candidate:"_s)) {
         return false;
     }
 
@@ -111,13 +113,13 @@ static bool candidateParseSdp(QXmppJingleCandidate *candidate, const QString &sd
     candidate->setHost(QHostAddress(bits[4]));
     candidate->setPort(bits[5].toInt());
     for (int i = 6; i < bits.size() - 1; i += 2) {
-        if (bits[i] == QStringLiteral("typ")) {
+        if (bits[i] == u"typ") {
             bool ok;
             candidate->setType(QXmppJingleCandidate::typeFromString(bits[i + 1], &ok));
             if (!ok) {
                 return false;
             }
-        } else if (bits[i] == QStringLiteral("generation")) {
+        } else if (bits[i] == u"generation") {
             candidate->setGeneration(bits[i + 1].toInt());
         } else {
             qWarning() << "Candidate SDP contains unknown attribute" << bits[i];
@@ -129,7 +131,7 @@ static bool candidateParseSdp(QXmppJingleCandidate *candidate, const QString &sd
 
 static QString candidateToSdp(const QXmppJingleCandidate &candidate)
 {
-    return QStringLiteral("candidate:%1 %2 %3 %4 %5 %6 typ %7 generation %8").arg(candidate.foundation(), QString::number(candidate.component()), candidate.protocol(), QString::number(candidate.priority()), candidate.host().toString(), QString::number(candidate.port()), QXmppJingleCandidate::typeToString(candidate.type()), QString::number(candidate.generation()));
+    return u"candidate:%1 %2 %3 %4 %5 %6 typ %7 generation %8"_s.arg(candidate.foundation(), QString::number(candidate.component()), candidate.protocol(), QString::number(candidate.priority()), candidate.host().toString(), QString::number(candidate.port()), QXmppJingleCandidate::typeToString(candidate.type()), QString::number(candidate.generation()));
 }
 
 // Parses all found SDP parameter elements of parent into parameters.
@@ -190,7 +192,7 @@ static void parseJingleRtpHeaderExtensionsNegotiationElements(const QDomElement 
             QXmppJingleRtpHeaderExtensionProperty property;
             property.parse(child);
             properties.append(property);
-        } else if (child.tagName() == QStringLiteral("extmap-allow-mixed") && child.namespaceURI() == ns_jingle_rtp_header_extensions_negotiation) {
+        } else if (child.tagName() == u"extmap-allow-mixed" && child.namespaceURI() == ns_jingle_rtp_header_extensions_negotiation) {
             isRtpHeaderExtensionMixingAllowed = true;
         }
     }
@@ -694,17 +696,17 @@ void QXmppJingleIq::Content::setTransportFingerprintSetup(const QString &setup)
 /// \cond
 void QXmppJingleIq::Content::parse(const QDomElement &element)
 {
-    d->creator = element.attribute(QStringLiteral("creator"));
-    d->disposition = element.attribute(QStringLiteral("disposition"));
-    d->name = element.attribute(QStringLiteral("name"));
-    d->senders = element.attribute(QStringLiteral("senders"));
+    d->creator = element.attribute(u"creator"_s);
+    d->disposition = element.attribute(u"disposition"_s);
+    d->name = element.attribute(u"name"_s);
+    d->senders = element.attribute(u"senders"_s);
 
     // description
-    QDomElement descriptionElement = element.firstChildElement(QStringLiteral("description"));
+    QDomElement descriptionElement = element.firstChildElement(u"description"_s);
     d->description.setType(descriptionElement.namespaceURI());
-    d->description.setMedia(descriptionElement.attribute(QStringLiteral("media")));
-    d->description.setSsrc(descriptionElement.attribute(QStringLiteral("ssrc")).toULong());
-    d->isRtpMultiplexingSupported = !descriptionElement.firstChildElement(QStringLiteral("rtcp-mux")).isNull();
+    d->description.setMedia(descriptionElement.attribute(u"media"_s));
+    d->description.setSsrc(parseInt<uint32_t>(descriptionElement.attribute(u"ssrc"_s)).value_or(0));
+    d->isRtpMultiplexingSupported = !descriptionElement.firstChildElement(u"rtcp-mux"_s).isNull();
 
     for (const auto &childElement : iterChildElements(descriptionElement)) {
         if (QXmppJingleRtpEncryption::isJingleRtpEncryption(childElement)) {
@@ -725,10 +727,10 @@ void QXmppJingleIq::Content::parse(const QDomElement &element)
     }
 
     // transport
-    QDomElement transportElement = element.firstChildElement(QStringLiteral("transport"));
+    QDomElement transportElement = element.firstChildElement(u"transport"_s);
     d->transportType = transportElement.namespaceURI();
-    d->transportUser = transportElement.attribute(QStringLiteral("ufrag"));
-    d->transportPassword = transportElement.attribute(QStringLiteral("pwd"));
+    d->transportUser = transportElement.attribute(u"ufrag"_s);
+    d->transportPassword = transportElement.attribute(u"pwd"_s);
     for (const auto &child : iterChildElements(transportElement, u"candidate")) {
         QXmppJingleCandidate candidate;
         candidate.parse(child);
@@ -739,8 +741,8 @@ void QXmppJingleIq::Content::parse(const QDomElement &element)
     auto child = firstChildElement(transportElement, u"fingerprint");
     if (!child.isNull()) {
         d->transportFingerprint = parseFingerprint(child.text());
-        d->transportFingerprintHash = child.attribute(QStringLiteral("hash"));
-        d->transportFingerprintSetup = child.attribute(QStringLiteral("setup"));
+        d->transportFingerprintHash = child.attribute(u"hash"_s);
+        d->transportFingerprintSetup = child.attribute(u"setup"_s);
     }
 }
 
@@ -767,7 +769,7 @@ void QXmppJingleIq::Content::toXml(QXmlStreamWriter *writer) const
         }
 
         if (d->isRtpMultiplexingSupported) {
-            writer->writeEmptyElement(QStringLiteral("rtcp-mux"));
+            writer->writeEmptyElement(u"rtcp-mux"_s);
         }
 
         if (d->rtpEncryption) {
@@ -816,26 +818,26 @@ bool QXmppJingleIq::Content::parseSdp(const QString &sdp)
         if (line.endsWith(u'\r')) {
             line.resize(line.size() - 1);
         }
-        if (line.startsWith(QStringLiteral("a="))) {
-            int idx = line.indexOf(u':');
+        if (line.startsWith(u"a="_s)) {
+            qsizetype idx = line.indexOf(u':');
             const QString attrName = idx != -1 ? line.mid(2, idx - 2) : line.mid(2);
             const QString attrValue = idx != -1 ? line.mid(idx + 1) : QString();
 
-            if (attrName == QStringLiteral("candidate")) {
+            if (attrName == u"candidate") {
                 QXmppJingleCandidate candidate;
                 if (!candidateParseSdp(&candidate, line.mid(2))) {
                     qWarning() << "Could not parse candidate" << line;
                     return false;
                 }
                 addTransportCandidate(candidate);
-            } else if (attrName == QStringLiteral("fingerprint")) {
+            } else if (attrName == u"fingerprint") {
                 const QStringList bits = attrValue.split(u' ');
                 if (bits.size() > 1) {
                     d->transportFingerprintHash = bits[0];
                     d->transportFingerprint = parseFingerprint(bits[1]);
                 }
-            } else if (attrName == QStringLiteral("fmtp")) {
-                int spIdx = attrValue.indexOf(u' ');
+            } else if (attrName == u"fmtp") {
+                qsizetype spIdx = attrValue.indexOf(u' ');
                 if (spIdx == -1) {
                     qWarning() << "Could not parse payload parameters" << line;
                     return false;
@@ -845,10 +847,10 @@ bool QXmppJingleIq::Content::parseSdp(const QString &sdp)
                 for (auto &payload : payloads) {
                     if (payload.id() == id) {
                         QMap<QString, QString> params;
-                        if (payload.name() == QStringLiteral("telephone-event")) {
-                            params.insert(QStringLiteral("events"), paramStr);
+                        if (payload.name() == u"telephone-event") {
+                            params.insert(u"events"_s, paramStr);
                         } else {
-                            thread_local static const auto regex = QRegularExpression(QStringLiteral(";\\s*"));
+                            thread_local static const auto regex = QRegularExpression(u";\\s*"_s);
                             const auto paramParts = paramStr.split(regex);
                             for (const auto &p : paramParts) {
                                 const QStringList bits = p.split(u'=');
@@ -860,7 +862,7 @@ bool QXmppJingleIq::Content::parseSdp(const QString &sdp)
                         payload.setParameters(params);
                     }
                 }
-            } else if (attrName == QStringLiteral("rtpmap")) {
+            } else if (attrName == u"rtpmap") {
                 // payload type map
                 const QStringList bits = attrValue.split(u' ');
                 if (bits.size() != 2) {
@@ -877,20 +879,20 @@ bool QXmppJingleIq::Content::parseSdp(const QString &sdp)
                     if (payload.id() == id) {
                         payload.setName(args[0]);
                         if (args.size() > 1) {
-                            payload.setClockrate(args[1].toInt());
+                            payload.setClockrate(args[1].toUInt());
                         }
                         if (args.size() > 2) {
-                            payload.setChannels(args[2].toInt());
+                            payload.setChannels(parseInt<uint8_t>(args[2]).value_or(0));
                         }
                     }
                 }
-            } else if (attrName == QStringLiteral("ice-ufrag")) {
+            } else if (attrName == u"ice-ufrag") {
                 d->transportUser = attrValue;
-            } else if (attrName == QStringLiteral("ice-pwd")) {
+            } else if (attrName == u"ice-pwd") {
                 d->transportPassword = attrValue;
-            } else if (attrName == QStringLiteral("setup")) {
+            } else if (attrName == u"setup") {
                 d->transportFingerprintSetup = attrValue;
-            } else if (attrName == QStringLiteral("ssrc")) {
+            } else if (attrName == u"ssrc") {
                 const QStringList bits = attrValue.split(u' ');
                 if (bits.isEmpty()) {
                     qWarning() << "Could not parse ssrc" << line;
@@ -898,7 +900,7 @@ bool QXmppJingleIq::Content::parseSdp(const QString &sdp)
                 }
                 d->description.setSsrc(bits[0].toULong());
             }
-        } else if (line.startsWith(QStringLiteral("m="))) {
+        } else if (line.startsWith(u"m="_s)) {
             // FIXME: what do we do with the profile (bits[2]) ?
             QStringList bits = line.mid(2).split(u' ');
             if (bits.size() < 3) {
@@ -966,39 +968,40 @@ QString QXmppJingleIq::Content::toSdp() const
         // payload parameters
         QStringList paramList;
         const QMap<QString, QString> params = payload.parameters();
-        if (payload.name() == QStringLiteral("telephone-event")) {
-            if (params.contains(QStringLiteral("events"))) {
-                paramList << params.value(QStringLiteral("events"));
+        if (payload.name() == u"telephone-event") {
+            if (params.contains(u"events"_s)) {
+                paramList << params.value(u"events"_s);
             }
         } else {
             QMap<QString, QString>::const_iterator i;
             for (i = params.begin(); i != params.end(); ++i) {
-                paramList << i.key() + QStringLiteral("=") + i.value();
+                paramList << i.key() + u"="_s + i.value();
             }
         }
         if (!paramList.isEmpty()) {
-            attrs << QString(QStringLiteral("a=fmtp:") + QString::number(payload.id()) + u' ' + paramList.join(QStringLiteral(u"; ")));
+			attrs << QString(u"a=fmtp:" + QString::number(payload.id()) + u' ' + paramList.join(u"; "_s));
+//            attrs << QString(QStringLiteral("a=fmtp:") + QString::number(payload.id()) + u' ' + paramList.join(QStringLiteral(u"; ")));
         }
     }
-    sdp << QStringLiteral("m=%1 %2 RTP/AVP%3").arg(d->description.media(), QString::number(localRtpPort), payloads);
-    sdp << QStringLiteral("c=%1").arg(addressToSdp(localRtpAddress));
+    sdp << u"m=%1 %2 RTP/AVP%3"_s.arg(d->description.media(), QString::number(localRtpPort), payloads);
+    sdp << u"c=%1"_s.arg(addressToSdp(localRtpAddress));
     sdp += attrs;
 
     // transport
     for (const auto &candidate : d->transportCandidates) {
-        sdp << QStringLiteral("a=%1").arg(candidateToSdp(candidate));
+        sdp << u"a=%1"_s.arg(candidateToSdp(candidate));
     }
     if (!d->transportUser.isEmpty()) {
-        sdp << QStringLiteral("a=ice-ufrag:%1").arg(d->transportUser);
+        sdp << u"a=ice-ufrag:%1"_s.arg(d->transportUser);
     }
     if (!d->transportPassword.isEmpty()) {
-        sdp << QStringLiteral("a=ice-pwd:%1").arg(d->transportPassword);
+        sdp << u"a=ice-pwd:%1"_s.arg(d->transportPassword);
     }
     if (!d->transportFingerprint.isEmpty() && !d->transportFingerprintHash.isEmpty()) {
-        sdp << QStringLiteral("a=fingerprint:%1 %2").arg(d->transportFingerprintHash, formatFingerprint(d->transportFingerprint));
+        sdp << u"a=fingerprint:%1 %2"_s.arg(d->transportFingerprintHash, formatFingerprint(d->transportFingerprint));
     }
     if (!d->transportFingerprintSetup.isEmpty()) {
-        sdp << QStringLiteral("a=setup:%1").arg(d->transportFingerprintSetup);
+        sdp << u"a=setup:%1"_s.arg(d->transportFingerprintSetup);
     }
 
     return sdp.join(QStringLiteral(u"\r\n")) + QStringLiteral(u"\r\n");
@@ -1089,7 +1092,7 @@ void QXmppJingleReason::setRtpErrorCondition(RtpErrorCondition rtpErrorCondition
 /// \cond
 void QXmppJingleReason::parse(const QDomElement &element)
 {
-    d->m_text = element.firstChildElement(QStringLiteral("text")).text();
+    d->m_text = element.firstChildElement(u"text"_s).text();
     for (int i = AlternativeSession; i <= UnsupportedTransports; i++) {
         if (!element.firstChildElement(QString::fromLocal8Bit(jingle_reasons[i])).isNull()) {
             d->m_type = static_cast<Type>(i);
@@ -1355,28 +1358,28 @@ void QXmppJingleIq::setRtpSessionState(const std::optional<RtpSessionState> &rtp
 /// \cond
 bool QXmppJingleIq::isJingleIq(const QDomElement &element)
 {
-    QDomElement jingleElement = element.firstChildElement(QStringLiteral("jingle"));
+    QDomElement jingleElement = element.firstChildElement(u"jingle"_s);
     return (jingleElement.namespaceURI() == ns_jingle);
 }
 
 void QXmppJingleIq::parseElementFromChild(const QDomElement &element)
 {
-    QDomElement jingleElement = element.firstChildElement(QStringLiteral("jingle"));
-    const auto action = jingleElement.attribute(QStringLiteral("action")).toStdString();
+    QDomElement jingleElement = element.firstChildElement(u"jingle"_s);
+    const auto action = jingleElement.attribute(u"action"_s).toStdString();
     for (int i = ContentAccept; i <= TransportReplace; i++) {
         if (action == jingle_actions[i]) {
             d->action = static_cast<Action>(i);
             break;
         }
     }
-    d->initiator = jingleElement.attribute(QStringLiteral("initiator"));
-    d->responder = jingleElement.attribute(QStringLiteral("responder"));
-    d->sid = jingleElement.attribute(QStringLiteral("sid"));
+    d->initiator = jingleElement.attribute(u"initiator"_s);
+    d->responder = jingleElement.attribute(u"responder"_s);
+    d->sid = jingleElement.attribute(u"sid"_s);
 
     // XEP-0272: Multiparty Jingle (Muji)
-    if (const auto mujiGroupChatElement = jingleElement.firstChildElement(QStringLiteral("muji"));
+    if (const auto mujiGroupChatElement = jingleElement.firstChildElement(u"muji"_s);
         mujiGroupChatElement.namespaceURI() == ns_muji) {
-        d->mujiGroupChatJid = mujiGroupChatElement.attribute(QStringLiteral("room"));
+        d->mujiGroupChatJid = mujiGroupChatElement.attribute(u"room"_s);
     }
 
     // content
@@ -1401,13 +1404,13 @@ void QXmppJingleIq::parseElementFromChild(const QDomElement &element)
             RtpSessionStateMuting muting;
             muting.isMute = isMute;
 
-            if (const auto creator = childElement.attribute(QStringLiteral("creator")); creator == u"initiator") {
+            if (const auto creator = childElement.attribute(u"creator"_s); creator == u"initiator") {
                 muting.creator = Initiator;
             } else if (creator == u"responder") {
                 muting.creator = Responder;
             }
 
-            muting.name = childElement.attribute(QStringLiteral("name"));
+            muting.name = childElement.attribute(u"name"_s);
 
             d->rtpSessionState = muting;
         } else if (elementTag == u"ringing") {
@@ -1446,27 +1449,27 @@ void QXmppJingleIq::toXmlElementFromChild(QXmlStreamWriter *writer) const
 
     if (d->rtpSessionState) {
         if (std::holds_alternative<RtpSessionStateActive>(*d->rtpSessionState)) {
-            writeStartElementWithNamespace(QStringLiteral("active"));
+            writeStartElementWithNamespace(u"active"_s);
         } else if (std::holds_alternative<RtpSessionStateHold>(*d->rtpSessionState)) {
-            writeStartElementWithNamespace(QStringLiteral("hold"));
+            writeStartElementWithNamespace(u"hold"_s);
         } else if (std::holds_alternative<RtpSessionStateUnhold>(*d->rtpSessionState)) {
-            writeStartElementWithNamespace(QStringLiteral("unhold"));
+            writeStartElementWithNamespace(u"unhold"_s);
         } else if (auto rtpSessionStateMuting = std::get_if<RtpSessionStateMuting>(&(*d->rtpSessionState))) {
             if (rtpSessionStateMuting->isMute) {
-                writeStartElementWithNamespace(QStringLiteral("mute"));
+                writeStartElementWithNamespace(u"mute"_s);
             } else {
-                writeStartElementWithNamespace(QStringLiteral("unmute"));
+                writeStartElementWithNamespace(u"unmute"_s);
             }
 
             if (rtpSessionStateMuting->creator == Initiator) {
-                writeOptionalXmlAttribute(writer, u"creator", QStringLiteral("initiator"));
+                writeOptionalXmlAttribute(writer, u"creator", u"initiator"_s);
             } else if (rtpSessionStateMuting->creator == Responder) {
-                writeOptionalXmlAttribute(writer, u"creator", QStringLiteral("responder"));
+                writeOptionalXmlAttribute(writer, u"creator", u"responder"_s);
             }
 
             writeOptionalXmlAttribute(writer, u"name", rtpSessionStateMuting->name);
         } else {
-            writeStartElementWithNamespace(QStringLiteral("ringing"));
+            writeStartElementWithNamespace(u"ringing"_s);
         }
 
         writer->writeEndElement();
@@ -1667,16 +1670,16 @@ bool QXmppJingleCandidate::isNull() const
 /// \cond
 void QXmppJingleCandidate::parse(const QDomElement &element)
 {
-    d->component = element.attribute(QStringLiteral("component")).toInt();
-    d->foundation = element.attribute(QStringLiteral("foundation"));
-    d->generation = element.attribute(QStringLiteral("generation")).toInt();
-    d->host = QHostAddress(element.attribute(QStringLiteral("ip")));
-    d->id = element.attribute(QStringLiteral("id"));
-    d->network = element.attribute(QStringLiteral("network")).toInt();
-    d->port = element.attribute(QStringLiteral("port")).toInt();
-    d->priority = element.attribute(QStringLiteral("priority")).toInt();
-    d->protocol = element.attribute(QStringLiteral("protocol"));
-    d->type = typeFromString(element.attribute(QStringLiteral("type")));
+    d->component = element.attribute(u"component"_s).toInt();
+    d->foundation = element.attribute(u"foundation"_s);
+    d->generation = element.attribute(u"generation"_s).toInt();
+    d->host = QHostAddress(element.attribute(u"ip"_s));
+    d->id = element.attribute(u"id"_s);
+    d->network = element.attribute(u"network"_s).toInt();
+    d->port = element.attribute(u"port"_s).toInt();
+    d->priority = element.attribute(u"priority"_s).toInt();
+    d->protocol = element.attribute(u"protocol"_s);
+    d->type = typeFromString(element.attribute(u"type"_s));
 }
 
 void QXmppJingleCandidate::toXml(QXmlStreamWriter *writer) const
@@ -1698,13 +1701,13 @@ void QXmppJingleCandidate::toXml(QXmlStreamWriter *writer) const
 QXmppJingleCandidate::Type QXmppJingleCandidate::typeFromString(const QString &typeStr, bool *ok)
 {
     QXmppJingleCandidate::Type type;
-    if (typeStr == QStringLiteral("host")) {
+    if (typeStr == u"host") {
         type = HostType;
-    } else if (typeStr == QStringLiteral("prflx")) {
+    } else if (typeStr == u"prflx") {
         type = PeerReflexiveType;
-    } else if (typeStr == QStringLiteral("srflx")) {
+    } else if (typeStr == u"srflx") {
         type = ServerReflexiveType;
-    } else if (typeStr == QStringLiteral("relay")) {
+    } else if (typeStr == u"relay") {
         type = RelayedType;
     } else {
         qWarning() << "Unknown candidate type" << typeStr;
@@ -1724,16 +1727,16 @@ QString QXmppJingleCandidate::typeToString(QXmppJingleCandidate::Type type)
     QString typeStr;
     switch (type) {
     case HostType:
-        typeStr = QStringLiteral("host");
+        typeStr = u"host"_s;
         break;
     case PeerReflexiveType:
-        typeStr = QStringLiteral("prflx");
+        typeStr = u"prflx"_s;
         break;
     case ServerReflexiveType:
-        typeStr = QStringLiteral("srflx");
+        typeStr = u"srflx"_s;
         break;
     case RelayedType:
-        typeStr = QStringLiteral("relay");
+        typeStr = u"relay"_s;
         break;
     }
     return typeStr;
@@ -1910,18 +1913,15 @@ void QXmppJinglePayloadType::setRtpFeedbackIntervals(const QVector<QXmppJingleRt
 /// \cond
 void QXmppJinglePayloadType::parse(const QDomElement &element)
 {
-    d->id = element.attribute(QStringLiteral("id")).toInt();
-    d->name = element.attribute(QStringLiteral("name"));
-    d->channels = element.attribute(QStringLiteral("channels")).toInt();
-    if (!d->channels) {
-        d->channels = 1;
-    }
-    d->clockrate = element.attribute(QStringLiteral("clockrate")).toInt();
-    d->maxptime = element.attribute(QStringLiteral("maxptime")).toInt();
-    d->ptime = element.attribute(QStringLiteral("ptime")).toInt();
+    d->id = parseInt<uint8_t>(element.attribute(u"id"_s)).value_or(0);
+    d->name = element.attribute(u"name"_s);
+    d->channels = parseInt<uint8_t>(element.attribute(u"channels"_s)).value_or(1);
+    d->clockrate = element.attribute(u"clockrate"_s).toUInt();
+    d->maxptime = element.attribute(u"maxptime"_s).toUInt();
+    d->ptime = element.attribute(u"ptime"_s).toUInt();
 
     for (const auto &child : iterChildElements(element, u"parameter")) {
-        d->parameters.insert(child.attribute(QStringLiteral("name")), child.attribute(QStringLiteral("value")));
+        d->parameters.insert(child.attribute(u"name"_s), child.attribute(u"value"_s));
     }
 
     parseJingleRtpFeedbackNegotiationElements(element, d->rtpFeedbackProperties, d->rtpFeedbackIntervals);
@@ -2089,8 +2089,8 @@ void QXmppJingleDescription::setPayloadTypes(const QList<QXmppJinglePayloadType>
 void QXmppJingleDescription::parse(const QDomElement &element)
 {
     d->type = element.namespaceURI();
-    d->media = element.attribute(QStringLiteral("media"));
-    d->ssrc = element.attribute(QStringLiteral("ssrc")).toULong();
+    d->media = element.attribute(u"media"_s);
+    d->ssrc = element.attribute(u"ssrc"_s).toULong();
 
     for (const auto &child : iterChildElements(element, u"payload-type")) {
         QXmppJinglePayloadType payload;
@@ -2191,8 +2191,8 @@ void QXmppSdpParameter::setValue(const QString &value)
 /// \cond
 void QXmppSdpParameter::parse(const QDomElement &element)
 {
-    d->name = element.attribute(QStringLiteral("name"));
-    d->value = element.attribute(QStringLiteral("value"));
+    d->name = element.attribute(u"name"_s);
+    d->value = element.attribute(u"value"_s);
 }
 
 void QXmppSdpParameter::toXml(QXmlStreamWriter *writer) const
@@ -2217,7 +2217,7 @@ void QXmppSdpParameter::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppSdpParameter::isSdpParameter(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("parameter");
+    return element.tagName() == u"parameter";
 }
 
 class QXmppJingleRtpCryptoElementPrivate : public QSharedData
@@ -2333,10 +2333,10 @@ void QXmppJingleRtpCryptoElement::setSessionParams(const QString &sessionParams)
 /// \cond
 void QXmppJingleRtpCryptoElement::parse(const QDomElement &element)
 {
-    d->tag = element.attribute(QStringLiteral("tag")).toUInt();
-    d->cryptoSuite = element.attribute(QStringLiteral("crypto-suite"));
-    d->keyParams = element.attribute(QStringLiteral("key-params"));
-    d->sessionParams = element.attribute(QStringLiteral("session-params"));
+    d->tag = element.attribute(u"tag"_s).toUInt();
+    d->cryptoSuite = element.attribute(u"crypto-suite"_s);
+    d->keyParams = element.attribute(u"key-params"_s);
+    d->sessionParams = element.attribute(u"session-params"_s);
 }
 
 void QXmppJingleRtpCryptoElement::toXml(QXmlStreamWriter *writer) const
@@ -2361,7 +2361,7 @@ void QXmppJingleRtpCryptoElement::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppJingleRtpCryptoElement::isJingleRtpCryptoElement(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("crypto");
+    return element.tagName() == u"crypto";
 }
 
 class QXmppJingleRtpEncryptionPrivate : public QSharedData
@@ -2433,8 +2433,8 @@ void QXmppJingleRtpEncryption::setCryptoElements(const QVector<QXmppJingleRtpCry
 /// \cond
 void QXmppJingleRtpEncryption::parse(const QDomElement &element)
 {
-    d->isRequired = element.attribute(QStringLiteral("required")) == QStringLiteral("true") ||
-        element.attribute(QStringLiteral("required")) == QStringLiteral("1");
+    d->isRequired = element.attribute(u"required"_s) == u"true" ||
+        element.attribute(u"required"_s) == u"1";
 
     for (const auto &childElement : iterChildElements(element)) {
         if (QXmppJingleRtpCryptoElement::isJingleRtpCryptoElement(childElement)) {
@@ -2452,7 +2452,7 @@ void QXmppJingleRtpEncryption::toXml(QXmlStreamWriter *writer) const
         writer->writeDefaultNamespace(toString65(ns_jingle_rtp));
 
         if (d->isRequired) {
-            writer->writeAttribute(QSL65("required"), QStringLiteral("1"));
+            writer->writeAttribute(QSL65("required"), u"1"_s);
         }
 
         for (const auto &cryptoElement : std::as_const(d->cryptoElements)) {
@@ -2473,7 +2473,7 @@ void QXmppJingleRtpEncryption::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppJingleRtpEncryption::isJingleRtpEncryption(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("encryption") &&
+    return element.tagName() == u"encryption" &&
         element.namespaceURI() == ns_jingle_rtp;
 }
 
@@ -2574,8 +2574,8 @@ void QXmppJingleRtpFeedbackProperty::setParameters(const QVector<QXmppSdpParamet
 /// \cond
 void QXmppJingleRtpFeedbackProperty::parse(const QDomElement &element)
 {
-    d->type = element.attribute(QStringLiteral("type"));
-    d->subtype = element.attribute(QStringLiteral("subtype"));
+    d->type = element.attribute(u"type"_s);
+    d->subtype = element.attribute(u"subtype"_s);
     parseSdpParameters(element, d->parameters);
 }
 
@@ -2605,7 +2605,7 @@ void QXmppJingleRtpFeedbackProperty::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppJingleRtpFeedbackProperty::isJingleRtpFeedbackProperty(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("rtcp-fb") &&
+    return element.tagName() == u"rtcp-fb" &&
         element.namespaceURI() == ns_jingle_rtp_feedback_negotiation;
 }
 
@@ -2650,7 +2650,7 @@ void QXmppJingleRtpFeedbackInterval::setValue(uint64_t value)
 /// \cond
 void QXmppJingleRtpFeedbackInterval::parse(const QDomElement &element)
 {
-    m_value = element.attribute(QStringLiteral("value")).toUInt();
+    m_value = element.attribute(u"value"_s).toUInt();
 }
 
 void QXmppJingleRtpFeedbackInterval::toXml(QXmlStreamWriter *writer) const
@@ -2671,7 +2671,7 @@ void QXmppJingleRtpFeedbackInterval::toXml(QXmlStreamWriter *writer) const
 ///
 bool QXmppJingleRtpFeedbackInterval::isJingleRtpFeedbackInterval(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("rtcp-fb-trr-int") &&
+    return element.tagName() == u"rtcp-fb-trr-int" &&
         element.namespaceURI() == ns_jingle_rtp_feedback_negotiation;
 }
 
@@ -2798,10 +2798,10 @@ void QXmppJingleRtpHeaderExtensionProperty::setParameters(const QVector<QXmppSdp
 /// \cond
 void QXmppJingleRtpHeaderExtensionProperty::parse(const QDomElement &element)
 {
-    if (element.tagName() == QStringLiteral("rtp-hdrext") && element.namespaceURI() == ns_jingle_rtp_header_extensions_negotiation) {
-        d->id = element.attribute(QStringLiteral("id")).toUInt();
-        d->uri = element.attribute(QStringLiteral("uri"));
-        d->senders = enumFromString<Senders>(JINGLE_RTP_HEADER_EXTENSIONS_SENDERS, element.attribute(QStringLiteral("senders")))
+    if (element.tagName() == u"rtp-hdrext" && element.namespaceURI() == ns_jingle_rtp_header_extensions_negotiation) {
+        d->id = element.attribute(u"id"_s).toUInt();
+        d->uri = element.attribute(u"uri"_s);
+        d->senders = enumFromString<Senders>(JINGLE_RTP_HEADER_EXTENSIONS_SENDERS, element.attribute(u"senders"_s))
                          .value_or(Both);
 
         parseSdpParameters(element, d->parameters);
@@ -2834,7 +2834,7 @@ void QXmppJingleRtpHeaderExtensionProperty::toXml(QXmlStreamWriter *writer) cons
 ///
 bool QXmppJingleRtpHeaderExtensionProperty::isJingleRtpHeaderExtensionProperty(const QDomElement &element)
 {
-    return element.tagName() == QStringLiteral("rtp-hdrext") &&
+    return element.tagName() == u"rtp-hdrext" &&
         element.namespaceURI() == ns_jingle_rtp_header_extensions_negotiation;
 }
 
@@ -2988,7 +2988,7 @@ void QXmppJingleMessageInitiationElement::parse(const QDomElement &element)
     }
 
     d->type = type.value();
-    d->id = element.attribute(QStringLiteral("id"));
+    d->id = element.attribute(u"id"_s);
 
     // Type::Proceed and Type::Ringing don't need any parsing aside of the id.
     switch (d->type) {
@@ -3017,7 +3017,7 @@ void QXmppJingleMessageInitiationElement::parse(const QDomElement &element)
         }
 
         if (auto migratedToElement = firstChildElement(element, u"migrated"); !migratedToElement.isNull()) {
-            d->migratedTo = migratedToElement.attribute(QStringLiteral("to"));
+            d->migratedTo = migratedToElement.attribute(u"to"_s);
         }
 
         break;
@@ -3042,11 +3042,11 @@ void QXmppJingleMessageInitiationElement::toXml(QXmlStreamWriter *writer) const
     }
 
     if (d->containsTieBreak) {
-        writer->writeEmptyElement(QStringLiteral("tie-break"));
+        writer->writeEmptyElement(u"tie-break"_s);
     }
 
     if (!d->migratedTo.isEmpty()) {
-        writer->writeEmptyElement(QStringLiteral("migrated"));
+        writer->writeEmptyElement(u"migrated"_s);
         writeOptionalXmlAttribute(writer, u"to", d->migratedTo);
     }
 
@@ -3061,7 +3061,7 @@ QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppJingleMessageInitiationElement)
 ///
 bool QXmppJingleMessageInitiationElement::isJingleMessageInitiationElement(const QDomElement &element)
 {
-    return stringToJmiElementType(element.tagName()).has_value() && element.hasAttribute(QStringLiteral("id")) && element.namespaceURI() == ns_jingle_message_initiation;
+    return stringToJmiElementType(element.tagName()).has_value() && element.hasAttribute(u"id"_s) && element.namespaceURI() == ns_jingle_message_initiation;
 }
 
 ///
@@ -3071,17 +3071,17 @@ QString QXmppJingleMessageInitiationElement::jmiElementTypeToString(Type type)
 {
     switch (type) {
     case Type::Propose:
-        return QStringLiteral("propose");
+        return u"propose"_s;
     case Type::Ringing:
-        return QStringLiteral("ringing");
+        return u"ringing"_s;
     case Type::Proceed:
-        return QStringLiteral("proceed");
+        return u"proceed"_s;
     case Type::Reject:
-        return QStringLiteral("reject");
+        return u"reject"_s;
     case Type::Retract:
-        return QStringLiteral("retract");
+        return u"retract"_s;
     case Type::Finish:
-        return QStringLiteral("finish");
+        return u"finish"_s;
     default:
         return {};
     }
@@ -3253,12 +3253,12 @@ void QXmppCallInviteElement::parse(const QDomElement &element)
     }
 
     d->type = type.value();
-    d->id = element.attribute(QStringLiteral("id"));
+    d->id = element.attribute(u"id"_s);
 
     switch (d->type) {
     case Type::Invite:
-        d->audio = element.attribute(QStringLiteral("audio"), QStringLiteral("true")) == QStringLiteral("true") ? true : false;
-        d->video = element.attribute(QStringLiteral("video"), QStringLiteral("false")) == QStringLiteral("true") ? true : false;
+        d->audio = element.attribute(u"audio"_s, u"true"_s) == u"true" ? true : false;
+        d->video = element.attribute(u"video"_s, u"false"_s) == u"true" ? true : false;
         // fall through
     case Type::Accept: {
         if (auto jingleElement = firstChildElement(element, u"jingle"); !jingleElement.isNull()) {
@@ -3268,7 +3268,7 @@ void QXmppCallInviteElement::parse(const QDomElement &element)
 
         QVector<External> external;
         for (const auto &externalEl : iterChildElements(element, u"external")) {
-            external.append(External { externalEl.attribute(QStringLiteral("uri")) });
+            external.append(External { externalEl.attribute(u"uri"_s) });
         }
         if (!external.isEmpty()) {
             d->external = external;
@@ -3335,7 +3335,7 @@ bool QXmppCallInviteElement::isCallInviteElement(const QDomElement &element)
 {
     return stringToCallInviteElementType(element.tagName()).has_value() &&
         // "invite" tags don't have an ID yet.
-        (element.hasAttribute(QStringLiteral("id")) || element.tagName() == callInviteElementTypeToString(Type::Invite)) &&
+        (element.hasAttribute(u"id"_s) || element.tagName() == callInviteElementTypeToString(Type::Invite)) &&
         element.namespaceURI() == ns_call_invites;
 }
 
@@ -3346,15 +3346,15 @@ QString QXmppCallInviteElement::callInviteElementTypeToString(Type type)
 {
     switch (type) {
     case Type::Invite:
-        return QStringLiteral("invite");
+        return u"invite"_s;
     case Type::Accept:
-        return QStringLiteral("accept");
+        return u"accept"_s;
     case Type::Reject:
-        return QStringLiteral("reject");
+        return u"reject"_s;
     case Type::Retract:
-        return QStringLiteral("retract");
+        return u"retract"_s;
     case Type::Left:
-        return QStringLiteral("left");
+        return u"left"_s;
     default:
         return {};
     }
@@ -3383,18 +3383,18 @@ std::optional<QXmppCallInviteElement::Type> QXmppCallInviteElement::stringToCall
 /// \cond
 void QXmppCallInviteElement::Jingle::parse(const QDomElement &element)
 {
-    if (element.hasAttribute(QStringLiteral("sid"))) {
-        sid = element.attribute(QStringLiteral("sid"));
+    if (element.hasAttribute(u"sid"_s)) {
+        sid = element.attribute(u"sid"_s);
     }
 
-    if (element.hasAttribute(QStringLiteral("jid"))) {
-        jid = element.attribute(QStringLiteral("jid"));
+    if (element.hasAttribute(u"jid"_s)) {
+        jid = element.attribute(u"jid"_s);
     }
 }
 
 void QXmppCallInviteElement::Jingle::toXml(QXmlStreamWriter *writer) const
 {
-    writer->writeEmptyElement(QStringLiteral("jingle"));
+    writer->writeEmptyElement(u"jingle"_s);
     writeOptionalXmlAttribute(writer, u"sid", sid);
 
     if (jid) {
@@ -3404,7 +3404,7 @@ void QXmppCallInviteElement::Jingle::toXml(QXmlStreamWriter *writer) const
 
 void QXmppCallInviteElement::External::toXml(QXmlStreamWriter *writer) const
 {
-    writer->writeEmptyElement(QStringLiteral("external"));
+    writer->writeEmptyElement(u"external"_s);
     writeOptionalXmlAttribute(writer, u"uri", uri);
 }
 /// \endcond

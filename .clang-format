@@ -10,6 +10,7 @@ BraceWrapping:
   AfterFunction: true
   AfterStruct: false
   SplitEmptyRecord: false
+BreakAfterAttributes: Always
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: true
@@ -29,6 +30,7 @@ IncludeCategories:
     Priority: 4
 InsertBraces: true
 Language: Cpp
+NamespaceIndentation: None
 PointerAlignment: Right
 ReflowComments: true
 SortIncludes: true

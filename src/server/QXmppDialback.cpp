@@ -7,6 +7,8 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 
 using namespace QXmpp::Private;
@@ -57,19 +59,19 @@ void QXmppDialback::setType(const QString &type)
 bool QXmppDialback::isDialback(const QDomElement &element)
 {
     return element.namespaceURI() == ns_server_dialback &&
-        (element.tagName() == QLatin1String("result") ||
-         element.tagName() == QLatin1String("verify"));
+        (element.tagName() == u"result" ||
+         element.tagName() == u"verify");
 }
 
 void QXmppDialback::parse(const QDomElement &element)
 {
     QXmppStanza::parse(element);
-    if (element.tagName() == QLatin1String("result")) {
+    if (element.tagName() == u"result") {
         m_command = Result;
     } else {
         m_command = Verify;
     }
-    m_type = element.attribute(QStringLiteral("type"));
+    m_type = element.attribute(u"type"_s);
     m_key = element.text();
 }
 

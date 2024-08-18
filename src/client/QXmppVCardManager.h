@@ -7,8 +7,13 @@
 
 #include "QXmppClientExtension.h"
 
+#include <variant>
+
+template<typename T>
+class QXmppTask;
 class QXmppVCardIq;
 class QXmppVCardManagerPrivate;
+struct QXmppError;
 
 ///
 /// \brief The QXmppVCardManager class gets/sets XMPP vCards. It is an
@@ -39,8 +44,16 @@ class QXMPP_EXPORT QXmppVCardManager : public QXmppClientExtension
     Q_OBJECT
 
 public:
+    /// Success or QXmppError
+    using Result = std::variant<QXmpp::Success, QXmppError>;
+    /// QXmppVCardIq or QXmppError
+    using VCardIqResult = std::variant<QXmppVCardIq, QXmppError>;
+
     QXmppVCardManager();
     ~QXmppVCardManager() override;
+
+    QXmppTask<VCardIqResult> fetchVCard(const QString &bareJid);
+    QXmppTask<Result> setVCard(const QXmppVCardIq &);
 
     QString requestVCard(const QString &bareJid = QString());
 
@@ -63,6 +76,10 @@ Q_SIGNALS:
     /// This signal is emitted when the client's vCard is received
     /// after calling the requestClientVCard() function.
     void clientVCardReceived();
+
+protected:
+    void onRegistered(QXmppClient *client) override;
+    void onUnregistered(QXmppClient *client) override;
 
 private:
     const std::unique_ptr<QXmppVCardManagerPrivate> d;

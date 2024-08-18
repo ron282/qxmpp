@@ -11,13 +11,23 @@
 #include "QXmppUtils.h"
 #include "QXmppUtils_p.h"
 
+#include "Algorithms.h"
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QMessageAuthenticationCode>
+#include <QPasswordDigestor>
 #include <QUrlQuery>
 #include <QXmlStreamWriter>
 #include <QtEndian>
 
+using std::visit;
 using namespace QXmpp::Private;
+
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
 
 static QByteArray forcedNonce;
 
@@ -53,12 +63,28 @@ static int hashLength(QCryptographicHash::Algorithm algorithm)
 }
 #endif
 
+// https://www.iana.org/assignments/named-information/named-information.xhtml#hash-alg
+constexpr auto ianaHashAlgorithms = to_array<QStringView>({
+    u"SHA-256",
+    u"SHA-384",
+    u"SHA-512",
+    u"SHA3-224",
+    u"SHA3-256",
+    u"SHA3-384",
+    u"SHA3-512",
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    u"BLAKE2S-256",
+    u"BLAKE2B-256",
+    u"BLAKE2B-512",
+#endif
+});
 
 #if defined(SFOS)
 namespace QXmpp { namespace Private { namespace Sasl {
 #else
 namespace QXmpp::Private::Sasl {
 #endif
+
 
 QString errorConditionToString(ErrorCondition c)
 {
@@ -81,7 +107,7 @@ std::optional<Auth> Auth::fromDom(const QDomElement &el)
     } else {
         return {};
     }
-    auth.mechanism = el.attribute(QStringLiteral("mechanism"));
+    auth.mechanism = el.attribute(u"mechanism"_s);
     return auth;
 }
 
@@ -127,7 +153,7 @@ std::optional<Failure> Failure::fromDom(const QDomElement &el)
 
     Failure failure {
         errorConditionFromString(errorConditionString),
-        el.firstChildElement(QStringLiteral("text")).text(),
+        el.firstChildElement(u"text"_s).text(),
     };
 
     // RFC3920 defines the error condition as "not-authorized", but
@@ -149,8 +175,8 @@ void Failure::toXml(QXmlStreamWriter *writer) const
     }
 
     if (!text.isEmpty()) {
-        writer->writeStartElement(QStringLiteral("text"));
-        writer->writeAttribute(QStringLiteral("xml:lang"), QStringLiteral("en"));
+        writer->writeStartElement(u"text"_s);
+        writer->writeAttribute(u"xml:lang"_s, u"en"_s);
         writer->writeCharacters(text);
         writer->writeEndElement();
     }
@@ -196,12 +222,180 @@ void Success::toXml(QXmlStreamWriter *writer) const
 }  // namespace QXmpp::Private::Sasl
 #endif
 
-#if defined(SFOS)
-namespace QXmpp { namespace Private { namespace Sasl2 {
-#else
-namespace QXmpp::Private::Sasl2 {
-#endif
+std::optional<Bind2Feature> Bind2Feature::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"bind" || el.namespaceURI() != ns_bind2) {
+        return {};
+    }
 
+    Bind2Feature bind2;
+
+    auto inlineElement = firstChildElement(el, u"inline", ns_bind2);
+    for (const auto &featureEl : iterChildElements(inlineElement, u"feature", ns_bind2)) {
+        bind2.features.push_back(featureEl.attribute(u"var"_s));
+    }
+
+    return bind2;
+}
+
+void Bind2Feature::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("bind"));
+    writer->writeDefaultNamespace(toString65(ns_bind2));
+    if (!features.empty()) {
+        writer->writeStartElement(QSL65("inline"));
+        for (const auto &feature : features) {
+            writer->writeStartElement(QSL65("feature"));
+            writer->writeAttribute(QSL65("var"), feature);
+            writer->writeEndElement();
+        }
+        writer->writeEndElement();
+    }
+    writer->writeEndElement();
+}
+
+std::optional<Bind2Request> Bind2Request::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"bind" || el.namespaceURI() != ns_bind2) {
+        return {};
+    }
+
+    return Bind2Request {
+        firstChildElement(el, u"tag", ns_bind2).text(),
+        !firstChildElement(el, u"inactive", ns_csi).isNull(),
+        !firstChildElement(el, u"enable", ns_carbons).isNull(),
+        SmEnable::fromDom(firstChildElement(el, u"enable", ns_stream_management)),
+    };
+}
+
+void Bind2Request::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("bind"));
+    writer->writeDefaultNamespace(toString65(ns_bind2));
+    writeOptionalXmlTextElement(writer, u"tag", tag);
+    if (csiInactive) {
+        writeEmptyElement(writer, u"inactive", ns_csi);
+    }
+    if (carbonsEnable) {
+        writeEmptyElement(writer, u"enable", ns_carbons);
+    }
+    if (smEnable) {
+        smEnable->toXml(writer);
+    }
+    writer->writeEndElement();
+}
+
+std::optional<Bind2Bound> Bind2Bound::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"bound" || el.namespaceURI() != ns_bind2) {
+        return {};
+    }
+
+    return Bind2Bound {
+        .smFailed = SmFailed::fromDom(firstChildElement(el, u"failed", ns_stream_management)),
+        .smEnabled = SmEnabled::fromDom(firstChildElement(el, u"enabled", ns_stream_management)),
+    };
+}
+
+void Bind2Bound::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("bound"));
+    writer->writeDefaultNamespace(toString65(ns_bind2));
+    if (smFailed) {
+        smFailed->toXml(writer);
+    }
+    if (smEnabled) {
+        smEnabled->toXml(writer);
+    }
+    writer->writeEndElement();
+}
+
+std::optional<FastFeature> FastFeature::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"fast" || el.namespaceURI() != ns_fast) {
+        return {};
+    }
+
+    return FastFeature {
+        .mechanisms = parseTextElements(iterChildElements(el, u"mechanism", ns_fast)),
+        .tls0rtt = parseBoolean(el.attribute(QStringLiteral("tls-0rtt"))).value_or(false),
+    };
+}
+
+void FastFeature::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("fast"));
+    writer->writeDefaultNamespace(toString65(ns_fast));
+    for (const auto &mechanism : mechanisms) {
+        writer->writeStartElement(QSL65("mechanism"));
+        writer->writeCharacters(mechanism);
+        writer->writeEndElement();
+    }
+    writer->writeEndElement();
+}
+
+std::optional<FastTokenRequest> FastTokenRequest::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"request-token" || el.namespaceURI() != ns_fast) {
+        return {};
+    }
+    return FastTokenRequest { el.attribute(QStringLiteral("mechanism")) };
+}
+
+void FastTokenRequest::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("request-token"));
+    writer->writeDefaultNamespace(toString65(ns_fast));
+    writer->writeAttribute(QSL65("mechanism"), mechanism);
+    writer->writeEndElement();
+}
+
+std::optional<FastToken> FastToken::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"token" || el.namespaceURI() != ns_fast) {
+        return {};
+    }
+
+    return FastToken {
+        QXmppUtils::datetimeFromString(el.attribute(QStringLiteral("expiry"))),
+        el.attribute(QStringLiteral("token")),
+    };
+}
+
+void FastToken::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("token"));
+    writer->writeDefaultNamespace(toString65(ns_fast));
+    writer->writeAttribute(QSL65("expiry"), QXmppUtils::datetimeToString(expiry));
+    writer->writeAttribute(QSL65("token"), token);
+    writer->writeEndElement();
+}
+
+std::optional<FastRequest> FastRequest::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"fast" || el.namespaceURI() != ns_fast) {
+        return {};
+    }
+    return FastRequest {
+        parseInt<uint64_t>(el.attribute(QStringLiteral("count"))),
+        parseBoolean(el.attribute(QStringLiteral("invalidate"))).value_or(false),
+    };
+}
+
+void FastRequest::toXml(QXmlStreamWriter *writer) const
+{
+    writer->writeStartElement(QSL65("fast"));
+    writer->writeDefaultNamespace(toString65(ns_fast));
+    if (count) {
+        writer->writeAttribute(QSL65("count"), QString::number(*count));
+    }
+    if (invalidate) {
+        writer->writeAttribute(QSL65("invalidate"), QSL65("true"));
+    }
+    writer->writeEndElement();
+}
+
+namespace Sasl2 {
 
 std::optional<StreamFeature> StreamFeature::fromDom(const QDomElement &el)
 {
@@ -209,14 +403,15 @@ std::optional<StreamFeature> StreamFeature::fromDom(const QDomElement &el)
         return {};
     }
 
-    StreamFeature feature { {}, false, false };
+    StreamFeature feature;
 
     for (const auto &mechEl : iterChildElements(el, u"mechanism", ns_sasl_2)) {
         feature.mechanisms.push_back(mechEl.text());
     }
 
     if (auto inlineEl = firstChildElement(el, u"inline", ns_sasl_2); !inlineEl.isNull()) {
-        feature.bind2Available = !firstChildElement(inlineEl, u"bind", ns_bind2).isNull();
+        feature.bind2Feature = Bind2Feature::fromDom(firstChildElement(inlineEl, u"bind", ns_bind2));
+        feature.fast = FastFeature::fromDom(firstChildElement(inlineEl, u"fast", ns_fast));
         feature.streamResumptionAvailable = !firstChildElement(inlineEl, u"sm", ns_stream_management).isNull();
     }
     return feature;
@@ -229,11 +424,12 @@ void StreamFeature::toXml(QXmlStreamWriter *writer) const
     for (const auto &mechanism : mechanisms) {
         writeXmlTextElement(writer, u"mechanism", mechanism);
     }
-    if (bind2Available || streamResumptionAvailable) {
+    if (bind2Feature || fast || streamResumptionAvailable) {
         writer->writeStartElement(QSL65("inline"));
-        if (bind2Available) {
-            writeEmptyElement(writer, u"bind", ns_bind2);
+        if (bind2Feature) {
+            bind2Feature->toXml(writer);
         }
+        writeOptional(writer, fast);
         if (streamResumptionAvailable) {
             writeEmptyElement(writer, u"sm", ns_stream_management);
         }
@@ -249,11 +445,7 @@ std::optional<UserAgent> UserAgent::fromDom(const QDomElement &el)
     }
 
     return UserAgent {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
-		QUuid::fromString(el.attribute(QStringLiteral("id"))),
-#else
-		QUuid(el.attribute(QStringLiteral("id"))),
-#endif
+		QUuid::fromString(el.attribute(u"id"_s)),
         firstChildElement(el, u"software", ns_sasl_2).text(),
         firstChildElement(el, u"device", ns_sasl_2).text(),
     };
@@ -281,9 +473,13 @@ std::optional<Authenticate> Authenticate::fromDom(const QDomElement &el)
         return {};
     }
     return Authenticate {
-        el.attribute(QStringLiteral("mechanism")),
+        el.attribute(u"mechanism"_s),
         parseBase64(firstChildElement(el, u"initial-response", ns_sasl_2).text()).value_or(QByteArray()),
         UserAgent::fromDom(firstChildElement(el, u"user-agent", ns_sasl_2)),
+        Bind2Request::fromDom(firstChildElement(el, u"bind", ns_bind2)),
+        SmResume::fromDom(firstChildElement(el, u"resume", ns_stream_management)),
+        FastTokenRequest::fromDom(firstChildElement(el, u"request-token", ns_fast)),
+        FastRequest::fromDom(firstChildElement(el, u"fast", ns_fast)),
     };
 }
 
@@ -296,6 +492,14 @@ void Authenticate::toXml(QXmlStreamWriter *writer) const
     if (userAgent) {
         userAgent->toXml(writer);
     }
+    if (bindRequest) {
+        bindRequest->toXml(writer);
+    }
+    if (smResume) {
+        smResume->toXml(writer);
+    }
+    writeOptional(writer, tokenRequest);
+    writeOptional(writer, fast);
     writer->writeEndElement();
 }
 
@@ -351,6 +555,10 @@ std::optional<Success> Success::fromDom(const QDomElement &el)
     }
 
     output.authorizationIdentifier = firstChildElement(el, u"authorization-identifier", ns_sasl_2).text();
+    output.bound = Bind2Bound::fromDom(firstChildElement(el, u"bound", ns_bind2));
+    output.smResumed = SmResumed::fromDom(firstChildElement(el, u"resumed", ns_stream_management));
+    output.smFailed = SmFailed::fromDom(firstChildElement(el, u"failed", ns_stream_management));
+    output.token = FastToken::fromDom(firstChildElement(el, u"token", ns_fast));
 
     return output;
 }
@@ -363,6 +571,16 @@ void Success::toXml(QXmlStreamWriter *writer) const
         writer->writeTextElement(QSL65("additional-data"), serializeBase64(*additionalData));
     }
     writeXmlTextElement(writer, u"authorization-identifier", authorizationIdentifier);
+    if (bound) {
+        bound->toXml(writer);
+    }
+    if (smResumed) {
+        smResumed->toXml(writer);
+    }
+    if (smFailed) {
+        smFailed->toXml(writer);
+    }
+    writeOptional(writer, token);
     writer->writeEndElement();
 }
 
@@ -453,10 +671,211 @@ void Abort::toXml(QXmlStreamWriter *writer) const
     writer->writeEndElement();
 }
 
+}  // namespace Sasl2
+
+QCryptographicHash::Algorithm ianaHashAlgorithmToQt(IanaHashAlgorithm alg)
+{
+#define CASE(_algorithm)                \
+    case IanaHashAlgorithm::_algorithm: \
+        return QCryptographicHash::_algorithm;
+
+    switch (alg) {
+        CASE(Sha256)
+        CASE(Sha384)
+        CASE(Sha512)
+        CASE(Sha3_224)
+        CASE(Sha3_256)
+        CASE(Sha3_384)
+        CASE(Sha3_512)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        CASE(Blake2s_256)
+        CASE(Blake2b_256)
+        CASE(Blake2b_512)
+#endif
+    }
+    Q_UNREACHABLE();
+#undef CASE
+}
+
+std::optional<SaslScramMechanism> SaslScramMechanism::fromString(QStringView str)
+{
+    if (str == u"SCRAM-SHA-1") {
+        return { { Sha1 } };
+    }
+    if (str == u"SCRAM-SHA-256") {
+        return { { Sha256 } };
+    }
+    if (str == u"SCRAM-SHA-512") {
+        return { { Sha512 } };
+    }
+    if (str == u"SCRAM-SHA3-512") {
+        return { { Sha3_512 } };
+    }
+    return {};
+}
+
+QString SaslScramMechanism::toString() const
+{
+    switch (algorithm) {
+    case Sha1:
+        return u"SCRAM-SHA-1"_s;
+    case Sha256:
+        return u"SCRAM-SHA-256"_s;
+    case Sha512:
+        return u"SCRAM-SHA-512"_s;
+    case Sha3_512:
+        return u"SCRAM-SHA3-512"_s;
+    }
+    Q_UNREACHABLE();
+}
+
+QCryptographicHash::Algorithm SaslScramMechanism::qtAlgorithm() const
+{
+    switch (algorithm) {
+    case Sha1:
+        return QCryptographicHash::Sha1;
+    case Sha256:
+        return QCryptographicHash::Sha256;
+    case Sha512:
+        return QCryptographicHash::Sha512;
+    case Sha3_512:
+        return QCryptographicHash::Sha3_512;
+    }
+    Q_UNREACHABLE();
+}
+
+std::optional<SaslHtMechanism> SaslHtMechanism::fromString(QStringView string)
+{
+    // prefix
+    static constexpr QStringView prefix = u"HT-";
+    if (!string.startsWith(prefix)) {
+        return {};
+    }
+    string = string.mid(prefix.size());
+
+    // hash algorithm
+    // C++23: use enumerate view
+    std::optional<IanaHashAlgorithm> algorithm;
+    for (size_t i = 0; i < ianaHashAlgorithms.size(); ++i) {
+        if (string.startsWith(ianaHashAlgorithms.at(i))) {
+            algorithm = IanaHashAlgorithm(i);
+            string = string.mid(ianaHashAlgorithms.at(i).size());
+        }
+    }
+    if (!algorithm) {
+        return {};
+    }
+
+    // channel-binding type
+    if (string == u"-ENDP") {
+        return SaslHtMechanism { *algorithm, TlsServerEndpoint };
+    }
+    if (string == u"-UNIQ") {
+        return SaslHtMechanism { *algorithm, TlsUnique };
+    }
+    if (string == u"-EXPR") {
+        return SaslHtMechanism { *algorithm, TlsExporter };
+    }
+    if (string == u"-NONE") {
+        return SaslHtMechanism { *algorithm, None };
+    }
+    return {};
+}
+
+static QStringView channelBindingTypeToString(SaslHtMechanism::ChannelBindingType t)
+{
+    switch (t) {
+    case SaslHtMechanism::TlsServerEndpoint:
+        return u"ENDP";
+    case SaslHtMechanism::TlsUnique:
+        return u"UNIQ";
+    case SaslHtMechanism::TlsExporter:
+        return u"EXPR";
+    case SaslHtMechanism::None:
+        return u"NONE";
+    }
+    Q_UNREACHABLE();
+}
+
+QString SaslHtMechanism::toString() const
+{
+    return u"HT-" + ianaHashAlgorithms.at(size_t(hashAlgorithm)) + u'-' + channelBindingTypeToString(channelBindingType);
+}
+
+std::optional<SaslMechanism> SaslMechanism::fromString(QStringView str)
+{
+    if (str.startsWith(u"SCRAM-")) {
+        return into<SaslMechanism>(SaslScramMechanism::fromString(str));
+    }
+    if (str.startsWith(u"HT-")) {
+        return into<SaslMechanism>(SaslHtMechanism::fromString(str));
+    }
+    if (str == u"DIGEST-MD5") {
+        return { { SaslDigestMd5Mechanism() } };
+    }
+    if (str == u"PLAIN") {
+        return { { SaslPlainMechanism() } };
+    }
+    if (str == u"ANONYMOUS") {
+        return { { SaslAnonymousMechanism() } };
+    }
+    if (str == u"X-FACEBOOK-PLATFORM") {
+        return { { SaslXFacebookMechanism() } };
+    }
+    if (str == u"X-MESSENGER-OAUTH2") {
+        return { { SaslXWindowsLiveMechanism() } };
+    }
+    if (str == u"X-OAUTH2") {
+        return { { SaslXGoogleMechanism() } };
+    }
+    return {};
+}
+
+QString SaslMechanism::toString() const
+{
+    return visit(
+        overloaded {
+            [](SaslScramMechanism scram) { return scram.toString(); },
+            [](SaslHtMechanism ht) { return ht.toString(); },
+            [](SaslDigestMd5Mechanism) { return u"DIGEST-MD5"_s; },
+            [](SaslPlainMechanism) { return u"PLAIN"_s; },
+            [](SaslAnonymousMechanism) { return u"ANONYMOUS"_s; },
+            [](SaslXFacebookMechanism) { return u"X-FACEBOOK-PLATFORM"_s; },
+            [](SaslXWindowsLiveMechanism) { return u"X-MESSENGER-OAUTH2"_s; },
+            [](SaslXGoogleMechanism) { return u"X-OAUTH2"_s; },
+        },
+        *this);
+}
+
+std::optional<HtToken> HtToken::fromXml(QXmlStreamReader &r)
+{
+    if (r.name() != u"ht-token" || r.namespaceUri() != ns_qxmpp_credentials) {
+        return {};
+    }
+    const auto &attrs = r.attributes();
+    if (auto mechanism = SaslHtMechanism::fromString(attrs.value("mechanism"_L1))) {
+        return HtToken {
+            *mechanism,
+            attrs.value("secret"_L1).toString(),
+            QXmppUtils::datetimeFromString(toString60(attrs.value("expiry"_L1))),
+        };
+    }
+    return {};
+}
+
+void HtToken::toXml(QXmlStreamWriter &w) const
+{
+    w.writeStartElement(QSL65("ht-token"));
+    w.writeAttribute(QSL65("mechanism"), mechanism.toString());
+    w.writeAttribute(QSL65("secret"), secret);
+    w.writeAttribute(QSL65("expiry"), expiry.toString(Qt::ISODate));
+    w.writeEndElement();
+}
+
 #if defined(SFOS)
-}  }  } // namespace QXmpp Private  Sasl2
+} }
 #else
-}  // namespace QXmpp::Private::Sasl2
+}  // namespace QXmpp::Private
 #endif
 
 ///
@@ -536,18 +955,6 @@ void QXmppSasl2UserAgent::setDeviceName(const QString &device)
     d->device = device;
 }
 
-// When adding new algorithms, also add them to QXmppSaslClient::availableMechanisms().
-static const QMap<QStringView, QCryptographicHash::Algorithm> SCRAM_ALGORITHMS = {
-    { u"SCRAM-SHA-1", QCryptographicHash::Sha1 },
-    { u"SCRAM-SHA-256", QCryptographicHash::Sha256 },
-    { u"SCRAM-SHA-512", QCryptographicHash::Sha512 },
-#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 2)
-	{ u"SCRAM-SHA3-512", QCryptographicHash::RealSha3_512 },
-#else
-	{ u"SCRAM-SHA3-512", QCryptographicHash::Sha3_512 },
-#endif
-};
-
 // Calculate digest response for use with XMPP/SASL.
 
 static QByteArray calculateDigest(const QByteArray &method, const QByteArray &digestUri, const QByteArray &secret, const QByteArray &nonce, const QByteArray &cnonce, const QByteArray &nc)
@@ -559,36 +966,6 @@ static QByteArray calculateDigest(const QByteArray &method, const QByteArray &di
     QByteArray HA2 = QCryptographicHash::hash(A2, QCryptographicHash::Md5).toHex();
     const QByteArray KD = HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ":auth:" + HA2;
     return QCryptographicHash::hash(KD, QCryptographicHash::Md5).toHex();
-}
-
-// Perform PBKFD2 key derivation, code taken from Qt 5.12
-
-static QByteArray deriveKeyPbkdf2(QCryptographicHash::Algorithm algorithm,
-                                  const QByteArray &data, const QByteArray &salt,
-                                  int iterations, quint64 dkLen)
-{
-    QByteArray key;
-    quint32 currentIteration = 1;
-    QMessageAuthenticationCode hmac(algorithm, data);
-    QByteArray index(4, Qt::Uninitialized);
-    while (quint64(key.length()) < dkLen) {
-        hmac.addData(salt);
-        qToBigEndian(currentIteration, reinterpret_cast<uchar *>(index.data()));
-        hmac.addData(index);
-        QByteArray u = hmac.result();
-        hmac.reset();
-        QByteArray tkey = u;
-        for (int iter = 1; iter < iterations; iter++) {
-            hmac.addData(u);
-            u = hmac.result();
-            hmac.reset();
-            std::transform(tkey.cbegin(), tkey.cend(), u.cbegin(), tkey.begin(),
-                           std::bit_xor<char>());
-        }
-        key += tkey;
-        currentIteration++;
-    }
-    return key.left(dkLen);
 }
 
 static QByteArray generateNonce()
@@ -616,122 +993,79 @@ static QMap<char, QByteArray> parseGS2(const QByteArray &ba)
     return map;
 }
 
-class QXmppSaslClientPrivate
+bool QXmppSaslClient::isMechanismAvailable(SaslMechanism mechanism, const Credentials &credentials)
 {
-public:
-    QString host;
-    QString serviceType;
-    QString username;
-    QString password;
-};
-
-QXmppSaslClient::QXmppSaslClient(QObject *parent)
-    : QXmppLoggable(parent),
-      d(std::make_unique<QXmppSaslClientPrivate>())
-{
-}
-
-QXmppSaslClient::~QXmppSaslClient() = default;
-
-///
-/// Returns a list of supported mechanisms.
-///
-QStringList QXmppSaslClient::availableMechanisms()
-{
-    return {
-        QStringLiteral("SCRAM-SHA3-512"),
-        QStringLiteral("SCRAM-SHA-512"),
-        QStringLiteral("SCRAM-SHA-256"),
-        QStringLiteral("SCRAM-SHA-1"),
-        QStringLiteral("DIGEST-MD5"),
-        QStringLiteral("PLAIN"),
-        QStringLiteral("ANONYMOUS"),
-        QStringLiteral("X-FACEBOOK-PLATFORM"),
-        QStringLiteral("X-MESSENGER-OAUTH2"),
-        QStringLiteral("X-OAUTH2"),
-    };
+    return visit(
+        overloaded {
+            [&](SaslHtMechanism ht) {
+                return credentials.htToken &&
+                    credentials.htToken->mechanism == ht &&
+                    ht.channelBindingType == SaslHtMechanism::None;
+            },
+            [&](std::variant<SaslScramMechanism, SaslDigestMd5Mechanism, SaslPlainMechanism>) {
+                return !credentials.password.isEmpty();
+            },
+            [&](SaslXFacebookMechanism) {
+                return !credentials.facebookAccessToken.isEmpty() && !credentials.facebookAppId.isEmpty();
+            },
+            [&](SaslXWindowsLiveMechanism) {
+                return !credentials.windowsLiveAccessToken.isEmpty();
+            },
+            [&](SaslXGoogleMechanism) {
+                return !credentials.googleAccessToken.isEmpty();
+            },
+            [](SaslAnonymousMechanism) {
+                return true;
+            } },
+        mechanism);
 }
 
 ///
 /// Creates an SASL client for the given mechanism.
 ///
-std::unique_ptr<QXmppSaslClient> QXmppSaslClient::create(const QString &mechanism, QObject *parent)
+std::unique_ptr<QXmppSaslClient> QXmppSaslClient::create(const QString &string, QObject *parent)
 {
-    if (mechanism == u"PLAIN") {
-        return std::make_unique<QXmppSaslClientPlain>(parent);
-    } else if (mechanism == u"DIGEST-MD5") {
-        return std::make_unique<QXmppSaslClientDigestMd5>(parent);
-    } else if (mechanism == u"ANONYMOUS") {
-        return std::make_unique<QXmppSaslClientAnonymous>(parent);
-    } else if (SCRAM_ALGORITHMS.contains(mechanism)) {
-        return std::make_unique<QXmppSaslClientScram>(SCRAM_ALGORITHMS.value(mechanism), parent);
-    } else if (mechanism == u"X-FACEBOOK-PLATFORM") {
-        return std::make_unique<QXmppSaslClientFacebook>(parent);
-    } else if (mechanism == u"X-MESSENGER-OAUTH2") {
-        return std::make_unique<QXmppSaslClientWindowsLive>(parent);
-    } else if (mechanism == u"X-OAUTH2") {
-        return std::make_unique<QXmppSaslClientGoogle>(parent);
-    } else {
-        return nullptr;
+    if (auto mechanism = SaslMechanism::fromString(string)) {
+        return create(*mechanism, parent);
     }
+    return nullptr;
 }
 
-/// Returns the host.
-QString QXmppSaslClient::host() const
+std::unique_ptr<QXmppSaslClient> QXmppSaslClient::create(SaslMechanism mechanism, QObject *parent)
 {
-    return d->host;
-}
-
-/// Sets the host.
-void QXmppSaslClient::setHost(const QString &host)
-{
-    d->host = host;
-}
-
-/// Returns the service type, e.g. "xmpp".
-QString QXmppSaslClient::serviceType() const
-{
-    return d->serviceType;
-}
-
-/// Sets the service type, e.g. "xmpp".
-void QXmppSaslClient::setServiceType(const QString &serviceType)
-{
-    d->serviceType = serviceType;
-}
-
-/// Returns the username.
-QString QXmppSaslClient::username() const
-{
-    return d->username;
-}
-
-/// Sets the username.
-void QXmppSaslClient::setUsername(const QString &username)
-{
-    d->username = username;
-}
-
-/// Returns the password.
-QString QXmppSaslClient::password() const
-{
-    return d->password;
-}
-
-/// Sets the password.
-void QXmppSaslClient::setPassword(const QString &password)
-{
-    d->password = password;
+    return visit<std::unique_ptr<QXmppSaslClient>>(
+        overloaded {
+            [&](SaslScramMechanism scram) {
+                return std::make_unique<QXmppSaslClientScram>(scram, parent);
+            },
+            [&](SaslHtMechanism ht) {
+                return std::make_unique<QXmppSaslClientHt>(ht, parent);
+            },
+            [&](SaslPlainMechanism) {
+                return std::make_unique<QXmppSaslClientPlain>(parent);
+            },
+            [&](SaslDigestMd5Mechanism) {
+                return std::make_unique<QXmppSaslClientDigestMd5>(parent);
+            },
+            [&](SaslAnonymousMechanism) {
+                return std::make_unique<QXmppSaslClientAnonymous>(parent);
+            },
+            [&](SaslXFacebookMechanism) {
+                return std::make_unique<QXmppSaslClientFacebook>(parent);
+            },
+            [&](SaslXWindowsLiveMechanism) {
+                return std::make_unique<QXmppSaslClientWindowsLive>(parent);
+            },
+            [&](SaslXGoogleMechanism) {
+                return std::make_unique<QXmppSaslClientGoogle>(parent);
+            },
+        },
+        mechanism);
 }
 
 QXmppSaslClientAnonymous::QXmppSaslClientAnonymous(QObject *parent)
     : QXmppSaslClient(parent), m_step(0)
 {
-}
-
-QString QXmppSaslClientAnonymous::mechanism() const
-{
-    return QStringLiteral("ANONYMOUS");
 }
 
 std::optional<QByteArray> QXmppSaslClientAnonymous::respond(const QByteArray &)
@@ -740,7 +1074,7 @@ std::optional<QByteArray> QXmppSaslClientAnonymous::respond(const QByteArray &)
         m_step++;
         return QByteArray();
     } else {
-        warning(QStringLiteral("QXmppSaslClientAnonymous : Invalid step"));
+        warning(u"QXmppSaslClientAnonymous : Invalid step"_s);
         return {};
     }
 }
@@ -751,15 +1085,14 @@ QXmppSaslClientDigestMd5::QXmppSaslClientDigestMd5(QObject *parent)
     m_cnonce = generateNonce();
 }
 
-QString QXmppSaslClientDigestMd5::mechanism() const
+void QXmppSaslClientDigestMd5::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return QStringLiteral("DIGEST-MD5");
+    m_password = credentials.password;
 }
 
 std::optional<QByteArray> QXmppSaslClientDigestMd5::respond(const QByteArray &challenge)
 {
-    Q_UNUSED(challenge);
-    const QByteArray digestUri = QStringLiteral("%1/%2").arg(serviceType(), host()).toUtf8();
+    const QByteArray digestUri = u"%1/%2"_s.arg(serviceType(), host()).toUtf8();
 
     if (m_step == 0) {
         m_step++;
@@ -768,7 +1101,7 @@ std::optional<QByteArray> QXmppSaslClientDigestMd5::respond(const QByteArray &ch
         const QMap<QByteArray, QByteArray> input = QXmppSaslDigestMd5::parseMessage(challenge);
 
         if (!input.contains(QByteArrayLiteral("nonce"))) {
-            warning(QStringLiteral("QXmppSaslClientDigestMd5 : Invalid input on step 1"));
+            warning(u"QXmppSaslClientDigestMd5 : Invalid input on step 1"_s);
             return {};
         }
 
@@ -778,13 +1111,13 @@ std::optional<QByteArray> QXmppSaslClientDigestMd5::respond(const QByteArray &ch
         // determine quality of protection
         const QList<QByteArray> qops = input.value(QByteArrayLiteral("qop"), QByteArrayLiteral("auth")).split(',');
         if (!qops.contains(QByteArrayLiteral("auth"))) {
-            warning(QStringLiteral("QXmppSaslClientDigestMd5 : Invalid quality of protection"));
+            warning(u"QXmppSaslClientDigestMd5 : Invalid quality of protection"_s);
             return {};
         }
 
         m_nonce = input.value(QByteArrayLiteral("nonce"));
         m_secret = QCryptographicHash::hash(
-            QByteArray(username().toUtf8() + QByteArrayLiteral(":") + realm + QByteArrayLiteral(":") + password().toUtf8()),
+            QByteArray(username().toUtf8() + QByteArrayLiteral(":") + realm + QByteArrayLiteral(":") + m_password.toUtf8()),
             QCryptographicHash::Md5);
 
         // Build response
@@ -808,14 +1141,14 @@ std::optional<QByteArray> QXmppSaslClientDigestMd5::respond(const QByteArray &ch
 
         // check new challenge
         if (input.value(QByteArrayLiteral("rspauth")) != calculateDigest(QByteArray(), digestUri, m_secret, m_nonce, m_cnonce, m_nc)) {
-            warning(QStringLiteral("QXmppSaslClientDigestMd5 : Invalid challenge on step 2"));
+            warning(u"QXmppSaslClientDigestMd5 : Invalid challenge on step 2"_s);
             return {};
         }
 
         m_step++;
         return QByteArray();
     } else {
-        warning(QStringLiteral("QXmppSaslClientDigestMd5 : Invalid step"));
+        warning(u"QXmppSaslClientDigestMd5 : Invalid step"_s);
         return {};
     }
 }
@@ -825,11 +1158,11 @@ QXmppSaslClientFacebook::QXmppSaslClientFacebook(QObject *parent)
 {
 }
 
-QString QXmppSaslClientFacebook::mechanism() const
+void QXmppSaslClientFacebook::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return QStringLiteral("X-FACEBOOK-PLATFORM");
+    m_accessToken = credentials.facebookAccessToken;
+    m_appId = credentials.facebookAppId;
 }
-
 std::optional<QByteArray> QXmppSaslClientFacebook::respond(const QByteArray &challenge)
 {
     if (m_step == 0) {
@@ -839,24 +1172,24 @@ std::optional<QByteArray> QXmppSaslClientFacebook::respond(const QByteArray &cha
     } else if (m_step == 1) {
         // parse request
         QUrlQuery requestUrl(QString::fromUtf8(challenge));
-        if (!requestUrl.hasQueryItem(QStringLiteral("method")) || !requestUrl.hasQueryItem(QStringLiteral("nonce"))) {
-            warning(QStringLiteral("QXmppSaslClientFacebook : Invalid challenge, nonce or method missing"));
+        if (!requestUrl.hasQueryItem(u"method"_s) || !requestUrl.hasQueryItem(u"nonce"_s)) {
+            warning(u"QXmppSaslClientFacebook : Invalid challenge, nonce or method missing"_s);
             return {};
         }
 
         // build response
         QUrlQuery responseUrl;
-        responseUrl.addQueryItem(QStringLiteral("access_token"), password());
-        responseUrl.addQueryItem(QStringLiteral("api_key"), username());
-        responseUrl.addQueryItem(QStringLiteral("call_id"), QString());
-        responseUrl.addQueryItem(QStringLiteral("method"), requestUrl.queryItemValue(QStringLiteral("method")));
-        responseUrl.addQueryItem(QStringLiteral("nonce"), requestUrl.queryItemValue(QStringLiteral("nonce")));
-        responseUrl.addQueryItem(QStringLiteral("v"), QStringLiteral("1.0"));
+        responseUrl.addQueryItem(u"access_token"_s, m_accessToken);
+        responseUrl.addQueryItem(u"api_key"_s, m_appId);
+        responseUrl.addQueryItem(u"call_id"_s, QString());
+        responseUrl.addQueryItem(u"method"_s, requestUrl.queryItemValue(u"method"_s));
+        responseUrl.addQueryItem(u"nonce"_s, requestUrl.queryItemValue(u"nonce"_s));
+        responseUrl.addQueryItem(u"v"_s, u"1.0"_s);
 
         m_step++;
         return responseUrl.query().toUtf8();
     } else {
-        warning(QStringLiteral("QXmppSaslClientFacebook : Invalid step"));
+        warning(u"QXmppSaslClientFacebook : Invalid step"_s);
         return {};
     }
 }
@@ -866,9 +1199,9 @@ QXmppSaslClientGoogle::QXmppSaslClientGoogle(QObject *parent)
 {
 }
 
-QString QXmppSaslClientGoogle::mechanism() const
+void QXmppSaslClientGoogle::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return QStringLiteral("X-OAUTH2");
+    m_accessToken = credentials.googleAccessToken;
 }
 
 std::optional<QByteArray> QXmppSaslClientGoogle::respond(const QByteArray &)
@@ -876,9 +1209,9 @@ std::optional<QByteArray> QXmppSaslClientGoogle::respond(const QByteArray &)
     if (m_step == 0) {
         // send initial response
         m_step++;
-        return QString(u'\0' + username() + u'\0' + password()).toUtf8();
+        return QString(u'\0' + username() + u'\0' + m_accessToken).toUtf8();
     } else {
-        warning(QStringLiteral("QXmppSaslClientGoogle : Invalid step"));
+        warning(u"QXmppSaslClientGoogle : Invalid step"_s);
         return {};
     }
 }
@@ -888,41 +1221,38 @@ QXmppSaslClientPlain::QXmppSaslClientPlain(QObject *parent)
 {
 }
 
-QString QXmppSaslClientPlain::mechanism() const
+void QXmppSaslClientPlain::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return QStringLiteral("PLAIN");
+    m_password = credentials.password;
 }
 
 std::optional<QByteArray> QXmppSaslClientPlain::respond(const QByteArray &)
 {
     if (m_step == 0) {
         m_step++;
-        return QString(u'\0' + username() + u'\0' + password()).toUtf8();
+        return QString(u'\0' + username() + u'\0' + m_password).toUtf8();
     } else {
-        warning(QStringLiteral("QXmppSaslClientPlain : Invalid step"));
+        warning(u"QXmppSaslClientPlain : Invalid step"_s);
         return {};
     }
 }
 
-QXmppSaslClientScram::QXmppSaslClientScram(QCryptographicHash::Algorithm algorithm, QObject *parent)
+QXmppSaslClientScram::QXmppSaslClientScram(SaslScramMechanism mechanism, QObject *parent)
     : QXmppSaslClient(parent),
-      m_algorithm(algorithm),
+      m_mechanism(mechanism),
       m_step(0),
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
-	  m_dklen(QCryptographicHash::hashLength(algorithm))
+	m_dklen(QCryptographicHash::hashLength(m_mechanism.qtAlgorithm()))
 #else
       m_dklen(hashLength(algorithm))
 #endif
 {
-    const auto itr = std::find(SCRAM_ALGORITHMS.cbegin(), SCRAM_ALGORITHMS.cend(), algorithm);
-    Q_ASSERT(itr != SCRAM_ALGORITHMS.cend());
-
     m_nonce = generateNonce();
 }
 
-QString QXmppSaslClientScram::mechanism() const
+void QXmppSaslClientScram::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return SCRAM_ALGORITHMS.key(m_algorithm).toString();
+    m_password = credentials.password;
 }
 
 std::optional<QByteArray> QXmppSaslClientScram::respond(const QByteArray &challenge)
@@ -945,17 +1275,17 @@ std::optional<QByteArray> QXmppSaslClientScram::respond(const QByteArray &challe
 
         // calculate proofs
         const QByteArray clientFinalMessageBare = QByteArrayLiteral("c=") + m_gs2Header.toBase64() + QByteArrayLiteral(",r=") + nonce;
-        const QByteArray saltedPassword = deriveKeyPbkdf2(m_algorithm, password().toUtf8(), salt,
-                                                          iterations, m_dklen);
-        const QByteArray clientKey = QMessageAuthenticationCode::hash(QByteArrayLiteral("Client Key"), saltedPassword, m_algorithm);
-        const QByteArray storedKey = QCryptographicHash::hash(clientKey, m_algorithm);
+        const QByteArray saltedPassword = QPasswordDigestor::deriveKeyPbkdf2(
+            m_mechanism.qtAlgorithm(), m_password.toUtf8(), salt, iterations, m_dklen);
+        const QByteArray clientKey = QMessageAuthenticationCode::hash(QByteArrayLiteral("Client Key"), saltedPassword, m_mechanism.qtAlgorithm());
+        const QByteArray storedKey = QCryptographicHash::hash(clientKey, m_mechanism.qtAlgorithm());
         const QByteArray authMessage = m_clientFirstMessageBare + QByteArrayLiteral(",") + challenge + QByteArrayLiteral(",") + clientFinalMessageBare;
-        QByteArray clientProof = QMessageAuthenticationCode::hash(authMessage, storedKey, m_algorithm);
+        QByteArray clientProof = QMessageAuthenticationCode::hash(authMessage, storedKey, m_mechanism.qtAlgorithm());
         std::transform(clientProof.cbegin(), clientProof.cend(), clientKey.cbegin(),
                        clientProof.begin(), std::bit_xor<char>());
 
-        const QByteArray serverKey = QMessageAuthenticationCode::hash(QByteArrayLiteral("Server Key"), saltedPassword, m_algorithm);
-        m_serverSignature = QMessageAuthenticationCode::hash(authMessage, serverKey, m_algorithm);
+        const QByteArray serverKey = QMessageAuthenticationCode::hash(QByteArrayLiteral("Server Key"), saltedPassword, m_mechanism.qtAlgorithm());
+        m_serverSignature = QMessageAuthenticationCode::hash(authMessage, serverKey, m_mechanism.qtAlgorithm());
 
         m_step++;
         return clientFinalMessageBare + QByteArrayLiteral(",p=") + clientProof.toBase64();
@@ -967,7 +1297,7 @@ std::optional<QByteArray> QXmppSaslClientScram::respond(const QByteArray &challe
         }
         return {};
     } else {
-        warning(QStringLiteral("QXmppSaslClientPlain : Invalid step"));
+        warning(u"QXmppSaslClientPlain : Invalid step"_s);
         return {};
     }
 }
@@ -977,9 +1307,9 @@ QXmppSaslClientWindowsLive::QXmppSaslClientWindowsLive(QObject *parent)
 {
 }
 
-QString QXmppSaslClientWindowsLive::mechanism() const
+void QXmppSaslClientWindowsLive::setCredentials(const QXmpp::Private::Credentials &credentials)
 {
-    return QStringLiteral("X-MESSENGER-OAUTH2");
+    m_accessToken = credentials.windowsLiveAccessToken;
 }
 
 std::optional<QByteArray> QXmppSaslClientWindowsLive::respond(const QByteArray &)
@@ -987,9 +1317,9 @@ std::optional<QByteArray> QXmppSaslClientWindowsLive::respond(const QByteArray &
     if (m_step == 0) {
         // send initial response
         m_step++;
-        return QByteArray::fromBase64(password().toLatin1());
+        return QByteArray::fromBase64(m_accessToken.toLatin1());
     } else {
-        warning(QStringLiteral("QXmppSaslClientWindowsLive : Invalid step"));
+        warning(u"QXmppSaslClientWindowsLive : Invalid step"_s);
         return {};
     }
 }
@@ -1014,11 +1344,11 @@ QXmppSaslServer::~QXmppSaslServer() = default;
 /// Creates an SASL server for the given mechanism.
 std::unique_ptr<QXmppSaslServer> QXmppSaslServer::create(const QString &mechanism, QObject *parent)
 {
-    if (mechanism == QStringLiteral("PLAIN")) {
+    if (mechanism == u"PLAIN") {
         return std::make_unique<QXmppSaslServerPlain>(parent);
-    } else if (mechanism == QStringLiteral("DIGEST-MD5")) {
+    } else if (mechanism == u"DIGEST-MD5") {
         return std::make_unique<QXmppSaslServerDigestMd5>(parent);
-    } else if (mechanism == QStringLiteral("ANONYMOUS")) {
+    } else if (mechanism == u"ANONYMOUS") {
         return std::make_unique<QXmppSaslServerAnonymous>(parent);
     } else {
         return {};
@@ -1080,7 +1410,7 @@ QXmppSaslServerAnonymous::QXmppSaslServerAnonymous(QObject *parent)
 
 QString QXmppSaslServerAnonymous::mechanism() const
 {
-    return QStringLiteral("ANONYMOUS");
+    return u"ANONYMOUS"_s;
 }
 
 QXmppSaslServer::Response QXmppSaslServerAnonymous::respond(const QByteArray &request, QByteArray &response)
@@ -1091,7 +1421,7 @@ QXmppSaslServer::Response QXmppSaslServerAnonymous::respond(const QByteArray &re
         response = QByteArray();
         return Succeeded;
     } else {
-        warning(QStringLiteral("QXmppSaslServerAnonymous : Invalid step"));
+        warning(u"QXmppSaslServerAnonymous : Invalid step"_s);
         return Failed;
     }
 }
@@ -1104,7 +1434,7 @@ QXmppSaslServerDigestMd5::QXmppSaslServerDigestMd5(QObject *parent)
 
 QString QXmppSaslServerDigestMd5::mechanism() const
 {
-    return QStringLiteral("DIGEST-MD5");
+    return u"DIGEST-MD5"_s;
 }
 
 QXmppSaslServer::Response QXmppSaslServerDigestMd5::respond(const QByteArray &request, QByteArray &response)
@@ -1128,7 +1458,7 @@ QXmppSaslServer::Response QXmppSaslServerDigestMd5::respond(const QByteArray &re
         const QByteArray digestUri = input.value(QByteArrayLiteral("digest-uri"));
 
         if (input.value(QByteArrayLiteral("qop")) != QByteArrayLiteral("auth")) {
-            warning(QStringLiteral("QXmppSaslServerDigestMd5 : Invalid quality of protection"));
+            warning(u"QXmppSaslServerDigestMd5 : Invalid quality of protection"_s);
             return Failed;
         }
 
@@ -1162,7 +1492,7 @@ QXmppSaslServer::Response QXmppSaslServerDigestMd5::respond(const QByteArray &re
         response = QByteArray();
         return Succeeded;
     } else {
-        warning(QStringLiteral("QXmppSaslServerDigestMd5 : Invalid step"));
+        warning(u"QXmppSaslServerDigestMd5 : Invalid step"_s);
         return Failed;
     }
 }
@@ -1174,7 +1504,7 @@ QXmppSaslServerPlain::QXmppSaslServerPlain(QObject *parent)
 
 QString QXmppSaslServerPlain::mechanism() const
 {
-    return QStringLiteral("PLAIN");
+    return u"PLAIN"_s;
 }
 
 QXmppSaslServer::Response QXmppSaslServerPlain::respond(const QByteArray &request, QByteArray &response)
@@ -1187,7 +1517,7 @@ QXmppSaslServer::Response QXmppSaslServerPlain::respond(const QByteArray &reques
 
         QList<QByteArray> auth = request.split('\0');
         if (auth.size() != 3) {
-            warning(QStringLiteral("QXmppSaslServerPlain : Invalid input"));
+            warning(u"QXmppSaslServerPlain : Invalid input"_s);
             return Failed;
         }
         setUsername(QString::fromUtf8(auth[1]));
@@ -1197,7 +1527,7 @@ QXmppSaslServer::Response QXmppSaslServerPlain::respond(const QByteArray &reques
         response = QByteArray();
         return InputNeeded;
     } else {
-        warning(QStringLiteral("QXmppSaslServerPlain : Invalid step"));
+        warning(u"QXmppSaslServerPlain : Invalid step"_s);
         return Failed;
     }
 }
@@ -1281,4 +1611,24 @@ QByteArray QXmppSaslDigestMd5::serializeMessage(const QMap<QByteArray, QByteArra
         }
     }
     return ba;
+}
+
+std::optional<QByteArray> QXmppSaslClientHt::respond(const QByteArray &challenge)
+{
+    // TODO: verify <additional-data/> provided by SASL 2 (hmac of 'Responder' + cb data).
+
+    Q_ASSERT(m_mechanism.channelBindingType == QXmpp::Private::SaslHtMechanism::None);
+
+    if (m_done || !challenge.isEmpty() || !m_token || m_mechanism != m_token->mechanism) {
+        return {};
+    }
+
+    // calculate token hash
+    QMessageAuthenticationCode hmac(
+        ianaHashAlgorithmToQt(m_mechanism.hashAlgorithm),
+        m_token->secret.toUtf8());
+    hmac.addData("Initiator");
+
+    m_done = true;
+    return username().toUtf8() + char(0) + hmac.result();
 }

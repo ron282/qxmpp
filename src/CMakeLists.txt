@@ -12,6 +12,7 @@ add_definitions(
 set(INSTALL_HEADER_FILES
     # 3rd Party
     3rdparty/QEmuStringView/QEmuStringView.h
+    3rdparty/rx/ranges.hpp
 
     # Base
     base/QXmppArchiveIq.h
@@ -82,8 +83,6 @@ set(INSTALL_HEADER_FILES
     base/QXmppSendResult.h
     base/QXmppSocks.h
     base/QXmppStanza.h
-    base/QXmppStartTlsPacket.h
-    base/QXmppStream.h
     base/QXmppStreamError.h
     base/QXmppStreamFeatures.h
     base/QXmppStun.h
@@ -94,13 +93,16 @@ set(INSTALL_HEADER_FILES
     base/QXmppTrustMessages.h
     base/QXmppUserTuneItem.h
     base/QXmppUtils.h
+    base/QXmppUri.h
     base/QXmppVCardIq.h
     base/QXmppVersionIq.h
     base/compat/QXmppSessionIq.h
+    base/compat/QXmppStartTlsPacket.h
     base/compat/QXmppPubSubIq.h
     base/compat/QXmppPubSubItem.h
 
     # Client
+    client/QXmppAccountMigrationManager.h
     client/QXmppArchiveManager.h
     client/QXmppAtmManager.h
     client/QXmppAtmTrustMemoryStorage.h
@@ -116,6 +118,7 @@ set(INSTALL_HEADER_FILES
     client/QXmppClient.h
     client/QXmppClientExtension.h
     client/QXmppConfiguration.h
+    client/QXmppCredentials.h
     client/QXmppDiscoveryManager.h
     client/QXmppE2eeExtension.h
     client/QXmppEntityTimeManager.h
@@ -166,6 +169,7 @@ set(INSTALL_HEADER_FILES
 
 set(SOURCE_FILES
     # Base
+    base/Stream.cpp
     base/QXmppArchiveIq.cpp
     base/QXmppBindIq.cpp
     base/QXmppBitsOfBinaryContentId.cpp
@@ -223,8 +227,6 @@ set(SOURCE_FILES
     base/QXmppSasl.cpp
     base/QXmppSocks.cpp
     base/QXmppStanza.cpp
-    base/QXmppStartTlsPacket.cpp
-    base/QXmppStream.cpp
     base/QXmppStreamFeatures.cpp
     base/QXmppStreamInitiationIq.cpp
     base/QXmppStreamManagement.cpp
@@ -232,6 +234,7 @@ set(SOURCE_FILES
     base/QXmppTask.cpp
     base/QXmppThumbnail.cpp
     base/QXmppTrustMessages.cpp
+    base/QXmppUri.cpp
     base/QXmppUserTuneItem.cpp
     base/QXmppUtils.cpp
     base/QXmppVCardIq.cpp
@@ -241,6 +244,7 @@ set(SOURCE_FILES
     base/XmppSocket.h
 
     # Client
+    client/QXmppAccountMigrationManager.cpp
     client/QXmppArchiveManager.cpp
     client/QXmppAtmManager.cpp
     client/QXmppAtmTrustMemoryStorage.cpp
@@ -261,7 +265,6 @@ set(SOURCE_FILES
     client/QXmppFileSharingManager.cpp
     client/QXmppHttpFileSharingProvider.cpp
     client/QXmppHttpUploadManager.cpp
-    client/QXmppInternalClientExtension.cpp
     client/QXmppInvokable.cpp
     client/QXmppIqHandling.cpp
     client/QXmppJingleMessageInitiationManager.cpp
@@ -277,7 +280,6 @@ set(SOURCE_FILES
     client/QXmppRpcManager.cpp
     client/QXmppSaslManager.cpp
     client/QXmppSendStanzaParams.cpp
-    client/QXmppTlsManager.cpp
     client/QXmppTransferManager.cpp
     client/QXmppTrustManager.cpp
     client/QXmppTrustMemoryStorage.cpp
@@ -315,6 +317,7 @@ set_target_properties(${QXMPP_TARGET} PROPERTIES
 target_include_directories(${QXMPP_TARGET}
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/QEmuStringView>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/rx>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/base>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/client>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/server>
