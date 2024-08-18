@@ -7,6 +7,8 @@
 #include "QXmppConstants_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QXmlStreamWriter>
 
@@ -144,7 +146,7 @@ void QXmppGeolocItem::setLongitude(std::optional<double> lon)
 bool QXmppGeolocItem::isItem(const QDomElement &itemElement)
 {
     auto isPayloadValid = [](const QDomElement &payload) -> bool {
-        return payload.tagName() == QStringLiteral("geoloc") &&
+        return payload.tagName() == u"geoloc" &&
             payload.namespaceURI() == ns_geoloc;
     };
 
@@ -179,7 +181,7 @@ void QXmppGeolocItem::parsePayload(const QDomElement &tune)
     }
 }
 
-auto writeTextEl(QXmlStreamWriter *writer, const QString &name, const std::optional<double> &val)
+auto writeTextEl(QXmlStreamWriter *writer, const QString &name, std::optional<double> val)
 {
     if (val.has_value()) {
         writer->writeTextElement(name, QString::number(*val));
@@ -195,11 +197,11 @@ void QXmppGeolocItem::serializePayload(QXmlStreamWriter *writer) const
     writer->writeStartElement(QSL65("geoloc"));
     writer->writeDefaultNamespace(toString65(ns_geoloc));
 
-    writeTextEl(writer, QStringLiteral("accuracy"), d->accuracy);
-    writeTextEl(writer, QStringLiteral("country"), d->country);
-    writeTextEl(writer, QStringLiteral("lat"), d->latitude);
-    writeTextEl(writer, QStringLiteral("locality"), d->locality);
-    writeTextEl(writer, QStringLiteral("lon"), d->longitude);
+    writeTextEl(writer, u"accuracy"_s, d->accuracy);
+    writeTextEl(writer, u"country"_s, d->country);
+    writeTextEl(writer, u"lat"_s, d->latitude);
+    writeTextEl(writer, u"locality"_s, d->locality);
+    writeTextEl(writer, u"lon"_s, d->longitude);
 
     writer->writeEndElement();
 }

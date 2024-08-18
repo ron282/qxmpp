@@ -7,6 +7,7 @@
 #include "QXmppHashing_p.h"
 
 #include "Algorithms.h"
+#include "StringLiterals.h"
 
 #include <QCryptographicHash>
 #include <QFuture>
@@ -193,7 +194,7 @@ auto deviceSize(QIODevice &device) -> std::optional<std::size_t>
     return std::nullopt;
 }
 
-HashingResult calculateHashesSync(std::unique_ptr<QIODevice> data, std::vector<QCryptographicHash::Algorithm> algorithms)
+HashingResult calculateHashesSync(std::unique_ptr<QIODevice> data, const std::vector<QCryptographicHash::Algorithm> &algorithms)
 {
     std::vector<QXmppHash> results;
     results.reserve(algorithms.size());
@@ -268,7 +269,7 @@ public:
         // check for readability
         if (!data->isOpen() || !data->isReadable()) {
             reportResult({ QXmppError {
-                               QStringLiteral("Input data is not opened for reading."),
+                               u"Input data is not opened for reading."_s,
                                std::any() },
                            std::move(data) });
             return;

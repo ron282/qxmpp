@@ -91,7 +91,7 @@ void tst_QXmppAttentionManager::testReceived()
 
     connect(manager, &QXmppAttentionManager::attentionRequested, &context, [&](const QXmppMessage &receivedMsg, bool isTrusted) {
         signalCalled = true;
-        QCOMPARE(isTrusted, QXmppUtils::jidToBareJid(receivedMsg.from()) == QStringLiteral("contact@qxmpp.org"));
+        QCOMPARE(isTrusted, QXmppUtils::jidToBareJid(receivedMsg.from()) == u"contact@qxmpp.org");
         QCOMPARE(receivedMsg.body(), msg.body());
     });
 
@@ -164,8 +164,8 @@ void tst_QXmppAttentionManager::testSendRequest()
             QCOMPARE(msg.type(), QXmppMessage::Chat);
             QCOMPARE(msg.id().size(), 36);
             QCOMPARE(msg.originId().size(), 36);
-            QCOMPARE(msg.to(), QStringLiteral("account@qxmpp.org"));
-            QCOMPARE(msg.body(), QStringLiteral("Hello"));
+            QCOMPARE(msg.to(), u"account@qxmpp.org"_s);
+            QCOMPARE(msg.body(), u"Hello"_s);
             QVERIFY(msg.isAttentionRequested());
         }
     });

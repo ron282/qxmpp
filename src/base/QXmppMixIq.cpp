@@ -9,6 +9,8 @@
 #include "QXmppMixIq_p.h"
 #include "QXmppUtils_p.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QSharedData>
 #include <QStringBuilder>
@@ -17,14 +19,14 @@ using namespace QXmpp::Private;
 
 static const QStringList MIX_ACTION_TYPES = {
     QString(),
-    QStringLiteral("client-join"),
-    QStringLiteral("client-leave"),
-    QStringLiteral("join"),
-    QStringLiteral("leave"),
-    QStringLiteral("update-subscription"),
-    QStringLiteral("setnick"),
-    QStringLiteral("create"),
-    QStringLiteral("destroy")
+    u"client-join"_s,
+    u"client-leave"_s,
+    u"join"_s,
+    u"leave"_s,
+    u"update-subscription"_s,
+    u"setnick"_s,
+    u"create"_s,
+    u"destroy"_s
 };
 
 static const QMap<QXmppMixConfigItem::Node, QStringView> NODES = {
@@ -40,18 +42,17 @@ static const QMap<QXmppMixConfigItem::Node, QStringView> NODES = {
     { QXmppMixConfigItem::Node::Presence, ns_mix_node_presence },
 };
 
-///
-/// \class QXmppMixSubscriptionUpdateIq
-///
-/// This class represents an IQ used to subscribe to nodes and unsubcribe from nodes of a MIX
-/// channel as defined by \xep{0369, Mediated Information eXchange (MIX)}.
-///
-/// \since QXmpp 1.7
-///
-/// \ingroup Stanzas
-///
+//
+// \class QXmppMixSubscriptionUpdateIq
+//
+// This class represents an IQ used to subscribe to nodes and unsubcribe from nodes of a MIX
+// channel as defined by \xep{0369, Mediated Information eXchange (MIX)}.
+//
+// \since QXmpp 1.7
+//
+// \ingroup Stanzas
+//
 
-/// \cond
 ///
 /// Constructs a MIX subscription update IQ.
 ///
@@ -103,7 +104,7 @@ void QXmppMixSubscriptionUpdateIq::setRemovals(QXmppMixConfigItem::Nodes removal
 
 bool QXmppMixSubscriptionUpdateIq::isMixSubscriptionUpdateIq(const QDomElement &element)
 {
-    const QDomElement &child = element.firstChildElement(QStringLiteral("update-subscription"));
+    const QDomElement &child = element.firstChildElement(u"update-subscription"_s);
     return !child.isNull() && (child.namespaceURI() == ns_mix);
 }
 
@@ -115,10 +116,10 @@ void QXmppMixSubscriptionUpdateIq::parseElementFromChild(const QDomElement &elem
     QVector<QString> removals;
 
     for (const auto &node : iterChildElements(child, u"subscribe")) {
-        additions << node.attribute(QStringLiteral("node"));
+        additions << node.attribute(u"node"_s);
     }
     for (const auto &node : iterChildElements(child, u"unsubscribe")) {
-        removals << node.attribute(QStringLiteral("node"));
+        removals << node.attribute(u"node"_s);
     }
 
     m_additions = listToMixNodes(additions);
@@ -146,20 +147,18 @@ void QXmppMixSubscriptionUpdateIq::toXmlElementFromChild(QXmlStreamWriter *write
 
     writer->writeEndElement();
 }
-/// \endcond
 
-///
-/// \class QXmppMixInvitationRequestIq
-///
-/// This class represents an IQ used to request an invitation to a MIX channel as defined by
-/// \xep{0407, Mediated Information eXchange (MIX): Miscellaneous Capabilities}.
-///
-/// \since QXmpp 1.7
-///
-/// \ingroup Stanzas
-///
+//
+// \class QXmppMixInvitationRequestIq
+//
+// This class represents an IQ used to request an invitation to a MIX channel as defined by
+// \xep{0407, Mediated Information eXchange (MIX): Miscellaneous Capabilities}.
+//
+// \since QXmpp 1.7
+//
+// \ingroup Stanzas
+//
 
-/// \cond
 ///
 /// Constructs a MIX invitation request IQ.
 ///
@@ -191,14 +190,14 @@ void QXmppMixInvitationRequestIq::setInviteeJid(const QString &inviteeJid)
 
 bool QXmppMixInvitationRequestIq::isMixInvitationRequestIq(const QDomElement &element)
 {
-    const QDomElement &child = element.firstChildElement(QStringLiteral("invite"));
+    const QDomElement &child = element.firstChildElement(u"invite"_s);
     return !child.isNull() && (child.namespaceURI() == ns_mix_misc);
 }
 
 void QXmppMixInvitationRequestIq::parseElementFromChild(const QDomElement &element)
 {
     QDomElement child = element.firstChildElement();
-    const auto subChild = child.firstChildElement(QStringLiteral("invitee"));
+    const auto subChild = child.firstChildElement(u"invitee"_s);
     m_inviteeJid = subChild.text();
 }
 
@@ -209,20 +208,18 @@ void QXmppMixInvitationRequestIq::toXmlElementFromChild(QXmlStreamWriter *writer
     writeXmlTextElement(writer, u"invitee", m_inviteeJid);
     writer->writeEndElement();
 }
-/// \endcond
 
-///
-/// \class QXmppMixInvitationResponseIq
-///
-/// This class represents an IQ that contains a requested invitation to a MIX channel as defined by
-/// \xep{0407, Mediated Information eXchange (MIX): Miscellaneous Capabilities}.
-///
-/// \since QXmpp 1.7
-///
-/// \ingroup Stanzas
-///
+//
+// \class QXmppMixInvitationResponseIq
+//
+// This class represents an IQ that contains a requested invitation to a MIX channel as defined by
+// \xep{0407, Mediated Information eXchange (MIX): Miscellaneous Capabilities}.
+//
+// \since QXmpp 1.7
+//
+// \ingroup Stanzas
+//
 
-/// \cond
 ///
 /// Constructs a MIX invitation response IQ.
 ///
@@ -254,14 +251,14 @@ void QXmppMixInvitationResponseIq::setInvitation(const QXmppMixInvitation &invit
 
 bool QXmppMixInvitationResponseIq::isMixInvitationResponseIq(const QDomElement &element)
 {
-    const QDomElement &child = element.firstChildElement(QStringLiteral("invite"));
+    const QDomElement &child = element.firstChildElement(u"invite"_s);
     return !child.isNull() && (child.namespaceURI() == ns_mix_misc);
 }
 
 void QXmppMixInvitationResponseIq::parseElementFromChild(const QDomElement &element)
 {
     QDomElement child = element.firstChildElement();
-    const auto subChild = child.firstChildElement(QStringLiteral("invitation"));
+    const auto subChild = child.firstChildElement(u"invitation"_s);
     m_invitation = QXmppMixInvitation();
     m_invitation.parse(subChild);
 }
@@ -273,7 +270,6 @@ void QXmppMixInvitationResponseIq::toXmlElementFromChild(QXmlStreamWriter *write
     m_invitation.toXml(writer);
     writer->writeEndElement();
 }
-/// \endcond
 
 class QXmppMixIqPrivate : public QSharedData
 {
@@ -630,22 +626,22 @@ void QXmppMixIq::parseElementFromChild(const QDomElement &element)
     d->actionType = actionTypeIndex == -1 ? None : (QXmppMixIq::Type)actionTypeIndex;
 
     if (child.namespaceURI() == ns_mix_pam) {
-        if (child.hasAttribute(QStringLiteral("channel"))) {
-            d->channelJid = child.attribute(QStringLiteral("channel"));
+        if (child.hasAttribute(u"channel"_s)) {
+            d->channelJid = child.attribute(u"channel"_s);
         }
 
         child = child.firstChildElement();
     }
 
     if (!child.isNull() && child.namespaceURI() == ns_mix) {
-        if (child.hasAttribute(QStringLiteral("id"))) {
-            d->participantId = child.attribute(QStringLiteral("id"));
+        if (child.hasAttribute(u"id"_s)) {
+            d->participantId = child.attribute(u"id"_s);
         }
-        if (child.hasAttribute(QStringLiteral("jid"))) {
-            d->channelJid = (child.attribute(QStringLiteral("jid"))).split(u'#').last();
+        if (child.hasAttribute(u"jid"_s)) {
+            d->channelJid = (child.attribute(u"jid"_s)).split(u'#').last();
         }
-        if (child.hasAttribute(QStringLiteral("channel"))) {
-            d->channelId = child.attribute(QStringLiteral("channel"));
+        if (child.hasAttribute(u"channel"_s)) {
+            d->channelId = child.attribute(u"channel"_s);
         }
 
         d->nick = firstChildElement(child, u"nick").text();
@@ -658,7 +654,7 @@ void QXmppMixIq::parseElementFromChild(const QDomElement &element)
         QVector<QString> subscriptions;
 
         for (const auto &node : iterChildElements(child, u"subscribe")) {
-            subscriptions << node.attribute(QStringLiteral("node"));
+            subscriptions << node.attribute(u"node"_s);
         }
 
         d->subscriptions = listToMixNodes(subscriptions);

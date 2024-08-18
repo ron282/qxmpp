@@ -12,6 +12,8 @@
 #include "QXmppFutureUtils_p.h"
 #include "QXmppHttpUploadIq.h"
 
+#include "StringLiterals.h"
+
 #include <QDomElement>
 #include <QFileInfo>
 #include <QMimeDatabase>
@@ -237,7 +239,7 @@ auto QXmppUploadRequestManager::requestSlot(const QString &fileName,
 {
     if (!serviceFound() && uploadService.isEmpty()) {
         return makeReadyTask(SlotResult(QXmppError {
-            QStringLiteral("Couldn't request upload slot: No service found."), {} }));
+            u"Couldn't request upload slot: No service found."_s, {} }));
     }
 
     QXmppHttpUploadRequestIq iq;
@@ -294,8 +296,7 @@ void QXmppUploadRequestManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
 
     const auto identities = iq.identities();
     for (const QXmppDiscoveryIq::Identity &identity : identities) {
-        if (identity.category() == QStringLiteral("store") &&
-            identity.type() == QStringLiteral("file")) {
+        if (identity.category() == u"store" && identity.type() == u"file") {
             QXmppUploadService service;
             service.setJid(iq.from());
 
@@ -303,9 +304,9 @@ void QXmppUploadRequestManager::handleDiscoInfo(const QXmppDiscoveryIq &iq)
             bool isFormNsCorrect = false;
             const auto fields = iq.form().fields();
             for (const QXmppDataForm::Field &field : fields) {
-                if (field.key() == QStringLiteral("FORM_TYPE")) {
+                if (field.key() == u"FORM_TYPE") {
                     isFormNsCorrect = field.value().toString() == ns_http_upload;
-                } else if (isFormNsCorrect && field.key() == QStringLiteral("max-file-size")) {
+                } else if (isFormNsCorrect && field.key() == u"max-file-size") {
                     service.setSizeLimit(field.value().toLongLong());
                 }
             }

@@ -60,10 +60,10 @@ void tst_QXmppDiscoveryManager::testItems()
     const auto items = expectFutureVariant<QList<QXmppDiscoveryIq::Item>>(future.toFuture(this));
 
     QCOMPARE(items.size(), 4);
-    QCOMPARE(items.at(0).name(), QStringLiteral("368866411b877c30064a5f62b917cffe"));
-    QCOMPARE(items.at(1).name(), QStringLiteral("3300659945416e274474e469a1f0154c"));
-    QCOMPARE(items.at(2).name(), QStringLiteral("4e30f35051b7b8b42abe083742187228"));
-    QCOMPARE(items.at(3).name(), QStringLiteral("ae890ac52d0df67ed7cfdf51b644e901"));
+    QCOMPARE(items.at(0).name(), u"368866411b877c30064a5f62b917cffe"_s);
+    QCOMPARE(items.at(1).name(), u"3300659945416e274474e469a1f0154c"_s);
+    QCOMPARE(items.at(2).name(), u"4e30f35051b7b8b42abe083742187228"_s);
+    QCOMPARE(items.at(3).name(), u"ae890ac52d0df67ed7cfdf51b644e901"_s);
 }
 
 void tst_QXmppDiscoveryManager::testRequests()
@@ -77,7 +77,7 @@ void tst_QXmppDiscoveryManager::testRequests()
   <query xmlns='http://jabber.org/protocol/disco#info'/>
 </iq>)"));
 
-    test.expect("<iq id='info1' to='romeo@montague.net/orchard' type='result'><query xmlns='http://jabber.org/protocol/disco#info'><identity category='client' name='tst_qxmppdiscoverymanager ' type='pc'/><feature var='jabber:x:data'/><feature var='http://jabber.org/protocol/rsm'/><feature var='jabber:x:oob'/><feature var='http://jabber.org/protocol/xhtml-im'/><feature var='http://jabber.org/protocol/chatstates'/><feature var='http://jabber.org/protocol/caps'/><feature var='urn:xmpp:ping'/><feature var='jabber:x:conference'/><feature var='urn:xmpp:message-correct:0'/><feature var='urn:xmpp:chat-markers:0'/><feature var='urn:xmpp:hints'/><feature var='urn:xmpp:sid:0'/><feature var='urn:xmpp:message-attaching:1'/><feature var='urn:xmpp:eme:0'/><feature var='urn:xmpp:spoiler:0'/><feature var='urn:xmpp:fallback:0'/><feature var='urn:xmpp:reactions:0'/><feature var='http://jabber.org/protocol/disco#info'/></query></iq>");
+    test.expect("<iq id='info1' to='romeo@montague.net/orchard' type='result'><query xmlns='http://jabber.org/protocol/disco#info'><identity category='client' name='tst_qxmppdiscoverymanager ' type='pc'/><feature var='jabber:x:data'/><feature var='http://jabber.org/protocol/rsm'/><feature var='jabber:x:oob'/><feature var='http://jabber.org/protocol/xhtml-im'/><feature var='http://jabber.org/protocol/chatstates'/><feature var='http://jabber.org/protocol/caps'/><feature var='jabber:x:conference'/><feature var='urn:xmpp:message-correct:0'/><feature var='urn:xmpp:chat-markers:0'/><feature var='urn:xmpp:hints'/><feature var='urn:xmpp:sid:0'/><feature var='urn:xmpp:message-attaching:1'/><feature var='urn:xmpp:eme:0'/><feature var='urn:xmpp:spoiler:0'/><feature var='urn:xmpp:fallback:0'/><feature var='urn:xmpp:reactions:0'/><feature var='http://jabber.org/protocol/disco#info'/></query></iq>");
 }
 
 QTEST_MAIN(tst_QXmppDiscoveryManager)

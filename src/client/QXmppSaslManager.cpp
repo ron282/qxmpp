@@ -5,76 +5,71 @@
 
 #include "QXmppConfiguration.h"
 #include "QXmppConstants_p.h"
+#include "QXmppCredentials.h"
 #include "QXmppFutureUtils_p.h"
 #include "QXmppSasl2UserAgent.h"
 #include "QXmppSaslManager_p.h"
 #include "QXmppSasl_p.h"
-#include "QXmppStream.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppUtils_p.h"
 
+#include "Algorithms.h"
+#include "StringLiterals.h"
 #include "XmppSocket.h"
+
+#include <ranges>
 
 #include <QDomElement>
 
-#ifndef QXMPP_DOC
+using namespace std::placeholders;
+namespace views = std::views;
+using std::ranges::copy;
+using std::ranges::empty;
+using std::ranges::max;
 
 namespace QXmpp::Private {
 
-static std::tuple<QString, QStringList> chooseMechanism(const QXmppConfiguration &config, const QList<QString> &availableMechanisms)
+static auto chooseMechanism(const QXmppConfiguration &config, const QList<QString> &availableMechanisms)
+    -> std::tuple<std::optional<SaslMechanism>, QStringList>
 {
-    // supported and preferred SASL auth mechanisms
-    const QString preferredMechanism = config.saslAuthMechanism();
-    QStringList supportedMechanisms = QXmppSaslClient::availableMechanisms();
-    if (supportedMechanisms.contains(preferredMechanism)) {
-        supportedMechanisms.removeAll(preferredMechanism);
-        supportedMechanisms.prepend(preferredMechanism);
-    }
-    if (config.facebookAppId().isEmpty() || config.facebookAccessToken().isEmpty()) {
-        supportedMechanisms.removeAll(QStringLiteral("X-FACEBOOK-PLATFORM"));
-    }
-    if (config.windowsLiveAccessToken().isEmpty()) {
-        supportedMechanisms.removeAll(QStringLiteral("X-MESSENGER-OAUTH2"));
-    }
-    if (config.googleAccessToken().isEmpty()) {
-        supportedMechanisms.removeAll(QStringLiteral("X-OAUTH2"));
-    }
-
-    // determine SASL Authentication mechanism to use
-    QStringList commonMechanisms;
-    for (const auto &mechanism : std::as_const(supportedMechanisms)) {
-        if (availableMechanisms.contains(mechanism)) {
-            commonMechanisms << mechanism;
-        }
-    }
-
-    // Remove disabled mechanisms and add to disabledAvailable
     const auto disabled = config.disabledSaslMechanisms();
     QStringList disabledAvailable;
-    for (const auto &m : disabled) {
-        if (commonMechanisms.removeAll(m)) {
-            disabledAvailable.push_back(m);
+    auto isEnabled = [&](const QString &mechanism) {
+        if (disabled.contains(mechanism)) {
+            disabledAvailable.push_back(mechanism);
+            return false;
+        }
+        return true;
+    };
+
+    // mechanisms that are available and supported by us
+    auto mechanismsView = availableMechanisms |
+        views::filter(isEnabled) |
+        views::transform(&SaslMechanism::fromString) |
+        views::filter(&std::optional<SaslMechanism>::has_value) |
+        views::transform([](const auto &v) { return *v; }) |
+        views::filter(std::bind(&QXmppSaslClient::isMechanismAvailable, _1, config.credentialData()));
+
+    std::vector<SaslMechanism> mechanisms(mechanismsView.begin(), mechanismsView.end());
+
+    // no mechanisms supported
+    if (mechanisms.empty()) {
+        return { std::nullopt, disabledAvailable };
+    }
+
+    // try to use configured mechanism
+    if (auto preferredString = config.saslAuthMechanism();
+        !preferredString.isEmpty()) {
+        // parse
+        if (auto preferred = SaslMechanism::fromString(preferredString)) {
+            if (contains(mechanisms, *preferred)) {
+                return { *preferred, {} };
+            }
         }
     }
 
-    return { commonMechanisms.empty() ? QString() : commonMechanisms.first(), disabledAvailable };
-}
-
-static void setCredentials(QXmppSaslClient *saslClient, const QXmppConfiguration &config)
-{
-    auto mechanism = saslClient->mechanism();
-    if (mechanism == u"X-FACEBOOK-PLATFORM") {
-        saslClient->setUsername(config.facebookAppId());
-        saslClient->setPassword(config.facebookAccessToken());
-    } else if (mechanism == u"X-MESSENGER-OAUTH2") {
-        saslClient->setPassword(config.windowsLiveAccessToken());
-    } else if (mechanism == u"X-OAUTH2") {
-        saslClient->setUsername(config.user());
-        saslClient->setPassword(config.googleAccessToken());
-    } else {
-        saslClient->setUsername(config.user());
-        saslClient->setPassword(config.password());
-    }
+    // max can be used: mechanisms is not empty (checked above)
+    return { max(mechanisms), disabledAvailable };
 }
 
 struct InitSaslAuthResult {
@@ -95,29 +90,30 @@ static InitSaslAuthResult initSaslAuthentication(const QXmppConfiguration &confi
     };
 
     auto [mechanism, disabled] = chooseMechanism(config, availableMechanisms);
-    if (mechanism.isEmpty()) {
+    if (!mechanism) {
         auto text = disabled.empty()
-            ? QStringLiteral("No supported SASL mechanism available")
-            : QStringLiteral("No supported SASL mechanism available (%1 is disabled)").arg(disabled.join(QStringView(u", ").toString()));
+            ? u"No supported SASL mechanism available"_s
+            : u"No supported SASL mechanism available (%1 is disabled)"_s.arg(disabled.join(u", "));
 
         return error(std::move(text), { AuthenticationError::MechanismMismatch, {}, {} });
     }
 
-    auto saslClient = QXmppSaslClient::create(mechanism, parent);
+    auto saslClient = QXmppSaslClient::create(*mechanism, parent);
     if (!saslClient) {
-        return error(QStringLiteral("SASL mechanism negotiation failed"),
+        return error(u"SASL mechanism negotiation failed"_s,
                      AuthenticationError { AuthenticationError::ProcessingError, {}, {} });
     }
-    info(QStringLiteral("SASL mechanism '%1' selected").arg(saslClient->mechanism()));
+    info(u"SASL mechanism '%1' selected"_s.arg(saslClient->mechanism().toString()));
     saslClient->setHost(config.domain());
-    saslClient->setServiceType(QStringLiteral("xmpp"));
-    setCredentials(saslClient.get(), config);
+    saslClient->setServiceType(u"xmpp"_s);
+    saslClient->setUsername(config.user());
+    saslClient->setCredentials(config.credentialData());
 
     // send SASL auth request
     if (auto response = saslClient->respond(QByteArray())) {
         return { std::move(saslClient), {}, *response };
     } else {
-        return error(QStringLiteral("SASL initial response failed"),
+        return error(u"SASL initial response failed"_s,
                      AuthenticationError { AuthenticationError::ProcessingError, {}, {} });
     }
 }
@@ -157,7 +153,7 @@ QXmppTask<SaslManager::AuthResult> SaslManager::authenticate(const QXmppConfigur
         return makeReadyTask<AuthResult>(std::move(*result.error));
     }
 
-    m_socket->sendData(serializeXml(Sasl::Auth { result.saslClient->mechanism(), result.initialResponse }));
+    m_socket->sendData(serializeXml(Sasl::Auth { result.saslClient->mechanism().toString(), result.initialResponse }));
 
     m_promise = QXmppPromise<AuthResult>();
     m_saslClient = std::move(result.saslClient);
@@ -166,37 +162,39 @@ QXmppTask<SaslManager::AuthResult> SaslManager::authenticate(const QXmppConfigur
 
 HandleElementResult SaslManager::handleElement(const QDomElement &el)
 {
+    using namespace Sasl;
+
     auto finish = [this](auto &&value) {
         auto p = std::move(*m_promise);
         m_promise.reset();
         p.finish(value);
     };
 
-    if (!m_promise.has_value() || el.namespaceURI() != ns_sasl) {
+    if (!m_promise.has_value()) {
         return Rejected;
     }
 
-    if (el.tagName() == u"success") {
-        finish(Success());
+    if (Success::fromDom(el)) {
+        finish(QXmpp::Success());
         return Finished;
-    } else if (auto challenge = Sasl::Challenge::fromDom(el)) {
+    } else if (auto challenge = Challenge::fromDom(el)) {
         if (auto response = m_saslClient->respond(challenge->value)) {
-            m_socket->sendData(serializeXml(Sasl::Response { *response }));
+            m_socket->sendData(serializeXml(Response { *response }));
             return Accepted;
         } else {
             finish(AuthError {
-                QStringLiteral("Could not respond to SASL challenge"),
+                u"Could not respond to SASL challenge"_s,
                 AuthenticationError { AuthenticationError::ProcessingError, {}, {} },
             });
             return Finished;
         }
-    } else if (auto failure = Sasl::Failure::fromDom(el)) {
+    } else if (auto failure = Failure::fromDom(el)) {
         auto text = failure->text.isEmpty()
-            ? Sasl::errorConditionToString(failure->condition.value_or(Sasl::ErrorCondition::NotAuthorized))
+            ? errorConditionToString(failure->condition.value_or(ErrorCondition::NotAuthorized))
             : failure->text;
 
         finish(AuthError {
-            QStringLiteral("Authentication failed: %1").arg(text),
+            u"Authentication failed: %1"_s.arg(text),
             AuthenticationError { mapSaslCondition(failure->condition), failure->text, std::move(*failure) },
         });
         return Finished;
@@ -204,28 +202,38 @@ HandleElementResult SaslManager::handleElement(const QDomElement &el)
     return Rejected;
 }
 
-QXmppTask<Sasl2Manager::AuthResult> Sasl2Manager::authenticate(const QXmppConfiguration &config, const Sasl2::StreamFeature &feature, QXmppLoggable *loggable)
+QXmppTask<Sasl2Manager::AuthResult> Sasl2Manager::authenticate(Sasl2::Authenticate &&auth, const QXmppConfiguration &config, const Sasl2::StreamFeature &feature, QXmppLoggable *loggable)
 {
     Q_ASSERT(!m_state.has_value());
 
-    auto result = initSaslAuthentication(config, feature.mechanisms, loggable);
+    // collect mechanisms
+    auto mechanisms = feature.mechanisms;
+
+    // additional mechanisms from extensions
+    bool fastAvailable = feature.fast && FastTokenManager::isFastEnabled(config);
+    if (fastAvailable) {
+        copy(feature.fast->mechanisms, std::back_inserter(mechanisms));
+    }
+
+    auto result = initSaslAuthentication(config, mechanisms, loggable);
     if (result.error) {
         return makeReadyTask<AuthResult>(std::move(*result.error));
     }
 
     // create request
-    Sasl2::Authenticate auth {
-        result.saslClient->mechanism(),
-        result.initialResponse,
-        {},
-    };
+    auth.mechanism = result.saslClient->mechanism().toString();
+    auth.initialResponse = result.initialResponse;
+    // indicate usage of FAST
+    if (fastAvailable && contains(feature.fast->mechanisms, auth.mechanism)) {
+        auth.fast = FastRequest {};
+    }
 
     // set user-agent if enabled
     if (auto userAgent = config.sasl2UserAgent()) {
         // ID is mandatory
         if (userAgent->deviceId().isNull()) {
             return makeReadyTask<AuthResult>(AuthError {
-                QStringLiteral("Invalid user-agent: device ID must be set."),
+                u"Invalid user-agent: device ID must be set."_s,
                 AuthenticationError { AuthenticationError::ProcessingError, {}, {} },
             });
         }
@@ -251,17 +259,17 @@ HandleElementResult Sasl2Manager::handleElement(const QDomElement &el)
         state.p.finish(value);
     };
 
-    if (!m_state || el.namespaceURI() != ns_sasl_2) {
+    if (!m_state) {
         return Rejected;
     }
 
-    if (auto challenge = Sasl2::Challenge::fromDom(el)) {
+    if (auto challenge = Challenge::fromDom(el)) {
         if (auto response = m_state->sasl->respond(challenge->data)) {
-            m_socket->sendData(serializeXml(Sasl2::Response { *response }));
+            m_socket->sendData(serializeXml(Response { *response }));
             return Accepted;
         } else {
             finish(AuthError {
-                QStringLiteral("Could not respond to SASL challenge"),
+                u"Could not respond to SASL challenge"_s,
                 AuthenticationError { AuthenticationError::ProcessingError, {}, {} },
             });
             return Finished;
@@ -276,7 +284,7 @@ HandleElementResult Sasl2Manager::handleElement(const QDomElement &el)
 
         if (failure->condition == Sasl::ErrorCondition::Aborted && m_state->unsupportedContinue) {
             finish(AuthError {
-                QStringLiteral("Required authentication tasks not supported."),
+                u"Required authentication tasks not supported."_s,
                 AuthenticationError {
                     AuthenticationError::RequiredTasks,
                     m_state->unsupportedContinue->text,
@@ -285,7 +293,7 @@ HandleElementResult Sasl2Manager::handleElement(const QDomElement &el)
             });
         } else {
             finish(AuthError {
-                QStringLiteral("Authentication failed: %1").arg(text),
+                u"Authentication failed: %1"_s.arg(text),
                 AuthenticationError { mapSaslCondition(failure->condition), failure->text, std::move(*failure) },
             });
         }
@@ -293,12 +301,63 @@ HandleElementResult Sasl2Manager::handleElement(const QDomElement &el)
     } else if (auto continueElement = Continue::fromDom(el)) {
         // no SASL 2 tasks are currently implemented
         m_state->unsupportedContinue = continueElement;
-        m_socket->sendData(serializeXml(Sasl2::Abort { QStringLiteral("SASL 2 tasks are not supported.") }));
+        m_socket->sendData(serializeXml(Abort { u"SASL 2 tasks are not supported."_s }));
         return Accepted;
     }
     return Rejected;
 }
 
-}  // namespace QXmpp::Private
+FastTokenManager::FastTokenManager(QXmppConfiguration &config)
+    : config(config)
+{
+}
 
-#endif  // QXMPP_DOC
+bool FastTokenManager::isFastEnabled(const QXmppConfiguration &config)
+{
+    return config.useFastTokenAuthentication() && config.sasl2UserAgent().has_value();
+}
+
+bool FastTokenManager::hasToken() const
+{
+    return config.credentialData().htToken.has_value();
+}
+
+void FastTokenManager::onSasl2Authenticate(Sasl2::Authenticate &auth, const Sasl2::StreamFeature &feature)
+{
+    auto selectMechanism = [](const auto &availableMechanisms) {
+        // find mechanisms supported by us
+        auto mechanisms = availableMechanisms |
+            views::transform(&SaslHtMechanism::fromString) |
+            views::filter([](const auto &v) { return v.has_value(); }) |
+            views::transform([](const auto &v) { return *v; }) |
+            views::filter([](const auto &m) { return m.channelBindingType == SaslHtMechanism::None; });
+
+        return empty(mechanisms) ? std::optional<SaslHtMechanism>() : max(mechanisms);
+    };
+
+    requestedMechanism.reset();
+    m_tokenChanged = false;
+
+    if (feature.fast && isFastEnabled(config) && !hasToken()) {
+        // request token
+        if (auto mechanism = selectMechanism(feature.fast->mechanisms)) {
+            requestedMechanism = mechanism;
+            auth.tokenRequest = FastTokenRequest { mechanism->toString() };
+        }
+    }
+}
+
+void FastTokenManager::onSasl2Success(const Sasl2::Success &success)
+{
+    if (success.token && (requestedMechanism || config.credentialData().htToken)) {
+        // use requested mechanism (new) or the one from the old token (token rotation)
+        config.credentialData().htToken = HtToken {
+            requestedMechanism ? *requestedMechanism : config.credentialData().htToken->mechanism,
+            success.token->token,
+            success.token->expiry,
+        };
+        m_tokenChanged = true;
+    }
+}
+
+}  // namespace QXmpp::Private

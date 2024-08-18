@@ -4,13 +4,14 @@
 
 #include "QXmppBlockingManager.h"
 
+#include "QXmppConstants_p.h"
 #include "QXmppIqHandling.h"
 #include "QXmppUtils.h"
 #include "QXmppUtils_p.h"
 
-#include <QDomElement>
+#include "StringLiterals.h"
 
-constexpr QStringView XMLNS_BLOCKING = QStringView(u"urn:xmpp:blocking");
+#include <QDomElement>
 
 using namespace QXmpp;
 using namespace QXmpp::Private;
@@ -29,7 +30,7 @@ static QVector<QString> parseItems(const QDomElement &el)
 {
     QVector<QString> jids;
     for (const auto &item : iterChildElements(el, u"item")) {
-        jids.append(item.attribute(QStringLiteral("jid")));
+        jids.append(item.attribute(u"jid"_s));
     }
     return jids;
 }
@@ -56,13 +57,13 @@ public:
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
         writer->writeStartElement(QSL65("blocklist"));
-        writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
+        writer->writeDefaultNamespace(toString65(ns_blocking));
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-        return tagName == QStringView(u"blocklist") && xmlns == XMLNS_BLOCKING;
+        return tagName == u"blocklist" && xmlns == ns_blocking;
     }
 };
 
@@ -82,14 +83,14 @@ public:
     }
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
-		writer->writeStartElement(QSL65("block"));
-        writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
+        writer->writeStartElement(QSL65("block"));
+        writer->writeDefaultNamespace(toString65(ns_blocking));
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-        return tagName == QStringView(u"block") && xmlns == XMLNS_BLOCKING;
+        return tagName == u"block" && xmlns == ns_blocking;
     }
 };
 
@@ -111,7 +112,7 @@ public:
     void toXmlElementFromChild(QXmlStreamWriter *writer) const override
     {
         writer->writeStartElement(QSL65("unblock"));
-        writer->writeDefaultNamespace(XMLNS_BLOCKING.toString());
+        writer->writeDefaultNamespace(toString65(ns_blocking));
         serializeItems(writer, jids);
         writer->writeEndElement();
     }
@@ -350,7 +351,7 @@ QXmppTask<QXmppBlockingManager::Result> QXmppBlockingManager::unblock(QVector<QS
 /// \cond
 QStringList QXmppBlockingManager::discoveryFeatures() const
 {
-    return { XMLNS_BLOCKING.toString() };
+    return { ns_blocking.toString() };
 }
 
 void QXmppBlockingManager::onRegistered(QXmppClient *client)
@@ -371,7 +372,7 @@ bool QXmppBlockingManager::handleStanza(const QDomElement &stanza, const std::op
             return StanzaError {
                 StanzaError::Cancel,
                 StanzaError::FeatureNotImplemented,
-                QStringLiteral("Only IQs of type 'set' supported.")
+                u"Only IQs of type 'set' supported."_s
             };
         }
 
@@ -382,7 +383,7 @@ bool QXmppBlockingManager::handleStanza(const QDomElement &stanza, const std::op
             return StanzaError {
                 StanzaError::Cancel,
                 StanzaError::Forbidden,
-                QStringLiteral("Forbidden.")
+                u"Forbidden."_s
             };
         }
 
@@ -390,7 +391,7 @@ bool QXmppBlockingManager::handleStanza(const QDomElement &stanza, const std::op
             return StanzaError {
                 StanzaError::Wait,
                 StanzaError::UnexpectedRequest,
-                QStringLiteral("Client is not subscribed to blocklist.")
+                u"Client is not subscribed to blocklist."_s
             };
         }
 

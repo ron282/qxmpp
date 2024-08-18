@@ -12,6 +12,7 @@
 #include "QXmppUtils.h"
 
 #include "QcaInitializer_p.h"
+#include "StringLiterals.h"
 
 #include <QMimeDatabase>
 
@@ -84,7 +85,7 @@ auto QXmppEncryptedFileSharingProvider::downloadFile(const std::any &source,
         return provider->downloadFile(httpSource, std::move(output), std::move(reportProgress), std::move(onFinished));
     }
 
-    reportFinished(QXmppError { QStringLiteral("No basic file sharing provider available for encrypted file."), {} });
+    reportFinished(QXmppError { u"No basic file sharing provider available for encrypted file."_s, {} });
     return {};
 }
 
@@ -113,8 +114,12 @@ auto QXmppEncryptedFileSharingProvider::uploadFile(std::unique_ptr<QIODevice> da
     metadata.setFilename(QXmppUtils::generateStanzaHash(10)+QStringLiteral(".")+QFileInfo(info.filename().value_or(QString())).completeSuffix());
 #else
     metadata.setFilename(QXmppUtils::generateStanzaHash(10));
+<<<<<<< HEAD
 #endif
 	metadata.setMediaType(QMimeDatabase().mimeTypeForName(QStringLiteral("application/octet-stream")));
+=======
+    metadata.setMediaType(QMimeDatabase().mimeTypeForName(u"application/octet-stream"_s));
+>>>>>>> 94232e798de18099322bee71400f246c9193047a
     metadata.setSize(encryptedSize);
 
     // find provider for source of encrypted file

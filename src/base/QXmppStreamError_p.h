@@ -19,7 +19,7 @@ namespace QXmpp { namespace Private {
 namespace QXmpp::Private {
 #endif
 
-// implemented in QXmppStream.cpp
+// implemented in Stream.cpp
 struct StreamErrorElement {
     struct SeeOtherHost {
         QString host;

@@ -31,7 +31,7 @@ public:
     QXmppStreamFeatures();
     QXmppStreamFeatures(const QXmppStreamFeatures &);
     QXmppStreamFeatures(QXmppStreamFeatures &&);
-    ~QXmppStreamFeatures();
+    ~QXmppStreamFeatures() override;
 
     QXmppStreamFeatures &operator=(const QXmppStreamFeatures &);
     QXmppStreamFeatures &operator=(QXmppStreamFeatures &&);

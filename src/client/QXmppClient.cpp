@@ -22,11 +22,11 @@
 #include "QXmppRosterManager.h"
 #include "QXmppStreamManagement_p.h"
 #include "QXmppTask.h"
-#include "QXmppTlsManager_p.h"
 #include "QXmppUtils.h"
 #include "QXmppVCardManager.h"
 #include "QXmppVersionManager.h"
 
+#include "StringLiterals.h"
 #include "XmppSocket.h"
 
 #include <chrono>
@@ -43,7 +43,7 @@ using IqDecryptResult = QXmppE2eeExtension::IqDecryptResult;
 
 static bool isIqResponse(const QDomElement &el)
 {
-    auto type = el.attribute(QStringLiteral("type"));
+    auto type = el.attribute(u"type"_s);
     return el.tagName() == u"iq" && (type == u"result" || type == u"error");
 }
 
@@ -56,7 +56,6 @@ QXmppClientPrivate::QXmppClientPrivate(QXmppClient *qq)
       receivedConflict(false),
       reconnectionTries(0),
       reconnectionTimer(nullptr),
-      isActive(true),
       q(qq)
 {
 }
@@ -65,7 +64,7 @@ void QXmppClientPrivate::addProperCapability(QXmppPresence &presence)
 {
     auto *ext = q->findExtension<QXmppDiscoveryManager>();
     if (ext) {
-        presence.setCapabilityHash(QStringLiteral("sha-1"));
+        presence.setCapabilityHash(u"sha-1"_s);
         presence.setCapabilityNode(ext->clientCapabilitiesNode());
         presence.setCapabilityVer(ext->capabilities().verificationString());
     }
@@ -99,8 +98,6 @@ QStringList QXmppClientPrivate::discoveryFeatures()
         ns_chat_states.toString(),
         // XEP-0115: Entity Capabilities
         ns_capabilities.toString(),
-        // XEP-0199: XMPP Ping
-        ns_ping.toString(),
         // XEP-0249: Direct MUC Invitations
         ns_conference.toString(),
         // XEP-0308: Last Message Correction
@@ -224,6 +221,68 @@ bool process(QXmppClient *client, const QList<QXmppClientExtension *> &extension
 #endif
 
 ///
+/// \class QXmppClient
+///
+/// \brief Main class for starting and managing connections to XMPP servers.
+///
+/// It provides the user all the required functionality to connect to the
+/// server and perform operations afterwards.
+///
+/// This class will provide the handle/reference to QXmppRosterManager
+/// (roster management), QXmppVCardManager (vCard manager), and
+/// QXmppVersionManager (software version information).
+///
+/// By default, the client will automatically try reconnecting to the server.
+/// You can change that behaviour using
+/// QXmppConfiguration::setAutoReconnectionEnabled().
+///
+/// Not all the managers or extensions have been enabled by default. One can
+/// enable/disable the managers using the functions \c addExtension() and
+/// \c removeExtension(). \c findExtension() can be used to find a
+/// reference/pointer to a particular instantiated and enabled manager.
+///
+/// List of managers enabled by default:
+/// - QXmppRosterManager
+/// - QXmppVCardManager
+/// - QXmppVersionManager
+/// - QXmppDiscoveryManager
+/// - QXmppEntityTimeManager
+///
+/// ## Connection details
+///
+/// If no explicit host and port are configured, the client will look up the SRV records of the
+/// domain of the configured JID. Since QXmpp 1.8 both TCP and direct TLS records are looked up
+/// and connection via direct TLS is preferred as it saves the extra round trip from STARTTLS. See
+/// also \xep{0368, SRV records for XMPP over TLS}.
+///
+/// On connection errors the other SRV records are tested too (if multiple are available).
+///
+/// For servers without SRV records or if looking up the records did not succeed, domain and the
+/// default port of 5223 (TLS) and 5222 (TCP/STARTTLS) are tried.
+///
+/// ## Usage of FAST token-based authentication
+///
+/// QXmpp uses \xep{0484, Fast Authentication Streamlining Tokens} if enabled and supported by the
+/// server. FAST tokens can be requested after a first time authentication using a password or
+/// another strong authentication mechanism. The tokens can then be used to log in, without a
+/// password. The tokens are linked to a specific device ID (set via the SASL 2 user agent) and
+/// only this device can use the token. Tokens also expire and are rotated by the server.
+///
+/// The advantage of this mechanism is that a client does not necessarily need to store the
+/// password of an account and in the future clients that are logged in could be listed and logged
+/// out manually. FAST also allows for performance improvements as it only requires one round trip
+/// for authentication (and may be included in TLS 0-RTT data although that is not implemented in
+/// QXmpp) while other mechanisms like SCRAM need multiple round trips.
+///
+/// FAST itself is enabled by default (see QXmppConfiguration::useFastTokenAuthentication()), but
+/// you also need to set a SASL user agent with a stable device ID, so FAST can be used.
+/// After that you can login and use QXmppCredentials to serialize the token data and store it
+/// permanently. Note that the token may change over time, though.
+///
+/// \ingroup Core
+///
+
+///
 /// \typedef QXmppClient::IqResult
 ///
 /// Result of an IQ request, either contains the QDomElement of the IQ reponse (in case of an
@@ -294,9 +353,6 @@ QXmppClient::QXmppClient(InitialExtensions initialExtensions, QObject *parent)
 
     // logging
     setLogger(QXmppLogger::getLogger());
-
-    // always add TLS manager (it is private and can't be added by the user)
-    addNewExtension<QXmppTlsManager>();
 
     switch (initialExtensions) {
     case NoExtensions:
@@ -609,13 +665,13 @@ QXmppTask<QXmppClient::IqResult> QXmppClient::sendSensitiveIq(QXmppIq &&iq, cons
                                                   [&](QDomElement &&el) {
                                                       if (!isIqResponse(el)) {
                                                           p.finish(QXmppError {
-                                                              QStringLiteral("Invalid IQ response received."),
+                                                              u"Invalid IQ response received."_s,
                                                               QXmpp::SendError::EncryptionError });
                                                           return;
                                                       }
                                                       if (!d->encryptionExtension) {
                                                           p.finish(QXmppError {
-                                                              QStringLiteral("No decryption extension found."),
+                                                              u"No decryption extension found."_s,
                                                               QXmpp::SendError::EncryptionError });
                                                           return;
                                                       }
@@ -689,7 +745,7 @@ void QXmppClient::disconnectFromServer()
     d->reconnectionTimer->stop();
 
     d->clientPresence.setType(QXmppPresence::Unavailable);
-    d->clientPresence.setStatusText(QStringLiteral("Logged out"));
+    d->clientPresence.setStatusText(u"Logged out"_s);
     if (d->stream->isConnected()) {
         sendPacket(d->clientPresence);
     }
@@ -711,35 +767,26 @@ bool QXmppClient::isConnected() const
 
 ///
 /// Returns true if the current client state is "active", false if it is
-/// "inactive". See \xep{0352}: Client State Indication for details.
-///
-/// On connect this is always reset to true.
+/// "inactive". See \xep{0352, Client State Indication} for details.
 ///
 /// \since QXmpp 1.0
 ///
 bool QXmppClient::isActive() const
 {
-    return d->isActive;
+    return d->stream->csiManager().state() == CsiManager::Active;
 }
 
 ///
-/// Sets the client state as described in \xep{0352}: Client State Indication.
+/// Sets the client state as described in \xep{0352, Client State Indication}.
 ///
-/// On connect this is always reset to true.
+/// Since QXmpp 1.8, the state is restored across reconnects. QXmpp will re-send the state of
+/// 'inactive' on connection if that was set before. Stream resumptions are also handled.
 ///
 /// \since QXmpp 1.0
 ///
 void QXmppClient::setActive(bool active)
 {
-    if (active != d->isActive && isConnected() && d->stream->isClientStateIndicationEnabled()) {
-        d->isActive = active;
-        QStringView packet = u"<%1 xmlns='%2'/>";
-#if QT_VERSION >= QT_VERSION_CHECK(5,10,0)
-		d->stream->xmppSocket().sendData(packet.arg(active ? u"active" : u"inactive", ns_csi).toUtf8());
-#else
-		d->stream->xmppSocket().sendData(packet.toString().arg(active ? QStringView(u"active").toString() : QStringView(u"inactive").toString(), ns_csi.toString()).toUtf8());
-#endif
-	}
+    d->stream->csiManager().setState(active ? CsiManager::Active : CsiManager::Inactive);
 }
 
 ///
@@ -787,11 +834,16 @@ void QXmppClient::sendMessage(const QString &bareJid, const QString &message)
     if (!resources.isEmpty()) {
         for (const auto &resource : resources) {
             sendPacket(
-                QXmppMessage({}, bareJid + QStringLiteral("/") + resource, message));
+                QXmppMessage({}, bareJid + u"/"_s + resource, message));
         }
     } else {
         sendPacket(QXmppMessage({}, bareJid, message));
     }
+}
+
+QXmppOutgoingClient *QXmppClient::stream() const
+{
+    return d->stream;
 }
 
 QXmppClient::State QXmppClient::state() const
@@ -872,17 +924,17 @@ void QXmppClient::injectIq(const QDomElement &element, const std::optional<QXmpp
         return;
     }
     if (!StanzaPipeline::process(d->extensions, element, e2eeMetadata)) {
-        const auto iqType = element.attribute(QStringLiteral("type"));
+        const auto iqType = element.attribute(u"type"_s);
         if (iqType == u"get" || iqType == u"set") {
             // send error IQ
             using Err = QXmppStanza::Error;
 
             QXmppIq iq(QXmppIq::Error);
-            iq.setTo(element.attribute(QStringLiteral("from")));
-            iq.setId(element.attribute(QStringLiteral("id")));
+            iq.setTo(element.attribute(u"from"_s));
+            iq.setId(element.attribute(u"id"_s));
             const auto errMessage = e2eeMetadata.has_value()
-                ? QStringLiteral("Feature not implemented or not supported with end-to-end encryption.")
-                : QStringLiteral("Feature not implemented.");
+                ? u"Feature not implemented or not supported with end-to-end encryption."_s
+                : u"Feature not implemented."_s;
             iq.setError(Err(Err::Cancel, Err::FeatureNotImplemented, errMessage));
             reply(std::move(iq), e2eeMetadata);
         }
@@ -917,7 +969,7 @@ void QXmppClient::_q_elementReceived(const QDomElement &element, bool &handled)
 void QXmppClient::_q_reconnect()
 {
     if (d->stream->configuration().autoReconnectionEnabled()) {
-        debug(QStringLiteral("Reconnecting to server"));
+        debug(u"Reconnecting to server"_s);
         d->stream->connectToHost();
     }
 }
@@ -929,13 +981,15 @@ void QXmppClient::_q_socketStateChanged(QAbstractSocket::SocketState socketState
 }
 
 /// At connection establishment, send initial presence.
-void QXmppClient::_q_streamConnected()
+void QXmppClient::_q_streamConnected(const QXmpp::Private::SessionBegin &session)
 {
     d->receivedConflict = false;
     d->reconnectionTries = 0;
-    d->isActive = true;
 
     // notify managers
+    if (session.fastTokenChanged) {
+        Q_EMIT credentialsChanged();
+    }
     Q_EMIT connected();
     Q_EMIT stateChanged(QXmppClient::ConnectedState);
 

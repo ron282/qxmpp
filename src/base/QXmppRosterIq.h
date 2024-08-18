@@ -12,12 +12,23 @@
 #include <QSet>
 #include <QSharedDataPointer>
 
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+struct RosterData;
+}  }
+#else
+namespace QXmpp::Private {
+struct RosterData;
+}
+#endif
+
 class QXmppRosterIqPrivate;
 
+///
 /// \brief The QXmppRosterIq class represents a roster IQ.
 ///
 /// \ingroup Stanzas
-
+///
 class QXMPP_EXPORT QXmppRosterIq : public QXmppIq
 {
 public:
@@ -77,6 +88,10 @@ public:
         /// \endcond
 
     private:
+        friend struct QXmpp::Private::RosterData;
+
+        void toXml(QXmlStreamWriter *writer, bool external) const;
+
         QString getSubscriptionTypeStr() const;
         void setSubscriptionTypeFromStr(const QString &);
 
@@ -94,8 +109,9 @@ public:
     QString version() const;
     void setVersion(const QString &);
 
-    void addItem(const Item &);
     QList<Item> items() const;
+    void setItems(const QList<Item> &);
+    void addItem(const Item &);
 
     // XEP-0405: Mediated Information eXchange (MIX): Participant Server Requirements
     bool mixAnnotate() const;

@@ -5,8 +5,13 @@
 #include "QXmppConfiguration.h"
 
 #include "QXmppConstants_p.h"
+#include "QXmppCredentials.h"
 #include "QXmppSasl2UserAgent.h"
+#include "QXmppSasl_p.h"
 #include "QXmppUtils.h"
+#include "QXmppUtils_p.h"
+
+#include "StringLiterals.h"
 
 #include <QCoreApplication>
 #include <QNetworkProxy>
@@ -14,25 +19,81 @@
 
 using namespace QXmpp::Private;
 
+struct QXmppCredentialsPrivate : QSharedData, Credentials { };
+
+///
+/// \class QXmppCredentials
+///
+/// \brief Stores different kinds of credentials used for authentication.
+///
+/// QXmppCredentials can be serialized to XML and parsed from XML again. This can be useful to
+/// store credentials permanently without needing to handle all the details of the different
+/// authentication methods. QXmpp can for example request and use \xep{0484, Fast Authentication
+/// Streamlining Tokens} tokens and might support other mechanisms in the future.
+/// The XML format is QXmpp specific and is not specified.
+///
+/// The XML output currently may contain:
+///  * an HT token for \xep{0484, Fast Authentication Streamlining Tokens}
+///
+/// \since QXmpp 1.8
+///
+
+/// Default constructor.
+QXmppCredentials::QXmppCredentials()
+    : d(new QXmppCredentialsPrivate)
+{
+}
+
+QXMPP_PRIVATE_DEFINE_RULE_OF_SIX(QXmppCredentials)
+
+///
+/// Tries to parse XML-serialized credentials.
+///
+std::optional<QXmppCredentials> QXmppCredentials::fromXml(QXmlStreamReader &r)
+{
+    if (!r.isStartElement() || r.name() != u"credentials" || r.namespaceUri() != ns_qxmpp_credentials) {
+        return {};
+    }
+
+    QXmppCredentials credentials;
+    while (r.readNextStartElement()) {
+        if (r.name() == u"ht-token") {
+            if (auto htToken = HtToken::fromXml(r)) {
+                credentials.d->htToken = std::move(*htToken);
+            }
+        }
+    }
+    return credentials;
+}
+
+///
+/// Serializes the credentials to XML.
+///
+void QXmppCredentials::toXml(QXmlStreamWriter &writer) const
+{
+    writer.writeStartElement(QSL65("credentials"));
+    writer.writeDefaultNamespace(toString65(ns_qxmpp_credentials));
+    if (d->htToken) {
+        d->htToken->toXml(writer);
+    }
+    writer.writeEndElement();
+}
+
+bool QXmppCredentials::operator==(const QXmppCredentials &other) const
+{
+    return d->htToken == other.d->htToken;
+}
+
 class QXmppConfigurationPrivate : public QSharedData
 {
 public:
     QString host;
     int port = XMPP_DEFAULT_PORT;
     QString user;
-    QString password;
     QString domain;
-    QString resource = QStringLiteral("QXmpp");
-
-    // Facebook
-    QString facebookAccessToken;
-    QString facebookAppId;
-
-    // Google
-    QString googleAccessToken;
-
-    // Windows Live
-    QString windowsLiveAccessToken;
+    QString resource = u"QXmpp"_s;
+    QString resourcePrefix;
+    QXmppCredentials credentials;
 
     bool autoAcceptSubscriptions = false;
     bool sendIntialPresence = true;
@@ -45,6 +106,7 @@ public:
     bool autoReconnectionEnabled = true;
     // which authentication systems to use (if any)
     bool useSasl2Authentication = true;
+    bool useFastTokenAuthentication = true;
     bool useSASLAuthentication = true;
     bool useNonSASLAuthentication = true;
     bool ignoreSslErrors = false;
@@ -52,7 +114,7 @@ public:
     QXmppConfiguration::StreamSecurityMode streamSecurityMode = QXmppConfiguration::TLSEnabled;
     QXmppConfiguration::NonSASLAuthMechanism nonSASLAuthMechanism = QXmppConfiguration::NonSASLDigest;
     QString saslAuthMechanism;
-    QList<QString> disabledSaslMechanisms = { QStringLiteral("PLAIN") };
+    QList<QString> disabledSaslMechanisms = { u"PLAIN"_s };
     std::optional<QXmppSasl2UserAgent> sasl2UserAgent;
 
     QNetworkProxy networkProxy;
@@ -128,7 +190,7 @@ void QXmppConfiguration::setUser(const QString &user)
 ///
 void QXmppConfiguration::setPassword(const QString &password)
 {
-    d->password = password;
+    credentialData().password = password;
 }
 
 ///
@@ -146,6 +208,26 @@ void QXmppConfiguration::setPassword(const QString &password)
 void QXmppConfiguration::setResource(const QString &resource)
 {
     d->resource = resource;
+}
+
+///
+/// Returns the resource prefix ('tag' for this client) used when \xep{0386, Bind 2} is available.
+///
+/// \since QXmpp 1.8
+///
+QString QXmppConfiguration::resourcePrefix() const
+{
+    return d->resourcePrefix;
+}
+
+///
+/// Sets the resource prefix ('tag' for this client) used when \xep{0386, Bind 2} is available.
+///
+/// \since QXmpp 1.8
+///
+void QXmppConfiguration::setResourcePrefix(const QString &resourcePrefix)
+{
+    d->resourcePrefix = resourcePrefix;
 }
 
 ///
@@ -181,6 +263,19 @@ int QXmppConfiguration::port() const
     return d->port;
 }
 
+///
+/// Returns the port number as quint16.
+///
+/// \since QXmpp 1.8
+///
+quint16 QXmppConfiguration::port16() const
+{
+    if (d->port >= 0 && d->port <= std::numeric_limits<quint16>::max()) {
+        return d->port;
+    }
+    return 0;
+}
+
 /// Returns the localpart of the JID.
 QString QXmppConfiguration::user() const
 {
@@ -190,7 +285,7 @@ QString QXmppConfiguration::user() const
 /// Returns the password.
 QString QXmppConfiguration::password() const
 {
-    return d->password;
+    return credentialData().password;
 }
 
 /// Returns the resource identifier.
@@ -229,10 +324,30 @@ QString QXmppConfiguration::jidBare() const
     }
 }
 
+///
+/// Returns the credentials of this configuration.
+///
+/// \since QXmpp 1.8
+///
+QXmppCredentials QXmppConfiguration::credentials() const
+{
+    return d->credentials;
+}
+
+///
+/// Sets the credentials for this configuration.
+///
+/// \since QXmpp 1.8
+///
+void QXmppConfiguration::setCredentials(const QXmppCredentials &credentials)
+{
+    d->credentials = credentials;
+}
+
 /// Returns the access token used for X-FACEBOOK-PLATFORM authentication.
 QString QXmppConfiguration::facebookAccessToken() const
 {
-    return d->facebookAccessToken;
+    return credentialData().facebookAccessToken;
 }
 
 ///
@@ -243,25 +358,25 @@ QString QXmppConfiguration::facebookAccessToken() const
 ///
 void QXmppConfiguration::setFacebookAccessToken(const QString &accessToken)
 {
-    d->facebookAccessToken = accessToken;
+    credentialData().facebookAccessToken = accessToken;
 }
 
 /// Returns the application ID used for X-FACEBOOK-PLATFORM authentication.
 QString QXmppConfiguration::facebookAppId() const
 {
-    return d->facebookAppId;
+    return credentialData().facebookAppId;
 }
 
 /// Sets the application ID used for X-FACEBOOK-PLATFORM authentication.
 void QXmppConfiguration::setFacebookAppId(const QString &appId)
 {
-    d->facebookAppId = appId;
+    credentialData().facebookAppId = appId;
 }
 
 /// Returns the access token used for X-OAUTH2 authentication.
 QString QXmppConfiguration::googleAccessToken() const
 {
-    return d->googleAccessToken;
+    return credentialData().googleAccessToken;
 }
 
 ///
@@ -272,13 +387,13 @@ QString QXmppConfiguration::googleAccessToken() const
 ///
 void QXmppConfiguration::setGoogleAccessToken(const QString &accessToken)
 {
-    d->googleAccessToken = accessToken;
+    credentialData().googleAccessToken = accessToken;
 }
 
 /// Returns the access token used for X-MESSENGER-OAUTH2 authentication.
 QString QXmppConfiguration::windowsLiveAccessToken() const
 {
-    return d->windowsLiveAccessToken;
+    return credentialData().windowsLiveAccessToken;
 }
 
 ///
@@ -289,7 +404,7 @@ QString QXmppConfiguration::windowsLiveAccessToken() const
 ///
 void QXmppConfiguration::setWindowsLiveAccessToken(const QString &accessToken)
 {
-    d->windowsLiveAccessToken = accessToken;
+    credentialData().windowsLiveAccessToken = accessToken;
 }
 
 ///
@@ -353,6 +468,32 @@ bool QXmppConfiguration::useSasl2Authentication() const
 void QXmppConfiguration::setUseSasl2Authentication(bool enabled)
 {
     d->useSasl2Authentication = enabled;
+}
+
+///
+/// Returns whether to use FAST token-based authentication from \xep{0484, Fast Authentication
+/// Streamlining Tokens} if available.
+///
+/// Note that FAST requires a valid SASL 2 user-agent to be set.
+///
+/// \since QXmpp 1.8
+///
+bool QXmppConfiguration::useFastTokenAuthentication() const
+{
+    return d->useFastTokenAuthentication;
+}
+
+///
+/// Sets whether to use FAST token-based authentication from \xep{0484, Fast Authentication
+/// Streamlining Tokens} if available.
+///
+/// Note that FAST requires a valid SASL 2 user-agent to be set.
+///
+/// \since QXmpp 1.8
+///
+void QXmppConfiguration::setUseFastTokenAuthentication(bool useFast)
+{
+    d->useFastTokenAuthentication = useFast;
 }
 
 /// Returns whether SSL errors (such as certificate validation errors)
@@ -580,3 +721,15 @@ QList<QSslCertificate> QXmppConfiguration::caCertificates() const
 {
     return d->caCertificates;
 }
+
+/// \cond
+const Credentials &QXmppConfiguration::credentialData() const
+{
+    return *(d->credentials.d);
+}
+
+Credentials &QXmppConfiguration::credentialData()
+{
+    return *(d->credentials.d);
+}
+/// \endcond

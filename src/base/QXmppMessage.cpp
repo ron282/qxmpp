@@ -16,6 +16,8 @@
 #include "QXmppJingleData.h"
 #include "QXmppMessageReaction.h"
 #include "QXmppMixInvitation.h"
+
+#include "StringLiterals.h"
 #ifdef BUILD_OMEMO
 #include "QXmppOmemoElement_p.h"
 #include "QXmppOmemoEnvelope_p.h"
@@ -67,6 +69,14 @@ static bool checkElement(const QDomElement &element, QStringView tagName, QStrin
 {
     return element.tagName() == tagName && element.namespaceURI() == xmlns;
 }
+
+///
+/// \struct QXmppStanzaId
+///
+/// \brief Stanza ID element as defined in \xep{0359, Unique and Stable Stanza IDs}.
+///
+/// \since QXmpp 1.8
+///
 
 enum StampType {
     LegacyDelayedDelivery,  // XEP-0091: Legacy Delayed Delivery
@@ -131,8 +141,7 @@ public:
     std::optional<QXmppJingleMessageInitiationElement> jingleMessageInitiationElement;
 
     // XEP-0359: Unique and Stable Stanza IDs
-    QString stanzaId;
-    QString stanzaIdBy;
+    QVector<QXmppStanzaId> stanzaIds;
     QString originId;
 
     // XEP-0367: Message Attaching
@@ -173,13 +182,14 @@ public:
     std::optional<QXmppCallInviteElement> callInviteElement;
 };
 
+///
 /// Constructs a QXmppMessage.
 ///
 /// \param from
 /// \param to
 /// \param body
 /// \param thread
-
+///
 QXmppMessage::QXmppMessage(const QString &from, const QString &to, const QString &body, const QString &thread)
     : QXmppStanza(from, to), d(new QXmppMessagePrivate)
 {
@@ -541,7 +551,7 @@ void QXmppMessage::setBitsOfBinaryData(const QXmppBitsOfBinaryDataList &bitsOfBi
 ///
 bool QXmppMessage::isSlashMeCommand(const QString &body)
 {
-    return body.startsWith(QStringLiteral("/me "));
+    return body.startsWith(u"/me "_s);
 }
 
 ///
@@ -876,44 +886,80 @@ void QXmppMessage::setJingleMessageInitiationElement(const std::optional<QXmppJi
 /// Returns the stanza ID of the message according to \xep{0359}: Unique and
 /// Stable Stanza IDs.
 ///
+/// \deprecated Use stanzaIds() instead.
+///
 /// \since QXmpp 1.3
 ///
 QString QXmppMessage::stanzaId() const
 {
-    return d->stanzaId;
+    return d->stanzaIds.empty() ? QString() : d->stanzaIds.last().id;
 }
 
 ///
 /// Sets the stanza ID of the message according to \xep{0359}: Unique and
 /// Stable Stanza IDs.
 ///
+/// \deprecated Use setStanzaIds() instead.
+///
 /// \since QXmpp 1.3
 ///
 void QXmppMessage::setStanzaId(const QString &id)
 {
-    d->stanzaId = id;
+    if (d->stanzaIds.size() == 1) {
+        d->stanzaIds.first().id = id;
+    } else {
+        d->stanzaIds = { QXmppStanzaId { id, {} } };
+    }
 }
 
 ///
 /// Returns the creator of the stanza ID according to \xep{0359}: Unique and
 /// Stable Stanza IDs.
 ///
+/// \deprecated Use stanzaIds() instead.
+///
 /// \since QXmpp 1.3
 ///
 QString QXmppMessage::stanzaIdBy() const
 {
-    return d->stanzaIdBy;
+    return d->stanzaIds.empty() ? QString() : d->stanzaIds.last().by;
 }
 
 ///
 /// Sets the creator of the stanza ID according to \xep{0359}: Unique and
 /// Stable Stanza IDs.
 ///
+/// \deprecated Use setStanzaIds() instead.
+///
 /// \since QXmpp 1.3
 ///
 void QXmppMessage::setStanzaIdBy(const QString &by)
 {
-    d->stanzaIdBy = by;
+    if (d->stanzaIds.size() == 1) {
+        d->stanzaIds.first().by = by;
+    } else {
+        d->stanzaIds = { QXmppStanzaId { {}, by } };
+    }
+}
+
+///
+/// Returns the stanza IDs of the message as defined in \xep{0359, Unique and Stable Stanza IDs}.
+///
+/// \since QXmpp 1.8
+///
+QVector<QXmppStanzaId> QXmppMessage::stanzaIds() const
+{
+    return d->stanzaIds;
+}
+
+///
+/// Sets the stanza IDs of the message as defined in \xep{0359, Unique and Stable Stanza IDs}.
+///
+/// \since QXmpp 1.8
+///
+void QXmppMessage::setStanzaIds(const QVector<QXmppStanzaId> &ids)
+{
+    d->stanzaIds = ids;
 }
 
 ///
@@ -1373,7 +1419,7 @@ void QXmppMessage::parse(const QDomElement &element, QXmpp::SceMode sceMode)
 {
     QXmppStanza::parse(element);
 
-    d->type = enumFromString<Type>(MESSAGE_TYPES, element.attribute(QStringLiteral("type")))
+    d->type = enumFromString<Type>(MESSAGE_TYPES, element.attribute(u"type"_s))
                   .value_or(Normal);
 
     parseExtensions(element, sceMode);
@@ -1443,7 +1489,7 @@ void QXmppMessage::parseExtensions(const QDomElement &element, const QXmpp::SceM
 bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sceMode)
 {
     if (sceMode & QXmpp::ScePublic) {
-        if (sceMode == QXmpp::ScePublic && element.tagName() == QStringLiteral("body")) {
+        if (sceMode == QXmpp::ScePublic && element.tagName() == u"body") {
             d->e2eeFallbackBody = element.text();
             return true;
         }
@@ -1470,24 +1516,26 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         }
         // XEP-0359: Unique and Stable Stanza IDs
         if (checkElement(element, u"stanza-id", ns_sid)) {
-            d->stanzaId = element.attribute(QStringLiteral("id"));
-            d->stanzaIdBy = element.attribute(QStringLiteral("by"));
+            d->stanzaIds.push_back(QXmppStanzaId {
+                element.attribute(u"id"_s),
+                element.attribute(u"by"_s),
+            });
             return true;
         }
         if (checkElement(element, u"origin-id", ns_sid)) {
-            d->originId = element.attribute(QStringLiteral("id"));
+            d->originId = element.attribute(u"id"_s);
             return true;
         }
         // XEP-0369: Mediated Information eXchange (MIX)
         if (checkElement(element, u"mix", ns_mix)) {
-            d->mixUserJid = element.firstChildElement(QStringLiteral("jid")).text();
-            d->mixUserNick = element.firstChildElement(QStringLiteral("nick")).text();
+            d->mixUserJid = element.firstChildElement(u"jid"_s).text();
+            d->mixUserNick = element.firstChildElement(u"nick"_s).text();
             return true;
         }
         // XEP-0380: Explicit Message Encryption
         if (checkElement(element, u"encryption", ns_eme)) {
-            d->encryptionMethod = element.attribute(QStringLiteral("namespace"));
-            d->encryptionName = element.attribute(QStringLiteral("name"));
+            d->encryptionMethod = element.attribute(u"namespace"_s);
+            d->encryptionName = element.attribute(u"name"_s);
             return true;
         }
 #ifdef BUILD_OMEMO
@@ -1569,28 +1617,28 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         }
     }
     if (sceMode & QXmpp::SceSensitive) {
-        if (element.tagName() == QStringLiteral("body")) {
+        if (element.tagName() == u"body") {
             d->body = element.text();
             return true;
         }
-        if (element.tagName() == QStringLiteral("subject")) {
+        if (element.tagName() == u"subject") {
             d->subject = element.text();
             return true;
         }
-        if (element.tagName() == QStringLiteral("thread")) {
+        if (element.tagName() == u"thread") {
             d->thread = element.text();
-            d->parentThread = element.attribute(QStringLiteral("parent"));
+            d->parentThread = element.attribute(u"parent"_s);
             return true;
         }
-        if (element.tagName() == QStringLiteral("x")) {
+        if (element.tagName() == u"x") {
             if (element.namespaceURI() == ns_legacy_delayed_delivery) {
                 // if XEP-0203 exists, XEP-0091 has no need to parse because XEP-0091
                 // is no more standard protocol)
                 if (d->stamp.isNull()) {
                     // XEP-0091: Legacy Delayed Delivery
                     d->stamp = QDateTime::fromString(
-                        element.attribute(QStringLiteral("stamp")),
-                        QStringLiteral("yyyyMMddThh:mm:ss"));
+                        element.attribute(u"stamp"_s),
+                        u"yyyyMMddThh:mm:ss"_s);
                     d->stamp.setTimeSpec(Qt::UTC);
                     d->stampType = LegacyDelayedDelivery;
                 }
@@ -1598,9 +1646,9 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
             }
             // XEP-0249: Direct MUC Invitations
             if (element.namespaceURI() == ns_conference) {
-                d->mucInvitationJid = element.attribute(QStringLiteral("jid"));
-                d->mucInvitationPassword = element.attribute(QStringLiteral("password"));
-                d->mucInvitationReason = element.attribute(QStringLiteral("reason"));
+                d->mucInvitationJid = element.attribute(u"jid"_s);
+                d->mucInvitationPassword = element.attribute(u"password"_s);
+                d->mucInvitationReason = element.attribute(u"reason"_s);
                 return true;
             }
             // XEP-0066: Out of Band Data
@@ -1613,16 +1661,16 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         }
         // XEP-0071: XHTML-IM
         if (checkElement(element, u"html", ns_xhtml_im)) {
-            QDomElement bodyElement = element.firstChildElement(QStringLiteral("body"));
+            QDomElement bodyElement = element.firstChildElement(u"body"_s);
             if (!bodyElement.isNull() && bodyElement.namespaceURI() == ns_xhtml) {
                 QTextStream stream(&d->xhtml, QIODevice::WriteOnly);
                 bodyElement.save(stream, 0);
 
                 d->xhtml = d->xhtml.mid(d->xhtml.indexOf(u'>') + 1);
                 d->xhtml.replace(
-                    QStringLiteral(" xmlns=\"http://www.w3.org/1999/xhtml\""),
+                    u" xmlns=\"http://www.w3.org/1999/xhtml\""_s,
                     QString());
-                d->xhtml.replace(QStringLiteral("</body>"), QString());
+                d->xhtml.replace(u"</body>"_s, QString());
                 d->xhtml = d->xhtml.trimmed();
             }
             return true;
@@ -1636,7 +1684,7 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
 #else
         // XEP-0184: Message Delivery Receipts
         if (checkElement(element, u"received", ns_message_receipts)) {
-            d->receiptId = element.attribute(QStringLiteral("id"));
+            d->receiptId = element.attribute(u"id"_s);
 
             // compatibility with old-style XEP
             if (d->receiptId.isEmpty()) {
@@ -1651,7 +1699,7 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         // XEP-0203: Delayed Delivery
         if (checkElement(element, u"delay", ns_delayed_delivery)) {
             d->stamp = QXmppUtils::datetimeFromString(
-                element.attribute(QStringLiteral("stamp")));
+                element.attribute(u"stamp"_s));
             d->stampType = DelayedDelivery;
             return true;
         }
@@ -1670,7 +1718,7 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
         }
         // XEP-0308: Last Message Correction
         if (checkElement(element, u"replace", ns_message_correct)) {
-            d->replaceId = element.attribute(QStringLiteral("id"));
+            d->replaceId = element.attribute(u"id"_s);
             return true;
         }
 #if defined(WITH_OMEMO_V03)
@@ -1682,8 +1730,8 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
             } else {
                 if (auto marker = enumFromString<Marker>(MARKER_TYPES, element.tagName())) {
                     d->marker = *marker;
-                    d->markedId = element.attribute(QStringLiteral("id"));
-                    d->markedThread = element.attribute(QStringLiteral("thread"));
+                    d->markedId = element.attribute(u"id"_s);
+                    d->markedThread = element.attribute(u"thread"_s);
                 }
             }
             return true;
@@ -1691,7 +1739,7 @@ bool QXmppMessage::parseExtension(const QDomElement &element, QXmpp::SceMode sce
 #endif
         // XEP-0367: Message Attaching
         if (checkElement(element, u"attach-to", ns_message_attaching)) {
-            d->attachId = element.attribute(QStringLiteral("id"));
+            d->attachId = element.attribute(u"id"_s);
             return true;
         }
         // XEP-0382: Spoiler messages
@@ -1838,13 +1886,11 @@ void QXmppMessage::serializeExtensions(QXmlStreamWriter *writer, QXmpp::SceMode 
 #endif
 
         // XEP-0359: Unique and Stable Stanza IDs
-        if (!d->stanzaId.isNull()) {
+        for (const auto &stanzaId : d->stanzaIds) {
             writer->writeStartElement(QSL65("stanza-id"));
             writer->writeDefaultNamespace(toString65(ns_sid));
-            writer->writeAttribute(QSL65("id"), d->stanzaId);
-            if (!d->stanzaIdBy.isNull()) {
-                writer->writeAttribute(QSL65("by"), d->stanzaIdBy);
-            }
+            writer->writeAttribute(QSL65("id"), stanzaId.id);
+            writeOptionalXmlAttribute(writer, u"by", stanzaId.by);
             writer->writeEndElement();
         }
 
@@ -2177,8 +2223,8 @@ std::optional<QXmppFallback> QXmppFallback::fromDom(const QDomElement &el)
 
     QVector<Reference> references;
     for (const auto &subEl : iterChildElements(el, {}, ns_fallback_indication)) {
-        auto start = parseInt<uint32_t>(subEl.attribute(QStringLiteral("start")));
-        auto end = parseInt<uint32_t>(subEl.attribute(QStringLiteral("end")));
+        auto start = parseInt<uint32_t>(subEl.attribute(u"start"_s));
+        auto end = parseInt<uint32_t>(subEl.attribute(u"end"_s));
         std::optional<Range> range;
         if (start && end) {
             range = Range { *start, *end };
@@ -2192,7 +2238,7 @@ std::optional<QXmppFallback> QXmppFallback::fromDom(const QDomElement &el)
     }
 
     return QXmppFallback {
-        el.attribute(QStringLiteral("for")),
+        el.attribute(u"for"_s),
         references,
     };
 }

@@ -4,123 +4,23 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
-#include "QXmppStream.h"
+#include "Stream.h"
 
 #include "QXmppConstants_p.h"
-#include "QXmppError.h"
-#include "QXmppNonza.h"
 #include "QXmppStreamError_p.h"
 #include "QXmppUtils_p.h"
 
-#include "Stream.h"
+#include "StringLiterals.h"
 #include "XmppSocket.h"
-#include "qxmlstream.h"
 
 #include <QDomDocument>
 #include <QHostAddress>
 #include <QRegularExpression>
 #include <QSslSocket>
+#include <QXmlStreamWriter>
 
 using namespace QXmpp;
 using namespace QXmpp::Private;
-
-class QXmppStreamPrivate
-{
-public:
-    QXmppStreamPrivate(QXmppStream *stream);
-
-    XmppSocket socket;
-};
-
-QXmppStreamPrivate::QXmppStreamPrivate(QXmppStream *stream)
-    : socket(stream)
-{
-}
-
-///
-/// Constructs a base XMPP stream.
-///
-/// \param parent
-///
-QXmppStream::QXmppStream(QObject *parent)
-    : QXmppLoggable(parent),
-      d(std::make_unique<QXmppStreamPrivate>(this))
-{
-    connect(&d->socket, &XmppSocket::started, this, &QXmppStream::handleStart);
-    connect(&d->socket, &XmppSocket::stanzaReceived, this, &QXmppStream::handleStanza);
-    connect(&d->socket, &XmppSocket::streamReceived, this, &QXmppStream::handleStream);
-    connect(&d->socket, &XmppSocket::streamClosed, this, &QXmppStream::disconnectFromHost);
-}
-
-QXmppStream::~QXmppStream() = default;
-
-///
-/// Disconnects from the remote host.
-///
-void QXmppStream::disconnectFromHost()
-{
-    d->socket.disconnectFromHost();
-}
-
-///
-/// Handles a stream start event, which occurs when the underlying transport
-/// becomes ready (socket connected, encryption started).
-///
-void QXmppStream::handleStart()
-{
-}
-
-///
-/// Returns true if the stream is connected.
-///
-bool QXmppStream::isConnected() const
-{
-    return d->socket.isConnected();
-}
-
-///
-/// Sends raw data to the peer.
-///
-/// \param data
-///
-bool QXmppStream::sendData(const QByteArray &data)
-{
-    return d->socket.sendData(data);
-}
-
-///
-/// Sends an XMPP packet to the peer.
-///
-/// \param nonza
-///
-bool QXmppStream::sendPacket(const QXmppNonza &nonza)
-{
-    return d->socket.sendData(serializeXml(nonza));
-}
-
-///
-/// Returns access to the XMPP socket.
-///
-XmppSocket &QXmppStream::xmppSocket() const
-{
-    return d->socket;
-}
-
-///
-/// Returns the QSslSocket used for this stream.
-///
-QSslSocket *QXmppStream::socket() const
-{
-    return d->socket.socket();
-}
-
-///
-/// Sets the QSslSocket used for this stream.
-///
-void QXmppStream::setSocket(QSslSocket *socket)
-{
-    d->socket.setSocket(socket);
-}
 
 #if defined(SFOS)
 namespace QXmpp { namespace Private {
@@ -140,6 +40,52 @@ void StreamOpen::toXml(QXmlStreamWriter *writer) const
     writer->writeDefaultNamespace(toString65(xmlns));
     writer->writeNamespace(toString65(ns_stream), QSL65("stream"));
     writer->writeCharacters({});
+}
+
+std::optional<StarttlsRequest> StarttlsRequest::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"starttls" || el.namespaceURI() != ns_tls) {
+        return {};
+    }
+    return StarttlsRequest {};
+}
+
+void StarttlsRequest::toXml(QXmlStreamWriter *w) const
+{
+    writeEmptyElement(w, u"starttls", ns_tls);
+}
+
+std::optional<StarttlsProceed> StarttlsProceed::fromDom(const QDomElement &el)
+{
+    if (el.tagName() != u"proceed" || el.namespaceURI() != ns_tls) {
+        return {};
+    }
+    return StarttlsProceed {};
+}
+
+void StarttlsProceed::toXml(QXmlStreamWriter *w) const
+{
+    writeEmptyElement(w, u"proceed", ns_tls);
+}
+
+void CsiActive::toXml(QXmlStreamWriter *w) const
+{
+    writeEmptyElement(w, u"active", ns_csi);
+}
+
+<<<<<<< HEAD:src/base/QXmppStream.cpp
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
+namespace QXmpp::Private {
+#endif
+
+void StreamOpen::toXml(QXmlStreamWriter *writer) const
+=======
+void CsiInactive::toXml(QXmlStreamWriter *w) const
+>>>>>>> 94232e798de18099322bee71400f246c9193047a:src/base/Stream.cpp
+{
+    writeEmptyElement(w, u"inactive", ns_csi);
 }
 
 constexpr auto STREAM_ERROR_CONDITIONS = to_array<QStringView>({
@@ -178,7 +124,7 @@ QString StreamErrorElement::streamErrorToString(StreamError e)
 std::variant<StreamErrorElement, QXmppError> StreamErrorElement::fromDom(const QDomElement &el)
 {
     if (el.tagName() != u"error" || el.namespaceURI() != ns_stream) {
-        return QXmppError { QStringLiteral("Invalid dom element."), {} };
+        return QXmppError { u"Invalid dom element."_s, {} };
     }
 
     std::optional<StreamErrorElement::Condition> condition;
@@ -198,7 +144,7 @@ std::variant<StreamErrorElement, QXmppError> StreamErrorElement::fromDom(const Q
     }
 
     if (!condition) {
-        return QXmppError { QStringLiteral("Stream error is missing valid error condition."), {} };
+        return QXmppError { u"Stream error is missing valid error condition."_s, {} };
     }
 
     return StreamErrorElement {
@@ -221,15 +167,20 @@ void XmppSocket::setSocket(QSslSocket *socket)
     }
 
     QObject::connect(socket, &QAbstractSocket::connected, this, [this]() {
-        info(QStringLiteral("Socket connected to %1 %2")
+        info(u"Socket connected to %1 %2"_s
                  .arg(m_socket->peerAddress().toString(),
                       QString::number(m_socket->peerPort())));
-        m_dataBuffer.clear();
-        m_streamOpenElement.clear();
-        Q_EMIT started();
+
+        // do not emit started() with direct TLS (this happens in encrypted())
+        if (!m_directTls) {
+            m_dataBuffer.clear();
+            m_streamOpenElement.clear();
+            Q_EMIT started();
+        }
     });
     QObject::connect(socket, &QSslSocket::encrypted, this, [this]() {
-        debug(QStringLiteral("Socket encrypted"));
+        debug(u"Socket encrypted"_s);
+        // this happens with direct TLS or STARTTLS
         m_dataBuffer.clear();
         m_streamOpenElement.clear();
         Q_EMIT started();
@@ -239,7 +190,7 @@ void XmppSocket::setSocket(QSslSocket *socket)
 #else
 	connect(socket, static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error), this,  [this](QAbstractSocket::SocketError) {;
 #endif
-        warning(QStringLiteral("Socket error: ") + m_socket->errorString());
+        warning(u"Socket error: "_s + m_socket->errorString());
     });
     QObject::connect(socket, &QSslSocket::readyRead, this, [this]() {
         processData(QString::fromUtf8(m_socket->readAll()));
@@ -249,6 +200,24 @@ void XmppSocket::setSocket(QSslSocket *socket)
 bool XmppSocket::isConnected() const
 {
     return m_socket && m_socket->state() == QAbstractSocket::ConnectedState;
+}
+
+void XmppSocket::connectToHost(const ServerAddress &address)
+{
+    m_directTls = address.type == ServerAddress::Tls;
+
+    // connect to host
+    switch (address.type) {
+    case ServerAddress::Tcp:
+        info(u"Connecting to %1:%2 (TCP)"_s.arg(address.host, QString::number(address.port)));
+        m_socket->connectToHost(address.host, address.port);
+        break;
+    case ServerAddress::Tls:
+        info(u"Connecting to %1:%2 (TLS)"_s.arg(address.host, QString::number(address.port)));
+        Q_ASSERT(QSslSocket::supportsSsl());
+        m_socket->connectToHostEncrypted(address.host, address.port);
+        break;
+    }
 }
 
 void XmppSocket::disconnectFromHost()
@@ -302,8 +271,8 @@ void XmppSocket::processData(const QString &data)
     //
     // Check whether we received a stream open or closing tag
     //
-    static const QRegularExpression streamStartRegex(QStringLiteral(R"(^(<\?xml.*\?>)?\s*<stream:stream[^>]*>)"));
-    static const QRegularExpression streamEndRegex(QStringLiteral("</stream:stream>$"));
+    static const QRegularExpression streamStartRegex(uR"(^(<\?xml.*\?>)?\s*<stream:stream[^>]*>)"_s);
+    static const QRegularExpression streamEndRegex(u"</stream:stream>$"_s);
 
     auto streamOpenMatch = streamStartRegex.match(m_dataBuffer);
     bool hasStreamOpen = streamOpenMatch.hasMatch();
@@ -338,7 +307,7 @@ void XmppSocket::processData(const QString &data)
         wrappedStanzas.prepend(m_streamOpenElement);
     }
     if (!hasStreamClose) {
-        wrappedStanzas.append(QStringLiteral("</stream:stream>"));
+        wrappedStanzas.append(u"</stream:stream>"_s);
     }
 
     //

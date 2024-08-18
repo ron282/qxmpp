@@ -7,7 +7,6 @@
 #include "QXmppDiscoveryManager.h"
 #include "QXmppHttpUploadIq.h"
 #include "QXmppHttpUploadManager.h"
-#include "QXmppTlsManager_p.h"
 #include "QXmppUploadRequestManager.h"
 
 #include "Algorithms.h"
@@ -19,7 +18,7 @@
 
 using namespace QXmpp::Private;
 
-static const auto UPLOAD_SERVICE_NAME = QStringLiteral("upload.montague.tld");
+static const auto UPLOAD_SERVICE_NAME = u"upload.montague.tld"_s;
 constexpr quint64 MAX_FILE_SIZE = 500UL * 1024UL * 1024UL;
 
 static void addUploadService(QXmppClient &client)
@@ -344,8 +343,8 @@ void tst_QXmppHttpUploadManager::testSendingFuture()
     QCOMPARE(slot.putUrl(), QUrl("https://upload.montague.tld/4a771ac1-f0b2-4a4a-9700-f2a26fa2bb67/tr%C3%A8s%20cool.jpg"));
     // checks that the disallowed 'Content-type' header is not set
     QCOMPARE(slot.putHeaders().size(), 2);
-    QCOMPARE(slot.putHeaders().keys()[0], QStringLiteral("Authorization"));
-    QCOMPARE(slot.putHeaders().keys()[1], QStringLiteral("Cookie"));
+    QCOMPARE(slot.putHeaders().keys()[0], u"Authorization"_s);
+    QCOMPARE(slot.putHeaders().keys()[1], u"Cookie"_s);
 }
 
 void tst_QXmppHttpUploadManager::testUploadService()
@@ -357,8 +356,8 @@ void tst_QXmppHttpUploadManager::testUploadService()
     service.setSizeLimit(256LL * 1024LL * 1024LL);
     QCOMPARE(service.sizeLimit(), 256LL * 1024LL * 1024LL);
 
-    service.setJid(QStringLiteral("upload.shakespeare.lit"));
-    QCOMPARE(service.jid(), QStringLiteral("upload.shakespeare.lit"));
+    service.setJid(u"upload.shakespeare.lit"_s);
+    QCOMPARE(service.jid(), u"upload.shakespeare.lit"_s);
 }
 
 void tst_QXmppHttpUploadManager::testUpload()
@@ -369,7 +368,6 @@ void tst_QXmppHttpUploadManager::testUpload()
     SKIP_IF_INTEGRATION_TESTS_DISABLED()
 
     TestClient test;
-    test.addNewExtension<QXmppTlsManager>();
     auto *disco = test.addNewExtension<QXmppDiscoveryManager>();
     test.addNewExtension<QXmppUploadRequestManager>();
     auto *uploadManager = test.addNewExtension<QXmppHttpUploadManager>();
@@ -411,8 +409,8 @@ void tst_QXmppHttpUploadManager::testUpload()
         QXmppHttpUploadRequestIq iq;
         parsePacket(iq, test.takeLastPacket().toUtf8());
 
-        QCOMPARE(iq.contentType().name(), QStringLiteral("image/svg+xml"));
-        QCOMPARE(iq.fileName(), QStringLiteral("test_renamed.png"));
+        QCOMPARE(iq.contentType().name(), u"image/svg+xml"_s);
+        QCOMPARE(iq.fileName(), u"test_renamed.png"_s);
         QCOMPARE(iq.size(), 2280LL);
     }
 

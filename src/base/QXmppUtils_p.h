@@ -84,6 +84,13 @@ void writeXmlTextElement(QXmlStreamWriter *stream, QStringView name, QStringView
 void writeXmlTextElement(QXmlStreamWriter *writer, QStringView name, QStringView xmlns, QStringView value);
 void writeOptionalXmlTextElement(QXmlStreamWriter *writer, QStringView name, QStringView value);
 void writeEmptyElement(QXmlStreamWriter *writer, QStringView name, QStringView xmlns);
+template<typename T>
+inline void writeOptional(QXmlStreamWriter *writer, const std::optional<T> &value)
+{
+    if (value) {
+        value->toXml(writer);
+    }
+}
 
 // Base64
 std::optional<QByteArray> parseBase64(const QString &);
@@ -95,13 +102,17 @@ std::optional<Int> parseInt(QStringView str);
 template<typename Int>
 inline QString serializeInt(Int value) { return QString::number(value); }
 
+// Booleans
+std::optional<bool> parseBoolean(const QString &str);
+QString serializeBoolean(bool);
+
 //
 // DOM
 //
 
-bool isIqType(const QDomElement &, QStringView tagName, QStringView xmlns);
-QDomElement firstChildElement(const QDomElement &, QStringView tagName = {}, QStringView xmlNs = {});
-QDomElement nextSiblingElement(const QDomElement &, QStringView tagName = {}, QStringView xmlNs = {});
+QXMPP_EXPORT bool isIqType(const QDomElement &, QStringView tagName, QStringView xmlns);
+QXMPP_EXPORT QDomElement firstChildElement(const QDomElement &, QStringView tagName = {}, QStringView xmlNs = {});
+QXMPP_EXPORT QDomElement nextSiblingElement(const QDomElement &, QStringView tagName = {}, QStringView xmlNs = {});
 
 struct DomChildElements {
     QDomElement parent;
@@ -128,6 +139,8 @@ struct DomChildElements {
 };
 
 inline DomChildElements iterChildElements(const QDomElement &el, QStringView tagName = {}, QStringView namespaceUri = {}) { return DomChildElements { el, tagName, namespaceUri }; }
+
+std::vector<QString> parseTextElements(DomChildElements elements);
 
 QByteArray serializeXml(const void *packet, void (*toXml)(const void *, QXmlStreamWriter *));
 template<typename T>

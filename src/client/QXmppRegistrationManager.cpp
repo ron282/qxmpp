@@ -8,9 +8,12 @@
 #include "QXmppClient.h"
 #include "QXmppConstants_p.h"
 #include "QXmppDiscoveryManager.h"
+#include "QXmppOutgoingClient.h"
 #include "QXmppRegisterIq.h"
 #include "QXmppStreamFeatures.h"
 #include "QXmppUtils.h"
+
+#include "StringLiterals.h"
 
 #include <QDomElement>
 
@@ -180,28 +183,34 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
         QXmppStreamFeatures features;
         features.parse(stanza);
 
+        // handle STARTTLS first (this is a workaround, registration management should better be
+        // integrated into the OutgoingClient)
+        if (client()->stream()->handleStarttls(features)) {
+            return true;
+        }
+
         if (features.registerMode() == QXmppStreamFeatures::Disabled) {
-            warning(QStringLiteral("Could not request the registration form, because the server does not advertise the register stream feature."));
+            warning(u"Could not request the registration form, because the server does not advertise the register stream feature."_s);
             client()->disconnectFromServer();
             Q_EMIT registrationFailed({ QXmppStanza::Error::Cancel,
                                         QXmppStanza::Error::FeatureNotImplemented,
-                                        QStringLiteral("The server does not advertise the register stream feature.") });
+                                        u"The server does not advertise the register stream feature."_s });
             return true;
         }
 
         if (!d->registrationFormToSend.form().isNull() || !d->registrationFormToSend.username().isNull()) {
-            info(QStringLiteral("Sending completed form."));
+            info(u"Sending completed form."_s);
             sendCachedRegistrationForm();
             return true;
         }
 
-        info(QStringLiteral("Requesting registration form from server."));
+        info(u"Requesting registration form from server."_s);
         requestRegistrationForm();
         return true;
     }
 
     if (stanza.tagName() == u"iq") {
-        const QString &id = stanza.attribute(QStringLiteral("id"));
+        const QString &id = stanza.attribute(u"id"_s);
 
         if (!id.isEmpty() && id == d->registrationIqId) {
             QXmppIq iq;
@@ -209,11 +218,11 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 
             switch (iq.type()) {
             case QXmppIq::Result:
-                info(QStringLiteral("Successfully registered with the service."));
+                info(u"Successfully registered with the service."_s);
                 Q_EMIT registrationSucceeded();
                 break;
             case QXmppIq::Error:
-                warning(QStringLiteral("Registering with the service failed: ").append(iq.error().text()));
+                warning(u"Registering with the service failed: "_s.append(iq.error().text()));
                 Q_EMIT registrationFailed(iq.error());
                 break;
             default:
@@ -228,12 +237,12 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 
             switch (iq.type()) {
             case QXmppIq::Result:
-                info(QStringLiteral("Changed password successfully."));
+                info(u"Changed password successfully."_s);
                 client()->configuration().setPassword(d->newPassword);
                 Q_EMIT passwordChanged(d->newPassword);
                 break;
             case QXmppIq::Error:
-                warning(QStringLiteral("Failed to change password: ").append(iq.error().text()));
+                warning(u"Failed to change password: "_s.append(iq.error().text()));
                 Q_EMIT passwordChangeFailed(iq.error());
                 break;
             default:
@@ -249,12 +258,12 @@ bool QXmppRegistrationManager::handleStanza(const QDomElement &stanza)
 
             switch (iq.type()) {
             case QXmppIq::Result:
-                info(QStringLiteral("Account deleted successfully."));
+                info(u"Account deleted successfully."_s);
                 Q_EMIT accountDeleted();
                 client()->disconnectFromServer();
                 break;
             case QXmppIq::Error:
-                warning(QStringLiteral("Failed to delete account: ").append(iq.error().text()));
+                warning(u"Failed to delete account: "_s.append(iq.error().text()));
                 Q_EMIT accountDeletionFailed(iq.error());
                 break;
             default:

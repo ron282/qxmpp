@@ -115,20 +115,20 @@ void tst_QXmppOmemoManager::testSecurityPolicies()
 
 void tst_QXmppOmemoManager::testTrustLevels()
 {
-    auto futureTrustLevel = m_alice1.manager->trustLevel(QStringLiteral("alice@example.org"),
+    auto futureTrustLevel = m_alice1.manager->trustLevel(u"alice@example.org"_s,
                                                          QByteArray::fromBase64(QByteArrayLiteral("AZ/cF4OrUOILKO1gQBf62pQevOhBJ2NyHnXLwM4FDZU=")));
     QVERIFY(futureTrustLevel.isFinished());
     auto resultTrustLevel = futureTrustLevel.result();
     QCOMPARE(resultTrustLevel, TrustLevel::Undecided);
 
     m_alice1.manager->setTrustLevel(
-        { { QStringLiteral("alice@example.org"),
+        { { u"alice@example.org"_s,
             QByteArray::fromBase64(QByteArrayLiteral("AZ/cF4OrUOILKO1gQBf62pQevOhBJ2NyHnXLwM4FDZU=")) },
-          { QStringLiteral("bob@example.com"),
+          { u"bob@example.com"_s,
             QByteArray::fromBase64(QByteArrayLiteral("9E51lG3vVmUn8CM7/AIcmIlLP2HPl6Ao0/VSf4VT/oA=")) } },
         TrustLevel::Authenticated);
 
-    futureTrustLevel = m_alice1.manager->trustLevel(QStringLiteral("alice@example.org"),
+    futureTrustLevel = m_alice1.manager->trustLevel(u"alice@example.org"_s,
                                                     QByteArray::fromBase64(QByteArrayLiteral("AZ/cF4OrUOILKO1gQBf62pQevOhBJ2NyHnXLwM4FDZU=")));
     QVERIFY(futureTrustLevel.isFinished());
     resultTrustLevel = futureTrustLevel.result();
@@ -178,9 +178,9 @@ void tst_QXmppOmemoManager::testSetUp()
     auto isManagerSetUp = false;
     const QObject context;
 
-    connect(&m_alice1.client, &QXmppClient::connected, &context, [=, &isManagerSetUp]() {
+    connect(&m_alice1.client, &QXmppClient::connected, &context, [&] {
         auto future = m_alice1.manager->setUp();
-        future.then(this, [=, &isManagerSetUp](bool isSetUp) {
+        future.then(this, [&isManagerSetUp](bool isSetUp) {
             if (isSetUp) {
                 isManagerSetUp = true;
             }
@@ -211,7 +211,7 @@ void tst_QXmppOmemoManager::testLoad()
     QVERIFY(!result);
 
     const QXmppOmemoStorage::OwnDevice ownDevice = { 1,
-                                                     QStringLiteral("notebook"),
+                                                     u"notebook"_s,
                                                      QByteArray::fromBase64(QByteArrayLiteral("OU5HM3loYnFjZVVaYmpSbHdab0FPTDhJVHRzUFVUcFMK")),
                                                      QByteArray::fromBase64(QByteArrayLiteral("TkhodEZ6cnFDeGtENWRuT1ZZdUsyaGIwQkRPdHFRSE8K")),
                                                      2,
@@ -251,7 +251,7 @@ void tst_QXmppOmemoManager::testSendMessage()
 
     const auto config1 = IntegrationTests::clientConfiguration();
     auto config2 = config1;
-    config2.setResource(config2.resource() + QStringLiteral("2"));
+    config2.setResource(config2.resource() + u"2"_s);
 
     const QObject context;
     QString recipient = "bob@" + config1.domain();
@@ -264,14 +264,14 @@ void tst_QXmppOmemoManager::testSendMessage()
     message2.setTo(recipient);
     message2.setBody("Hello Bob again!");
 
-    connect(&m_alice1.client, &QXmppClient::connected, &context, [=]() {
+    connect(&m_alice1.client, &QXmppClient::connected, &context, [this, config2] {
         auto future = m_alice1.manager->setUp();
-        future.then(this, [=](bool isSetUp) {
+        future.then(this, [this, config2](bool isSetUp) {
             if (isSetUp) {
                 auto future = m_alice1.manager->setSecurityPolicy(Toakafa);
-                future.then(this, [=]() {
+                future.then(this, [this, config2] {
                     auto future = m_alice2.manager->setSecurityPolicy(Toakafa);
-                    future.then(this, [=]() {
+                    future.then(this, [this, config2] {
                         m_alice2.client.connectToServer(config2);
                     });
                 });
@@ -279,7 +279,7 @@ void tst_QXmppOmemoManager::testSendMessage()
         });
     });
 
-    connect(&m_alice2.client, &QXmppClient::connected, &context, [=]() {
+    connect(&m_alice2.client, &QXmppClient::connected, &context, [this] {
         m_alice2.manager->setUp();
     });
 
@@ -303,7 +303,7 @@ void tst_QXmppOmemoManager::testSendMessage()
         }
     });
 
-    connect(&m_alice1.logger, &QXmppLogger::message, &context, [=, &isEmptyOmemoMessageReceivedByAlice1, &isSecondMessageSentByAlice1](QXmppLogger::MessageType type, const QString &text) mutable {
+    connect(&m_alice1.logger, &QXmppLogger::message, &context, [&](QXmppLogger::MessageType type, const QString &text) mutable {
         if (type == QXmppLogger::SentMessage) {
             qDebug() << "Alice - SENT: " << text;
         } else if (type == QXmppLogger::ReceivedMessage) {
@@ -334,7 +334,7 @@ void tst_QXmppOmemoManager::testSendMessage()
 
     // Wait for receiving the device of Alice 2 in order to send a message to Bob and a message
     // carbon to Alice 2.
-    connect(m_alice1.manager, &QXmppOmemoManager::deviceAdded, &context, [=, &isFirstMessageSentByAlice1](const QString &jid, uint32_t) mutable {
+    connect(m_alice1.manager, &QXmppOmemoManager::deviceAdded, &context, [=, this, &isFirstMessageSentByAlice1](const QString &jid, uint32_t) mutable {
         if (jid == m_alice2.client.configuration().jidBare()) {
             if (!isFirstMessageSentByAlice1) {
                 auto future = m_alice1.client.sendSensitive(std::move(message1), QXmppSendStanzaParams());
@@ -373,13 +373,13 @@ void tst_QXmppOmemoManager::testSendIq()
 
     const auto config1 = IntegrationTests::clientConfiguration();
     auto config2 = config1;
-    config2.setResource(config2.resource() + QStringLiteral("2"));
+    config2.setResource(config2.resource() + u"2"_s);
 
     const QObject context;
 
     QXmppBitsOfBinaryIq requestIq;
     requestIq.setTo(config2.jid());
-    requestIq.setCid(QXmppBitsOfBinaryContentId::fromContentId(QStringLiteral("sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org")));
+    requestIq.setCid(QXmppBitsOfBinaryContentId::fromContentId(u"sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org"_s));
 
     QXmppBitsOfBinaryIq responseIq;
     responseIq.setType(QXmppIq::Result);
@@ -393,14 +393,14 @@ void tst_QXmppOmemoManager::testSendIq()
 
     OmemoIqHandler iqHandler(requestIq, responseIq);
 
-    connect(&m_alice1.client, &QXmppClient::connected, &context, [=]() {
+    connect(&m_alice1.client, &QXmppClient::connected, &context, [=, this] {
         auto future = m_alice1.manager->setUp();
-        future.then(this, [=](bool isSetUp) {
+        future.then(this, [=, this](bool isSetUp) {
             if (isSetUp) {
                 auto future = m_alice1.manager->setSecurityPolicy(Toakafa);
-                future.then(this, [=]() {
+                future.then(this, [=, this] {
                     auto future = m_alice2.manager->setSecurityPolicy(Toakafa);
-                    future.then(this, [=]() {
+                    future.then(this, [=, this] {
                         m_alice2.client.connectToServer(config2);
                     });
                 });
@@ -408,7 +408,7 @@ void tst_QXmppOmemoManager::testSendIq()
         });
     });
 
-    connect(&m_alice2.client, &QXmppClient::connected, &context, [=]() {
+    connect(&m_alice2.client, &QXmppClient::connected, &context, [this] {
         m_alice2.manager->setUp();
     });
 
@@ -429,14 +429,14 @@ void tst_QXmppOmemoManager::testSendIq()
     });
 
     // Wait for receiving the device of Alice 2 in order to send a request to it.
-    connect(m_alice1.manager, &QXmppOmemoManager::deviceAdded, &context, [=, &isFirstRequestSent, &isErrorResponseReceived, &isSecondRequestSent, &isResultResponseReceived, &iqHandler](const QString &jid, uint32_t) {
+    connect(m_alice1.manager, &QXmppOmemoManager::deviceAdded, &context, [=, this, &isFirstRequestSent, &isErrorResponseReceived, &isSecondRequestSent, &isResultResponseReceived, &iqHandler](const QString &jid, uint32_t) {
         if (jid != m_alice2.client.configuration().jidBare()) {
             return;
         }
         if (!isFirstRequestSent && !isSecondRequestSent) {
             auto requestIqCopy = requestIq;
             auto future = m_alice1.client.sendSensitiveIq(std::move(requestIqCopy));
-            future.then(this, [=, &isFirstRequestSent, &isErrorResponseReceived, &isSecondRequestSent, &isResultResponseReceived, &iqHandler](QXmppClient::IqResult result) {
+            future.then(this, [=, this, &isFirstRequestSent, &isErrorResponseReceived, &isSecondRequestSent, &isResultResponseReceived, &iqHandler](QXmppClient::IqResult result) {
                 if (const auto response = std::get_if<QDomElement>(&result)) {
                     isFirstRequestSent = true;
 

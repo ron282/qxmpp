@@ -52,7 +52,7 @@ public:
 
     explicit Sasl2Manager(SendDataInterface *socket) : m_socket(socket) { }
 
-    QXmppTask<AuthResult> authenticate(const QXmppConfiguration &config, const Sasl2::StreamFeature &feature, QXmppLoggable *loggable);
+    QXmppTask<AuthResult> authenticate(Sasl2::Authenticate &&authenticate, const QXmppConfiguration &config, const Sasl2::StreamFeature &feature, QXmppLoggable *loggable);
     HandleElementResult handleElement(const QDomElement &);
 
 private:
@@ -64,6 +64,24 @@ private:
 
     SendDataInterface *m_socket;
     std::optional<State> m_state;
+};
+
+// Authentication token management
+class FastTokenManager
+{
+public:
+    explicit FastTokenManager(QXmppConfiguration &config);
+
+    static bool isFastEnabled(const QXmppConfiguration &);
+    bool hasToken() const;
+    void onSasl2Authenticate(Sasl2::Authenticate &auth, const Sasl2::StreamFeature &feature);
+    void onSasl2Success(const Sasl2::Success &success);
+    bool tokenChanged() const { return m_tokenChanged; }
+
+private:
+    QXmppConfiguration &config;
+    std::optional<SaslHtMechanism> requestedMechanism;
+    bool m_tokenChanged = false;
 };
 
 #if defined(SFOS)

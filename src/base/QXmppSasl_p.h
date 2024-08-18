@@ -11,16 +11,17 @@
 #include "QXmppGlobal.h"
 #include "QXmppLogger.h"
 #include "QXmppNonza.h"
+#include "QXmppStreamManagement_p.h"
 
 #include <optional>
 
 #include <QCryptographicHash>
+#include <QDateTime>
 #include <QMap>
 #include <QUuid>
 
 class QDomElement;
 class QXmlStreamWriter;
-class QXmppSaslClientPrivate;
 class QXmppSaslServerPrivate;
 
 #if defined(SFOS)
@@ -110,18 +111,81 @@ struct Success {
 #endif
 
 #if defined(SFOS)
-namespace QXmpp {	namespace Private {		namespace Sasl2 {
+namespace QXmpp {	namespace Private {
+
+struct Bind2Feature {
+    static std::optional<Bind2Feature> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    std::vector<QString> features;
+};
+
+struct Bind2Request {
+    static std::optional<Bind2Request> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    QString tag;
+    // bind2 extensions
+    bool csiInactive = false;
+    bool carbonsEnable = false;
+    std::optional<SmEnable> smEnable;
+};
+
+struct Bind2Bound {
+    static std::optional<Bind2Bound> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    // extensions
+    std::optional<SmFailed> smFailed;
+    std::optional<SmEnabled> smEnabled;
+};
+
+struct FastFeature {
+    static std::optional<FastFeature> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    std::vector<QString> mechanisms;
+    bool tls0rtt = false;
+};
+
+struct FastTokenRequest {
+    static std::optional<FastTokenRequest> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    QString mechanism;
+};
+
+struct FastToken {
+    static std::optional<FastToken> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    QDateTime expiry;
+    QString token;
+};
+
+struct FastRequest {
+    static std::optional<FastRequest> fromDom(const QDomElement &);
+    void toXml(QXmlStreamWriter *) const;
+
+    std::optional<uint64_t> count;
+    bool invalidate = false;
+};
+
+namespace Sasl2 {
 #else
 namespace QXmpp::Private::Sasl2 {
 #endif
+
+
 
 struct StreamFeature {
     static std::optional<StreamFeature> fromDom(const QDomElement &);
     void toXml(QXmlStreamWriter *) const;
 
     QList<QString> mechanisms;
-    bool streamResumptionAvailable;
-    bool bind2Available;
+    std::optional<Bind2Feature> bind2Feature;
+    std::optional<FastFeature> fast;
+    bool streamResumptionAvailable = false;
 };
 
 struct UserAgent {
@@ -140,7 +204,10 @@ struct Authenticate {
     QString mechanism;
     QByteArray initialResponse;
     std::optional<UserAgent> userAgent;
-    // bind2 and other extensions may be added here later on
+    std::optional<Bind2Request> bindRequest;
+    std::optional<SmResume> smResume;
+    std::optional<FastTokenRequest> tokenRequest;
+    std::optional<FastRequest> fast;
 };
 
 struct Challenge {
@@ -164,6 +231,10 @@ struct Success {
     std::optional<QByteArray> additionalData;
     QString authorizationIdentifier;
     // extensions
+    std::optional<Bind2Bound> bound;
+    std::optional<SmResumed> smResumed;
+    std::optional<SmFailed> smFailed;
+    std::optional<FastToken> token;
 };
 
 struct Failure {
@@ -197,36 +268,158 @@ struct Abort {
 }  // namespace QXmpp::Private::Sasl2
 #endif
 
+enum class IanaHashAlgorithm {
+    Sha256,
+    Sha384,
+    Sha512,
+    Sha3_224,
+    Sha3_256,
+    Sha3_384,
+    Sha3_512,
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    Blake2s_256,
+    Blake2b_256,
+    Blake2b_512,
+#endif
+};
+
+QCryptographicHash::Algorithm ianaHashAlgorithmToQt(IanaHashAlgorithm alg);
+
+//
+// SASL mechanisms
+//
+
+struct SaslScramMechanism {
+    static std::optional<SaslScramMechanism> fromString(QStringView str);
+    QString toString() const;
+
+    QCryptographicHash::Algorithm qtAlgorithm() const;
+
+    auto operator<=>(const SaslScramMechanism &) const = default;
+
+    enum Algorithm {
+        Sha1,
+        Sha256,
+        Sha512,
+        Sha3_512,
+    } algorithm;
+};
+
+struct SaslHtMechanism {
+    static std::optional<SaslHtMechanism> fromString(QStringView);
+    QString toString() const;
+
+    auto operator<=>(const SaslHtMechanism &) const = default;
+
+    enum ChannelBindingType {
+        TlsServerEndpoint,
+        TlsUnique,
+        TlsExporter,
+        None,
+    };
+
+    IanaHashAlgorithm hashAlgorithm;
+    ChannelBindingType channelBindingType;
+};
+
+struct SaslDigestMd5Mechanism {
+    auto operator<=>(const SaslDigestMd5Mechanism &) const = default;
+};
+struct SaslPlainMechanism {
+    auto operator<=>(const SaslPlainMechanism &) const = default;
+};
+struct SaslAnonymousMechanism {
+    auto operator<=>(const SaslAnonymousMechanism &) const = default;
+};
+struct SaslXFacebookMechanism {
+    auto operator<=>(const SaslXFacebookMechanism &) const = default;
+};
+struct SaslXWindowsLiveMechanism {
+    auto operator<=>(const SaslXWindowsLiveMechanism &) const = default;
+};
+struct SaslXGoogleMechanism {
+    auto operator<=>(const SaslXGoogleMechanism &) const = default;
+};
+
+// Note that the order of the variant alternatives defines the preference/strength of the mechanisms.
+struct SaslMechanism
+    : std::variant<SaslXGoogleMechanism,
+                   SaslXWindowsLiveMechanism,
+                   SaslXFacebookMechanism,
+                   SaslAnonymousMechanism,
+                   SaslPlainMechanism,
+                   SaslDigestMd5Mechanism,
+                   SaslScramMechanism,
+                   SaslHtMechanism> {
+    static std::optional<SaslMechanism> fromString(QStringView str);
+    QString toString() const;
+};
+
+inline QDebug operator<<(QDebug dbg, SaslMechanism mechanism) { return dbg << mechanism.toString(); }
+
+//
+// Credentials
+//
+
+struct HtToken {
+    static std::optional<HtToken> fromXml(QXmlStreamReader &);
+    void toXml(QXmlStreamWriter &) const;
+    bool operator==(const HtToken &other) const = default;
+
+    SaslHtMechanism mechanism;
+    QString secret;
+    QDateTime expiry;
+};
+
+struct Credentials {
+    QString password;
+    std::optional<HtToken> htToken;
+
+    // Facebook
+    QString facebookAccessToken;
+    QString facebookAppId;
+    // Google
+    QString googleAccessToken;
+    // Windows Live
+    QString windowsLiveAccessToken;
+};
+
+#if defined(SFOS)
+} }
+#else
+}  // namespace QXmpp::Private
+#endif
 
 class QXMPP_AUTOTEST_EXPORT QXmppSaslClient : public QXmppLoggable
 {
     Q_OBJECT
 public:
-    QXmppSaslClient(QObject *parent = nullptr);
-    ~QXmppSaslClient() override;
+    QXmppSaslClient(QObject *parent) : QXmppLoggable(parent) { }
 
-    QString host() const;
-    void setHost(const QString &host);
+    QString host() const { return m_host; }
+    void setHost(const QString &host) { m_host = host; }
 
-    QString serviceType() const;
-    void setServiceType(const QString &serviceType);
+    QString serviceType() const { return m_serviceType; }
+    void setServiceType(const QString &serviceType) { m_serviceType = serviceType; }
 
-    QString username() const;
-    void setUsername(const QString &username);
+    QString username() const { return m_username; }
+    void setUsername(const QString &username) { m_username = username; }
 
-    QString password() const;
-    void setPassword(const QString &password);
-
-    virtual QString mechanism() const = 0;
+    virtual void setCredentials(const QXmpp::Private::Credentials &) = 0;
+    virtual QXmpp::Private::SaslMechanism mechanism() const = 0;
     virtual std::optional<QByteArray> respond(const QByteArray &challenge) = 0;
 
-    static QStringList availableMechanisms();
+    static bool isMechanismAvailable(QXmpp::Private::SaslMechanism, const QXmpp::Private::Credentials &);
     static std::unique_ptr<QXmppSaslClient> create(const QString &mechanism, QObject *parent = nullptr);
+    static std::unique_ptr<QXmppSaslClient> create(QXmpp::Private::SaslMechanism mechanism, QObject *parent = nullptr);
 
 private:
     friend class QXmpp::Private::SaslManager;
 
-    const std::unique_ptr<QXmppSaslClientPrivate> d;
+    QString m_host;
+    QString m_serviceType;
+    QString m_username;
+    QString m_password;
 };
 
 class QXMPP_AUTOTEST_EXPORT QXmppSaslServer : public QXmppLoggable
@@ -279,7 +472,8 @@ class QXmppSaslClientAnonymous : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientAnonymous(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override { }
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslAnonymousMechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
@@ -291,10 +485,12 @@ class QXmppSaslClientDigestMd5 : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientDigestMd5(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslDigestMd5Mechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
+    QString m_password;
     QByteArray m_cnonce;
     QByteArray m_nc;
     QByteArray m_nonce;
@@ -307,11 +503,14 @@ class QXmppSaslClientFacebook : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientFacebook(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslXFacebookMechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
     int m_step;
+    QString m_accessToken;
+    QString m_appId;
 };
 
 class QXmppSaslClientGoogle : public QXmppSaslClient
@@ -319,10 +518,12 @@ class QXmppSaslClientGoogle : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientGoogle(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslXGoogleMechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
+    QString m_accessToken;
     int m_step;
 };
 
@@ -331,10 +532,12 @@ class QXmppSaslClientPlain : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientPlain(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslPlainMechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
+    QString m_password;
     int m_step;
 };
 
@@ -342,18 +545,41 @@ class QXmppSaslClientScram : public QXmppSaslClient
 {
     Q_OBJECT
 public:
-    QXmppSaslClientScram(QCryptographicHash::Algorithm algorithm, QObject *parent = nullptr);
-    QString mechanism() const override;
+    QXmppSaslClientScram(QXmpp::Private::SaslScramMechanism mechanism, QObject *parent = nullptr);
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { m_mechanism }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
-    QCryptographicHash::Algorithm m_algorithm;
+    QXmpp::Private::SaslScramMechanism m_mechanism;
     int m_step;
-    int m_dklen;
+    QString m_password;
+    uint32_t m_dklen;
     QByteArray m_gs2Header;
     QByteArray m_clientFirstMessageBare;
     QByteArray m_serverSignature;
     QByteArray m_nonce;
+};
+
+class QXmppSaslClientHt : public QXmppSaslClient
+{
+    Q_OBJECT
+    using HtMechanism = QXmpp::Private::SaslHtMechanism;
+
+public:
+    QXmppSaslClientHt(HtMechanism mechanism, QObject *parent)
+        : QXmppSaslClient(parent), m_mechanism(mechanism)
+    {
+    }
+
+    void setCredentials(const QXmpp::Private::Credentials &credentials) override { m_token = credentials.htToken; }
+    QXmpp::Private::SaslMechanism mechanism() const override { return { m_mechanism }; }
+    std::optional<QByteArray> respond(const QByteArray &challenge) override;
+
+private:
+    std::optional<QXmpp::Private::HtToken> m_token;
+    HtMechanism m_mechanism;
+    bool m_done = false;
 };
 
 class QXmppSaslClientWindowsLive : public QXmppSaslClient
@@ -361,10 +587,12 @@ class QXmppSaslClientWindowsLive : public QXmppSaslClient
     Q_OBJECT
 public:
     QXmppSaslClientWindowsLive(QObject *parent = nullptr);
-    QString mechanism() const override;
+    void setCredentials(const QXmpp::Private::Credentials &) override;
+    QXmpp::Private::SaslMechanism mechanism() const override { return { QXmpp::Private::SaslXWindowsLiveMechanism() }; }
     std::optional<QByteArray> respond(const QByteArray &challenge) override;
 
 private:
+    QString m_accessToken;
     int m_step;
 };
 

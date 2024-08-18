@@ -31,9 +31,10 @@ public:
         resetIdCount();
     }
 
-    ~TestClient() override
-    {
-    }
+    ~TestClient() override = default;
+
+    QXmppOutgoingClient *stream() const { return d->stream; }
+    QXmppOutgoingClientPrivate *streamPrivate() const { return d->stream->d.get(); }
 
     template<typename String>
     void inject(const String &xml)
@@ -46,7 +47,7 @@ public:
     void expect(QString &&packet)
     {
         QVERIFY2(!m_sentPackets.empty(), "No packet was sent!");
-        QCOMPARE(m_sentPackets.takeFirst(), packet.replace(u'\'', u'"'));
+        QCOMPARE(m_sentPackets.takeFirst().replace(u'\'', u'"'), packet.replace(u'\'', u'"'));
         resetIdCount();
     }
     QString takePacket()
@@ -58,6 +59,16 @@ public:
     {
         [this]() { QVERIFY(!m_sentPackets.isEmpty()); }();
         return m_sentPackets.takeLast();
+    }
+    void expectNoPacket() const
+    {
+        if (!m_sentPackets.empty()) {
+            qDebug() << "Unexpected:";
+            for (const auto &packet : m_sentPackets) {
+                qDebug().noquote() << " *" << packet;
+            }
+        }
+        VERIFY2(m_sentPackets.empty(), "Unexpected packet sent!");
     }
     void ignore()
     {
@@ -91,12 +102,12 @@ private:
     void onLoggerMessage(QXmppLogger::MessageType type, const QString &text)
     {
         if (type != QXmppLogger::SentMessage ||
-            text == QLatin1String("<r xmlns=\"urn:xmpp:sm:3\"/>")) {
+            text == u"<r xmlns=\"urn:xmpp:sm:3\"/>") {
             return;
         }
 
         if (debugEnabled) {
-            qDebug() << "LOG" << text;
+            qDebug().noquote() << "LOG:" << text;
         }
 
         m_sentPackets << text;

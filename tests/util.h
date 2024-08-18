@@ -7,19 +7,29 @@
 #ifndef TESTS_UTIL_H
 #define TESTS_UTIL_H
 
+#include "QXmppError.h"
 #include "QXmppPasswordChecker.h"
 #include "QXmppTask.h"
 
+#include "StringLiterals.h"
+
+#include <any>
 #include <memory>
 #include <variant>
 
 #include <QDomDocument>
 #include <QtTest>
 
+struct QXmppError;
+
 // QVERIFY2 with empty return value (return {};)
 #define QVERIFY_RV(statement, description)                                       \
     if (!QTest::qVerify(statement, #statement, description, __FILE__, __LINE__)) \
         return {};
+
+#define VERIFY2(statement, description)                                                                           \
+    if (!QTest::qVerify(bool(statement), #statement, static_cast<const char *>(description), __FILE__, __LINE__)) \
+        throw std::runtime_error(description);
 
 template<typename String>
 inline QDomElement xmlToDom(const String &xml)
@@ -96,35 +106,76 @@ template<typename T, typename Variant>
 T expectVariant(Variant var)
 {
     using namespace std::string_literals;
-    [&]() {
-        std::string message =
-            "Variant ("s + typeid(Variant).name() +
-            ") contains wrong type ("s + std::to_string(var.index()) +
-            "); expected '"s + typeid(T).name() + "'."s;
-        QVERIFY2(std::holds_alternative<T>(var), message.c_str());
-    }();
+    std::string message =
+        "Variant ("s + typeid(Variant).name() +
+        ") contains wrong type ("s + std::to_string(var.index()) +
+        "); expected '"s + typeid(T).name() + "'."s;
+    VERIFY2(std::holds_alternative<T>(var), message.c_str());
     return std::get<T>(std::move(var));
 }
 
 template<typename T, typename Input>
 T expectFutureVariant(const QFuture<Input> &future)
 {
-    [&]() {
-        QVERIFY(future.isFinished());
-    }();
+    VERIFY2(future.isFinished(), "Future is still running!");
     return expectVariant<T>(future.result());
 }
 
 template<typename T, typename Input>
-T expectFutureVariant(QXmppTask<Input> &future)
+T expectFutureVariant(QXmppTask<Input> &task)
 {
-#define return \
-    return     \
-    {          \
+    VERIFY2(task.isFinished(), "Task is still running!");
+    return expectVariant<T>(task.result());
+}
+
+template<typename T>
+const T &unwrap(const std::optional<T> &v)
+{
+    VERIFY2(v.has_value(), "Expected value, got empty optional");
+    return *v;
+}
+
+template<typename T>
+T unwrap(std::optional<T> &&v)
+{
+    VERIFY2(v.has_value(), "Expected value, got empty optional");
+    return *v;
+}
+
+template<typename T>
+T unwrap(std::variant<T, QXmppError> &&v)
+{
+    if (std::holds_alternative<QXmppError>(v)) {
+        auto message = u"Expected value, got error: %1."_s.arg(std::get<QXmppError>(v).description);
+        VERIFY2(v.index() == 1, message.toLocal8Bit().constData());
     }
-    QVERIFY(future.isFinished());
-#undef return
-    return expectVariant<T>(future.result());
+    return std::get<T>(std::move(v));
+}
+
+template<typename T>
+const T &unwrap(const std::variant<T, QXmppError> &v)
+{
+    if (std::holds_alternative<QXmppError>(v)) {
+        auto message = u"Expected value, got error: %1."_s.arg(std::get<QXmppError>(v).description);
+        VERIFY2(v.index() == 1, message.toLocal8Bit().constData());
+    }
+    return std::get<T>(v);
+}
+
+template<typename T>
+const T &unwrap(const std::any &v)
+{
+    VERIFY2(v.has_value(), "Expected non-empty std::any");
+    VERIFY2(v.type() == typeid(T), "Got std::any with wrong type");
+    return std::any_cast<T>(v);
+}
+
+template<typename T>
+T unwrap(std::any &&v)
+{
+    VERIFY2(v.has_value(), "Expected non-empty std::any");
+    VERIFY2(v.type() == typeid(T), "Got std::any with wrong type");
+    return std::any_cast<T>(std::move(v));
 }
 
 template<typename T>

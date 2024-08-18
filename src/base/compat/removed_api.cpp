@@ -8,7 +8,10 @@
 #include "QXmppPubSubIq.h"
 #include "QXmppPubSubItem.h"
 #include "QXmppSessionIq.h"
+#include "QXmppStartTlsPacket.h"
 #include "QXmppUtils_p.h"
+
+#include "StringLiterals.h"
 
 #include <QDomElement>
 #include <QSharedData>
@@ -37,15 +40,15 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 
 static const QStringList PUBSUB_QUERIES = {
-    QStringLiteral("affiliations"),
-    QStringLiteral("default"),
-    QStringLiteral("items"),
-    QStringLiteral("publish"),
-    QStringLiteral("retract"),
-    QStringLiteral("subscribe"),
-    QStringLiteral("subscription"),
-    QStringLiteral("subscriptions"),
-    QStringLiteral("unsubscribe"),
+    u"affiliations"_s,
+    u"default"_s,
+    u"items"_s,
+    u"publish"_s,
+    u"retract"_s,
+    u"subscribe"_s,
+    u"subscription"_s,
+    u"subscriptions"_s,
+    u"unsubscribe"_s,
 };
 
 class QXmppPubSubIqPrivate : public QSharedData
@@ -159,12 +162,12 @@ void QXmppPubSubIq::setItems(const QList<QXmppPubSubItem> &items)
 
 bool QXmppPubSubIq::isPubSubIq(const QDomElement &element)
 {
-    return element.firstChildElement(QStringLiteral("pubsub")).namespaceURI() == ns_pubsub;
+    return element.firstChildElement(u"pubsub"_s).namespaceURI() == ns_pubsub;
 }
 
 void QXmppPubSubIq::parseElementFromChild(const QDomElement &element)
 {
-    const QDomElement pubSubElement = element.firstChildElement(QStringLiteral("pubsub"));
+    const QDomElement pubSubElement = element.firstChildElement(u"pubsub"_s);
 
     const QDomElement queryElement = pubSubElement.firstChildElement();
 
@@ -175,8 +178,8 @@ void QXmppPubSubIq::parseElementFromChild(const QDomElement &element)
         d->queryType = QueryType(queryType);
     }
 
-    d->queryJid = queryElement.attribute(QStringLiteral("jid"));
-    d->queryNode = queryElement.attribute(QStringLiteral("node"));
+    d->queryJid = queryElement.attribute(u"jid"_s);
+    d->queryNode = queryElement.attribute(u"node"_s);
 
     // parse contents
     QDomElement childElement;
@@ -191,8 +194,8 @@ void QXmppPubSubIq::parseElementFromChild(const QDomElement &element)
         }
         break;
     case QXmppPubSubIq::SubscriptionQuery:
-        d->subscriptionId = queryElement.attribute(QStringLiteral("subid"));
-        d->subscriptionType = queryElement.attribute(QStringLiteral("subscription"));
+        d->subscriptionId = queryElement.attribute(u"subid"_s);
+        d->subscriptionType = queryElement.attribute(u"subscription"_s);
         break;
     default:
         break;
@@ -228,7 +231,6 @@ void QXmppPubSubIq::toXmlElementFromChild(QXmlStreamWriter *writer) const
     writer->writeEndElement();
     writer->writeEndElement();
 }
-QT_WARNING_POP
 /// \endcond
 
 // PubSubItem
@@ -286,7 +288,7 @@ void QXmppPubSubItem::setContents(const QXmppElement &contents)
 
 void QXmppPubSubItem::parse(const QDomElement &element)
 {
-    d->id = element.attribute(QStringLiteral("id"));
+    d->id = element.attribute(u"id"_s);
     d->contents = QXmppElement(element.firstChildElement());
 }
 
@@ -298,3 +300,86 @@ void QXmppPubSubItem::toXml(QXmlStreamWriter *writer) const
     writer->writeEndElement();
 }
 /// \endcond
+
+// StarttlsPacket
+
+constexpr auto STARTTLS_TYPES = to_array<QStringView>({
+    u"starttls",
+    u"proceed",
+    u"failure",
+});
+
+///
+/// Constructs a new QXmppStartTlsPacket
+///
+/// \param type The type of the new QXmppStartTlsPacket.
+///
+QXmppStartTlsPacket::QXmppStartTlsPacket(Type type)
+    : m_type(type)
+{
+}
+
+QXmppStartTlsPacket::~QXmppStartTlsPacket() = default;
+
+/// Returns the type of the STARTTLS packet
+QXmppStartTlsPacket::Type QXmppStartTlsPacket::type() const
+{
+    return m_type;
+}
+
+/// Sets the type of the STARTTLS packet
+void QXmppStartTlsPacket::setType(QXmppStartTlsPacket::Type type)
+{
+    m_type = type;
+}
+
+/// \cond
+void QXmppStartTlsPacket::parse(const QDomElement &element)
+{
+    if (!QXmppStartTlsPacket::isStartTlsPacket(element)) {
+        return;
+    }
+
+    m_type = enumFromString<Type>(STARTTLS_TYPES, element.tagName()).value_or(Invalid);
+}
+
+void QXmppStartTlsPacket::toXml(QXmlStreamWriter *writer) const
+{
+    if (m_type != Invalid) {
+        writer->writeStartElement(toString65(STARTTLS_TYPES.at(size_t(m_type))));
+        writer->writeDefaultNamespace(toString65(ns_tls));
+        writer->writeEndElement();
+    }
+}
+/// \endcond
+
+///
+/// Checks whether the given \p element is a STARTTLS packet according to
+/// <a href="https://xmpp.org/rfcs/rfc6120.html#tls-process-initiate">RFC6120</a>.
+///
+/// \param element The element that should be checked for being a STARTTLS packet.
+///
+/// \returns True, if the element is a STARTTLS packet.
+///
+bool QXmppStartTlsPacket::isStartTlsPacket(const QDomElement &element)
+{
+    return element.namespaceURI() == ns_tls &&
+        enumFromString<Type>(STARTTLS_TYPES, element.tagName()).has_value();
+}
+
+///
+/// Checks whether the given \p element is a STARTTLS packet according to
+/// <a href="https://xmpp.org/rfcs/rfc6120.html#tls-process-initiate">RFC6120</a>
+/// and has the correct type.
+///
+/// \param element The element that should be checked for being a STARTTLS packet.
+/// \param type The type the element needs to have.
+///
+/// \returns True, if the element is a STARTTLS packet and has the correct type.
+///
+bool QXmppStartTlsPacket::isStartTlsPacket(const QDomElement &element, Type type)
+{
+    return element.namespaceURI() == ns_tls && element.tagName() == STARTTLS_TYPES.at(size_t(type));
+}
+
+QT_WARNING_POP

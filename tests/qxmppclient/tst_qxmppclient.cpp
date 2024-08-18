@@ -4,16 +4,21 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "QXmppClient.h"
+#include "QXmppCredentials.h"
 #include "QXmppE2eeExtension.h"
 #include "QXmppFutureUtils_p.h"
 #include "QXmppLogger.h"
 #include "QXmppMessage.h"
+#include "QXmppOutgoingClient.h"
+#include "QXmppOutgoingClient_p.h"
 #include "QXmppPromise.h"
 #include "QXmppRegisterIq.h"
 #include "QXmppRosterManager.h"
+#include "QXmppStreamFeatures.h"
 #include "QXmppVCardManager.h"
 #include "QXmppVersionManager.h"
 
+#include "TestClient.h"
 #include "util.h"
 
 #include <QObject>
@@ -25,46 +30,42 @@ class tst_QXmppClient : public QObject
     Q_OBJECT
 
 private:
-    Q_SLOT void initTestCase();
-
-    Q_SLOT void handleMessageSent(QXmppLogger::MessageType type, const QString &text) const;
     Q_SLOT void testSendMessage();
     Q_SLOT void testIndexOfExtension();
     Q_SLOT void testE2eeExtension();
     Q_SLOT void testTaskDirect();
     Q_SLOT void testTaskStore();
 
-    QXmppClient *client;
+    // outgoing client
+#if BUILD_INTERNAL_TESTS
+    Q_SLOT void csiManager();
+#endif
+
+    Q_SLOT void credentialsSerialization();
 };
-
-void tst_QXmppClient::handleMessageSent(QXmppLogger::MessageType type, const QString &text) const
-{
-    QCOMPARE(type, QXmppLogger::MessageType::SentMessage);
-
-    QXmppMessage msg;
-    parsePacket(msg, text.toUtf8());
-
-    QCOMPARE(msg.from(), QString());
-    QCOMPARE(msg.to(), QStringLiteral("support@qxmpp.org"));
-    QCOMPARE(msg.body(), QStringLiteral("implement XEP-* plz"));
-}
-
-void tst_QXmppClient::initTestCase()
-{
-    client = new QXmppClient(this);
-}
 
 void tst_QXmppClient::testSendMessage()
 {
+    auto client = std::make_unique<QXmppClient>();
+
     QXmppLogger logger;
     logger.setLoggingType(QXmppLogger::SignalLogging);
     client->setLogger(&logger);
 
-    connect(&logger, &QXmppLogger::message, this, &tst_QXmppClient::handleMessageSent);
+    connect(&logger, &QXmppLogger::message, this, [](QXmppLogger::MessageType type, const QString &text) {
+        QCOMPARE(type, QXmppLogger::MessageType::SentMessage);
+
+        QXmppMessage msg;
+        parsePacket(msg, text.toUtf8());
+
+        QCOMPARE(msg.from(), QString());
+        QCOMPARE(msg.to(), u"support@qxmpp.org"_s);
+        QCOMPARE(msg.body(), u"implement XEP-* plz"_s);
+    });
 
     client->sendMessage(
-        QStringLiteral("support@qxmpp.org"),
-        QStringLiteral("implement XEP-* plz"));
+        u"support@qxmpp.org"_s,
+        u"implement XEP-* plz"_s);
 
     // see handleMessageSent()
 
@@ -203,7 +204,7 @@ void tst_QXmppClient::testTaskStore()
     task.then(this, [&thenCalled](QXmppIq &&iq) {
         thenCalled = true;
 
-        QCOMPARE(iq.from(), QStringLiteral("juliet"));
+        QCOMPARE(iq.from(), u"juliet"_s);
         // casting not supported
         QVERIFY(!dynamic_cast<QXmppRegisterIq *>(&iq));
     });
@@ -227,6 +228,61 @@ void tst_QXmppClient::testTaskStore()
 
     QVERIFY(p.task().isFinished());
     QVERIFY(!p.task().hasResult());
+}
+
+#if BUILD_INTERNAL_TESTS
+void tst_QXmppClient::csiManager()
+{
+    TestClient client;
+    auto &csi = client.stream()->csiManager();
+
+    QCOMPARE(client.isActive(), true);
+    QCOMPARE(csi.state(), CsiManager::Active);
+
+    client.setActive(false);
+    client.expectNoPacket();
+
+    // enable CSI and authenticate client
+    client.streamPrivate()->isAuthenticated = true;
+    QXmppStreamFeatures features;
+    features.setClientStateIndicationMode(QXmppStreamFeatures::Enabled);
+    csi.onStreamFeatures(features);
+    csi.onSessionOpened({});
+
+    client.expect("<inactive xmlns='urn:xmpp:csi:0'/>");
+
+    // we currently can't really test stream resumption because the socket is not actually
+    // connected
+
+    // bind2
+    Bind2Request r;
+    csi.onBind2Request(r, { "urn:xmpp:csi:0" });
+    QCOMPARE(r.csiInactive, true);
+
+    SessionBegin session {
+        false,
+        false,
+        true,
+    };
+    csi.onSessionOpened(session);
+    client.expectNoPacket();
+}
+#endif
+
+void tst_QXmppClient::credentialsSerialization()
+{
+    QByteArray xml =
+        "<credentials xmlns=\"org.qxmpp.credentials\">"
+        "<ht-token mechanism=\"HT-SHA3-384-UNIQ\" secret=\"t0k3n1234\" expiry=\"2024-09-21T18:00:00Z\"/>"
+        "</credentials>";
+    QXmlStreamReader r(xml);
+    r.readNextStartElement();
+    auto credentials = unwrap(QXmppCredentials::fromXml(r));
+
+    QString output;
+    QXmlStreamWriter w(&output);
+    credentials.toXml(w);
+    QCOMPARE(output, xml);
 }
 
 QTEST_MAIN(tst_QXmppClient)

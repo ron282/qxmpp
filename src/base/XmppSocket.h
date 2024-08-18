@@ -10,12 +10,24 @@
 class QDomElement;
 class QSslSocket;
 class TestStream;
+class tst_QXmppStream;
 
 #if defined(SFOS)
 namespace QXmpp {  namespace Private {
 #else
 namespace QXmpp::Private {
 #endif
+
+struct ServerAddress {
+    enum ConnectionType {
+        Tcp,
+        Tls,
+    };
+
+    ConnectionType type;
+    QString host;
+    quint16 port;
+};
 
 class SendDataInterface
 {
@@ -34,6 +46,7 @@ public:
     void setSocket(QSslSocket *socket);
 
     bool isConnected() const;
+    void connectToHost(const ServerAddress &);
     void disconnectFromHost();
     bool sendData(const QByteArray &) override;
 
@@ -45,9 +58,10 @@ public:
 private:
     void processData(const QString &data);
 
-    friend class ::TestStream;
+    friend class ::tst_QXmppStream;
 
     QString m_dataBuffer;
+    bool m_directTls = false;
     QSslSocket *m_socket = nullptr;
 
     // incoming stream state
