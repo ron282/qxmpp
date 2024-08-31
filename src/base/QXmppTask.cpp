@@ -9,12 +9,12 @@
 #if defined(SFOS)
 namespace QXmpp {  namespace Private {
 #else
-}
+namespace QXmpp::Private {
 #endif
 
 struct TaskData {
     QPointer<const QObject> context;
-    std::function<void(TaskPrivate &, void *)> continuation;
+    std::function<void(QXmpp::Private::TaskPrivate &, void *)> continuation;
     void *result = nullptr;
     void (*freeResult)(void *);
     bool finished = false;

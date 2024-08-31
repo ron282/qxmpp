@@ -16,7 +16,9 @@
 
 #include <QDomElement>
 #include <QMessageAuthenticationCode>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QPasswordDigestor>
+#endif
 #include <QUrlQuery>
 #include <QXmlStreamWriter>
 #include <QtEndian>
@@ -80,11 +82,12 @@ constexpr auto ianaHashAlgorithms = to_array<QStringView>({
 });
 
 #if defined(SFOS)
-namespace QXmpp { namespace Private { namespace Sasl {
+namespace QXmpp { namespace Private {
 #else
-namespace QXmpp::Private::Sasl {
+namespace QXmpp::Private {
 #endif
 
+namespace Sasl {
 
 QString errorConditionToString(ErrorCondition c)
 {
@@ -216,11 +219,7 @@ void Success::toXml(QXmlStreamWriter *writer) const
     writer->writeEndElement();
 }
 
-#if defined(SFOS)
-}  }  } // namespace QXmpp Private Sasl
-#else
-}  // namespace QXmpp::Private::Sasl
-#endif
+}  // namespace Sasl
 
 std::optional<Bind2Feature> Bind2Feature::fromDom(const QDomElement &el)
 {
@@ -445,7 +444,11 @@ std::optional<UserAgent> UserAgent::fromDom(const QDomElement &el)
     }
 
     return UserAgent {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 		QUuid::fromString(el.attribute(u"id"_s)),
+#else
+        QUuid(el.attribute(u"id"_s)),
+#endif
         firstChildElement(el, u"software", ns_sasl_2).text(),
         firstChildElement(el, u"device", ns_sasl_2).text(),
     };
@@ -833,6 +836,25 @@ std::optional<SaslMechanism> SaslMechanism::fromString(QStringView str)
 
 QString SaslMechanism::toString() const
 {
+#if defined(SFOS)
+    if(std::holds_alternative<SaslScramMechanism>(*this))
+        return std::get<SaslScramMechanism>(*this).toString();
+    if(std::holds_alternative<SaslHtMechanism>(*this))
+        return std::get<SaslHtMechanism>(*this).toString();
+    if(std::holds_alternative<SaslDigestMd5Mechanism>(*this))
+        return u"DIGEST-MD5"_s;
+    if(std::holds_alternative<SaslPlainMechanism>(*this))
+        return u"PLAIN"_s;
+    if(std::holds_alternative<SaslAnonymousMechanism>(*this))
+        return u"ANONYMOUS"_s;
+    if(std::holds_alternative<SaslXFacebookMechanism>(*this))
+        return u"X-FACEBOOK-PLATFORM"_s;
+    if(std::holds_alternative<SaslXWindowsLiveMechanism>(*this))
+        return u"X-MESSENGER-OAUTH2"_s;
+    if(std::holds_alternative<SaslXGoogleMechanism>(*this))
+        return u"X-OAUTH2"_s;
+    return {};
+#else
     return visit(
         overloaded {
             [](SaslScramMechanism scram) { return scram.toString(); },
@@ -845,6 +867,7 @@ QString SaslMechanism::toString() const
             [](SaslXGoogleMechanism) { return u"X-OAUTH2"_s; },
         },
         *this);
+#endif
 }
 
 std::optional<HtToken> HtToken::fromXml(QXmlStreamReader &r)
@@ -995,6 +1018,25 @@ static QMap<char, QByteArray> parseGS2(const QByteArray &ba)
 
 bool QXmppSaslClient::isMechanismAvailable(SaslMechanism mechanism, const Credentials &credentials)
 {
+#if defined(SFOS)
+    if(std::holds_alternative<SaslScramMechanism>(mechanism))
+        return !credentials.password.isEmpty();
+    if(std::holds_alternative<SaslHtMechanism>(mechanism))
+        return std::get<SaslHtMechanism>(*this).toString();
+    if(std::holds_alternative<SaslDigestMd5Mechanism>(mechanism))
+        return !credentials.password.isEmpty();
+    if(std::holds_alternative<SaslPlainMechanism>(mechanism))
+        return !credentials.password.isEmpty();
+    if(std::holds_alternative<SaslAnonymousMechanism>(mechanism))
+        return true;
+    if(std::holds_alternative<SaslXFacebookMechanism>(mechanism))
+        return !credentials.facebookAccessToken.isEmpty() && !credentials.facebookAppId.isEmpty();
+    if(std::holds_alternative<SaslXWindowsLiveMechanism>(mechanism))
+        return !credentials.windowsLiveAccessToken.isEmpty();
+    if(std::holds_alternative<SaslXGoogleMechanism>(mechanism))
+        return !credentials.googleAccessToken.isEmpty();
+    return false;
+#else
     return visit(
         overloaded {
             [&](SaslHtMechanism ht) {
@@ -1018,6 +1060,7 @@ bool QXmppSaslClient::isMechanismAvailable(SaslMechanism mechanism, const Creden
                 return true;
             } },
         mechanism);
+}
 }
 
 ///

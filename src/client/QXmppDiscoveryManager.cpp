@@ -58,7 +58,11 @@ QXmppDiscoveryManager::QXmppDiscoveryManager()
     d->clientType = u"pc"_s;
 #endif
     if (qApp->applicationName().isEmpty() && qApp->applicationVersion().isEmpty()) {
+#if defined(SFOS)
+        d->clientName = u"%1 %2"_s.arg(QStringView(u"Based on QXmpp").toString(), QXmppVersion());
+#else
         d->clientName = u"%1 %2"_s.arg(u"Based on QXmpp", QXmppVersion());
+#endif
     } else {
         d->clientName = u"%1 %2"_s.arg(qApp->applicationName(), qApp->applicationVersion());
     }

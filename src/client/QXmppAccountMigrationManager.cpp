@@ -15,6 +15,21 @@
 
 #include <QDomElement>
 
+#if defined(SFOS)
+#include <QHash>
+#include <QString>
+#include <functional>
+
+namespace std {
+  template<> struct hash<QString> {
+    std::size_t operator()(const QString& s) const noexcept {
+      return (size_t) qHash(s);
+    }
+  };
+}
+#endif
+
+
 using namespace QXmpp;
 using namespace QXmpp::Private;
 

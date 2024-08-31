@@ -18,9 +18,11 @@ class QXmppPacket;
 #if defined(SFOS)
 namespace QXmpp {  namespace Private {
 class XmppSocket;
+} }
 #else
 namespace QXmpp::Private {
 class XmppSocket;
+}
 #endif
 
 //
@@ -35,6 +37,11 @@ class XmppSocket;
 //
 // We mean it.
 //
+#if defined(SFOS)
+namespace QXmpp {  namespace Private {
+#else
+namespace QXmpp::Private {
+#endif
 
 
 struct SmEnable {

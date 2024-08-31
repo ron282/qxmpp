@@ -24,7 +24,7 @@
 
 #include <unordered_map>
 
-#if QT_VERSION < QT_VERSION_CHECK(5,7,0)
+#if QT_VERSION < QT_VERSION_CHECK(5,6,0)
 #include <QHash>
 #include <QString>
 #include <functional>
@@ -1583,6 +1583,6 @@ void CsiManager::sendState()
 #if defined(SFOS)
 }  } // namespace QXmpp Private
 #else
- }  // namespace QXmpp::Private
+}  // namespace QXmpp::Private
 #endif
 

@@ -458,7 +458,7 @@ void QXmppPresence::parseExtension(const QDomElement &element, QXmppElementList 
         d->capabilityVer = QByteArray::fromBase64(element.attribute(u"ver"_s).toLatin1());
         d->capabilityHash = element.attribute(u"hash"_s);
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-        d->capabilityExt = element.attribute(u"ext").split(u' ', QString::SkipEmptyParts);
+        d->capabilityExt = element.attribute(u"ext"_s).split(u' ', QString::SkipEmptyParts);
 #else
 		d->capabilityExt = element.attribute(u"ext"_s).split(u' ', Qt::SkipEmptyParts);
 #endif

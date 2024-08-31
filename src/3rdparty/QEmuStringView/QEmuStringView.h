@@ -309,12 +309,11 @@ m_size));
     Q_REQUIRED_RESULT inline int compare(QLatin1String other, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
     Q_REQUIRED_RESULT Q_DECL_CONSTEXPR int compare(QChar c) const noexcept
     { return size() >= 1 ? compare_single_char_helper(*utf16() - c.unicode()) : -1; }
-//    Q_REQUIRED_RESULT int compare(QChar c, Qt::CaseSensitivity cs) const noexcept
+//    Q_REQUIRED_RESULT int compare(QChar c, Qt::CaseSsensitivity cs) const noexcept
 //    { return QEmuPrivate::compareStrings(*this,
 //QEmuStringView(&c, 1), cs); }
-//    Q_REQUIRED_RESULT bool startsWith(QEmuStringView s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
-//    { return QEmuPrivate::startsWith(*this,
-//s, cs); }
+    Q_REQUIRED_RESULT bool startsWith(QEmuStringView s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept
+    { return toString().startsWith(s.toString(), cs); }
 //    Q_REQUIRED_RESULT inline bool startsWith(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const noexcept;
 //    Q_REQUIRED_RESULT bool startsWith(QChar c) const noexcept
 //    { return !empty() && front() == c; }

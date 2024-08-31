@@ -119,7 +119,7 @@ public:
 
     static bool checkIqType(const QString &tagName, const QString &xmlns)
     {
-        return tagName == QStringView(u"unblock") && xmlns == XMLNS_BLOCKING;
+        return tagName == QStringView(u"unblock") && xmlns == ns_blocking;
     }
 };
 

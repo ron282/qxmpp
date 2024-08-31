@@ -12,7 +12,11 @@
 #include "StringLiterals.h"
 #include "XmppSocket.h"
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
 namespace QXmpp::Private {
+#endif
 
 std::optional<SmEnable> SmEnable::fromDom(const QDomElement &el)
 {
@@ -163,12 +167,6 @@ void SmRequest::toXml(QXmlStreamWriter *w) const
     w->writeDefaultNamespace(toString65(ns_stream_management));
     w->writeEndElement();
 }
-
-#if defined(SFOS)
-namespace QXmpp {  namespace Private {
-#else
-namespace QXmpp::Private {
-#endif
 
 StreamAckManager::StreamAckManager(XmppSocket &socket)
     : socket(socket)

@@ -9,9 +9,8 @@
 #include <functional>
 #include <optional>
 
-#if __cplusplus < 202002L
-#include "ranges.hpp"
-#endif
+
+#include <ranges>
 
 #if defined(SFOS)
 namespace QXmpp { namespace Private {
@@ -23,11 +22,7 @@ template<typename OutputVector, typename InputVector, typename Converter>
 auto transform(const InputVector &input, Converter convert)
 {
     OutputVector output;
-#if __cplusplus < 202002L
-	if constexpr (rx::ranges::sized_range<InputVector>) {
-#else
 	if constexpr (std::ranges::sized_range<InputVector>) {
-#endif
         output.reserve(input.size());
     }
     for (const auto &value : input) {
@@ -61,7 +56,7 @@ auto into(std::optional<From> &&value) -> std::optional<To>
 }
 
 #if defined(SFOS)
-} } // namespace QXmpp Private
+}  } // namespace QXmpp namespace Private
 #else
 }  // namespace QXmpp::Private
 #endif

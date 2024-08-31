@@ -11,11 +11,7 @@
 #include "StringLiterals.h"
 
 #include <array>
-#if __cplusplus < 202002L
-#include "ranges.hpp"
-#else
 #include <ranges>
-#endif
 
 #include <QUrlQuery>
 

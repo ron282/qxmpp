@@ -19,8 +19,11 @@ template<typename T>
 class QFuture;
 class QXmppHash;
 
-namespace QXmpp {
-namespace Private {
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
+namespace QXmpp::Private {
+#endif
 
 struct HashingResult {
     using Result = std::variant<std::vector<QXmppHash>, Cancelled, QXmppError>;
@@ -59,7 +62,10 @@ uint16_t hashPriority(HashAlgorithm algorithm);
 QXMPP_EXPORT QFuture<HashingResultPtr> calculateHashes(std::unique_ptr<QIODevice> data, std::vector<HashAlgorithm> hashes);
 QFuture<HashVerificationResultPtr> verifyHashes(std::unique_ptr<QIODevice> data, std::vector<QXmppHash> hashes);
 
-}  // namespace Private
-}  // namespace QXmpp
+#if defined(SFOS)
+} }
+#else
+}  // namespace QXmpp::Private
+#endif
 
 #endif  // QXMPPHASHING_H
