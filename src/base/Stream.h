@@ -30,6 +30,12 @@ struct StreamOpen {
     QStringView xmlns;
 };
 
+#if defined(SFOS)
+}  }  // namespace QXmpp  Private
+#else
+}  // namespace QXmpp::Private
+#endif
+
 struct StarttlsRequest {
     static std::optional<StarttlsRequest> fromDom(const QDomElement &);
     void toXml(QXmlStreamWriter *) const;

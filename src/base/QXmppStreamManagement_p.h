@@ -90,6 +90,12 @@ struct SmRequest {
     void toXml(QXmlStreamWriter *w) const;
 };
 
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
+namespace QXmpp::Private {
+#endif
+
 //
 // This manager handles sending and receiving of stream management acks.
 // Enabling of stream management and stream resumption is done in the C2sStreamManager.

@@ -176,7 +176,11 @@ struct FastRequest {
     bool invalidate = false;
 };
 
+#if defined(SFOS)
 namespace Sasl2 {
+#else
+namespace QXmpp::Private::Sasl2 {
+#endif
 
 struct StreamFeature {
     static std::optional<StreamFeature> fromDom(const QDomElement &);

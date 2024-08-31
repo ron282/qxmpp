@@ -74,6 +74,15 @@ void CsiActive::toXml(QXmlStreamWriter *w) const
 }
 
 void CsiInactive::toXml(QXmlStreamWriter *w) const
+
+#if defined(SFOS)
+namespace QXmpp { namespace Private {
+#else
+namespace QXmpp::Private {
+#endif
+
+void StreamOpen::toXml(QXmlStreamWriter *writer) const
+void CsiInactive::toXml(QXmlStreamWriter *w) const
 {
     writeEmptyElement(w, u"inactive", ns_csi);
 }

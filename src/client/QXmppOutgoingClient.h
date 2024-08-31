@@ -71,6 +71,7 @@ struct SessionBegin {
 struct SessionEnd {
     bool smCanResume;
 };
+
 #if defined(SFOS)
 }  }  // namespace QXmpp::Private
 #else

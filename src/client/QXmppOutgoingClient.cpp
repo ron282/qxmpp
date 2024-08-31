@@ -1583,6 +1583,6 @@ void CsiManager::sendState()
 #if defined(SFOS)
 }  } // namespace QXmpp Private
 #else
- }  // namespace QXmpp::Private
+}  // namespace QXmpp::Private
 #endif
 
