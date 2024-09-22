@@ -21,7 +21,11 @@ constexpr inline QLatin1String operator"" _L1(const char *str, size_t size) noex
 }
 #else
 
+#if __cplusplus < 202002L
+#include "ranges.hpp"
+#else
 #include <ranges>
+#endif
 
 #if defined(SFOS)
 namespace QXmpp {  namespace Private {
