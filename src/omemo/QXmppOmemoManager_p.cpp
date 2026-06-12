@@ -1793,7 +1793,13 @@ QXmppTask<std::optional<QCA::SecureArray>> ManagerPrivate::extractPayloadDecrypt
                 warning(QStringLiteral("Public Identity key could not be retrieved"));
                 interface.finish(std::nullopt);
             } else {
-                const auto key = publicIdentityKeyBuffer.toByteArray();
+                auto key = publicIdentityKeyBuffer.toByteArray();
+                // ec_public_key_serialize() prepends a 0x05 type byte; strip it so the key
+                // matches the raw 32-byte Curve25519 format that ec_public_key_get_ed() returns
+                // and that Conversations publishes in bundles / QR fingerprints.
+                if (key.size() == 33 && static_cast<unsigned char>(key.at(0)) == 0x05) {
+                    key = key.mid(1);
+                }
                 auto &device = devices[senderJid][senderDeviceId];
                 auto &storedKeyId = device.keyId;
 
