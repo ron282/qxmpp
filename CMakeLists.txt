@@ -69,6 +69,10 @@ if(BUILD_OMEMO)
     # libomemo-c
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(OmemoC REQUIRED IMPORTED_TARGET libomemo-c)
+    # protobuf-c is bundled into libomemo-c.so in our fork; remove spurious link dep
+    get_target_property(_omemo_libs PkgConfig::OmemoC INTERFACE_LINK_LIBRARIES)
+    list(REMOVE_ITEM _omemo_libs "protobuf-c")
+    set_target_properties(PkgConfig::OmemoC PROPERTIES INTERFACE_LINK_LIBRARIES "${_omemo_libs}")
 
     # QCA
     if(NOT WITH_QCA)
