@@ -206,10 +206,6 @@ void ManagerPrivate::init()
     }
 }
 
-static void log(int level, const char *message, size_t len, void *user_data)
-{
-      qDebug() << "[libomemo-c] : " << QString::fromLatin1(message);
-}
 
 //
 // Initializes the OMEMO library's global context.
@@ -226,7 +222,16 @@ bool ManagerPrivate::initGlobalContext()
         return false;
     }
 
-    signal_context_set_log_function(globalContext.get(), log);
+    // Lambda defined here so it has friend access to Manager::warning() (protected).
+    const auto logCallback = [](int level, const char *message, size_t len, void *user_data) {
+        const auto msg = QStringLiteral("[libomemo-c] ") + QString::fromLatin1(message, int(len));
+        if (level <= SG_LOG_WARNING) {
+            static_cast<Manager *>(user_data)->warning(msg);
+        } else {
+            qDebug() << msg;
+        }
+    };
+    signal_context_set_log_function(globalContext.get(), logCallback);
     return true;
 }
 
@@ -1198,7 +1203,7 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
                     auto buildSessionDependingOnTrustLevel = [=](const QXmppOmemoDeviceBundle &deviceBundle, TrustLevel trustLevel) mutable {
                         // Build a session if the device's key has a specific trust level.
                         if (!acceptedTrustLevels.testFlag(trustLevel)) {
-                            q->debug(u"Session could not be created for JID '" + jid + u"' with device ID '" + QString::number(deviceId) + u"' because its key's trust level '" + QString::number(int(trustLevel)) + u"' is not accepted");
+                            warning(u"Session could not be created for JID '" + jid + u"' with device ID '" + QString::number(deviceId) + u"' because its key's trust level '" + QString::number(int(trustLevel)) + u"' is not accepted (keyId=" + QString::fromLatin1(deviceBundle.publicIdentityKey().toHex()) + u")");
                             controlDeviceProcessing(false);
                         } else if (!buildSession(address.data(), deviceBundle)) {
                             warning(u"Session could not be created for JID '" + jid + u"' and device ID '" + QString::number(deviceId) + u"'");
@@ -1270,7 +1275,7 @@ QXmppTask<std::optional<QXmppOmemoElement>> ManagerPrivate::encryptStanza(const 
                                     addOmemoEnvelope();
                                 }
                             } else {
-                                q->debug(u"OMEMO envelope could not be created for JID '" + jid + u"' and device ID '" + QString::number(deviceId) + u"' because the device's key has an unaccepted trust level '" + QString::number(int(trustLevel)) + u"'");
+                                warning(u"OMEMO envelope could not be created for JID '" + jid + u"' and device ID '" + QString::number(deviceId) + u"' because the device's key has an unaccepted trust level '" + QString::number(int(trustLevel)) + u"' (keyId=" + QString::fromLatin1(device.keyId.toHex()) + u")");
                                 controlDeviceProcessing(false);
                             }
                         });
@@ -1475,8 +1480,11 @@ QByteArray ManagerPrivate::createOmemoEnvelopeData(const signal_protocol_address
     session_cipher_set_version(sessionCipher.get(), CIPHERTEXT_OMEMO_VERSION);
 #endif
     RefCountedPtr<ciphertext_message> encryptedOmemoEnvelopeData;
-    if (session_cipher_encrypt(sessionCipher.get(), reinterpret_cast<const uint8_t *>(payloadDecryptionData.constData()), payloadDecryptionData.size(), encryptedOmemoEnvelopeData.ptrRef()) != SG_SUCCESS) {
-        warning(QStringLiteral("Payload decryption data could not be encrypted"));
+    const int sgRet = session_cipher_encrypt(sessionCipher.get(), reinterpret_cast<const uint8_t *>(payloadDecryptionData.constData()), payloadDecryptionData.size(), encryptedOmemoEnvelopeData.ptrRef());
+    if (sgRet != SG_SUCCESS) {
+        const auto jid = QString::fromUtf8(address.name, int(address.name_len));
+        const bool sessionEmpty = devices.value(jid).value(uint32_t(address.device_id)).session.isEmpty();
+        warning(u"Payload decryption data could not be encrypted for " + jid + u":" + QString::number(address.device_id) + u" SG_ERR=" + QString::number(sgRet) + u" session_empty=" + (sessionEmpty ? u"true" : u"false"));
         return {};
     }
 
@@ -1509,8 +1517,25 @@ QXmppTask<std::optional<QXmppMessage>> ManagerPrivate::decryptMessage(QXmppMessa
         QXmppPromise<std::optional<QXmppMessage>> interface;
 
         const auto mixUserJid = stanza.mixUserJid();
-        const auto senderJid = mixUserJid.isEmpty() ? QXmppUtils::jidToBareJid(stanza.from()) : mixUserJid;
         const auto senderDeviceId = omemoElement.senderDeviceId();
+
+        // For MUC, stanza.from() is the occupant JID (room@conf/nick), not the real sender.
+        // Find the real sender JID by matching the device ID across known devices.
+        QString senderJid;
+        if (!mixUserJid.isEmpty()) {
+            senderJid = mixUserJid;
+        } else if (stanza.type() == QXmppMessage::GroupChat) {
+            for (auto it = devices.constBegin(); it != devices.constEnd(); ++it) {
+                if (it->contains(senderDeviceId)) {
+                    senderJid = it.key();
+                    break;
+                }
+            }
+            if (senderJid.isEmpty())
+                senderJid = QXmppUtils::jidToBareJid(stanza.from());
+        } else {
+            senderJid = QXmppUtils::jidToBareJid(stanza.from());
+        }
         const auto omemoPayload = omemoElement.payload();
         subscribeToNewDeviceLists(senderJid, senderDeviceId);
 
@@ -1627,8 +1652,12 @@ QXmppTask<std::optional<DecryptionResult>> ManagerPrivate::decryptStanza(T stanz
 #if defined(WITH_OMEMO_V03)
             QByteArray serializedBody;
             QXmlStreamWriter(&serializedBody).writeCharacters(QString::fromUtf8(serializedSceEnvelope));
+            // Add <to/> matching jidToBareJid(from): for GroupChat this equals the room JID,
+            // satisfying the GroupChat <to/> check further below.
+            const QByteArray toJid = QXmppUtils::jidToBareJid(stanza.from()).toUtf8();
             serializedSceEnvelope =  QByteArray("<envelope xmlns='urn:xmpp:sce:1'> <content> <body xmlns='jabber:client'>") +
-                    serializedBody + QByteArray("</body></content><from jid='")+senderJid.toUtf8()+QByteArray("' /></envelope>");
+                    serializedBody + QByteArray("</body></content><from jid='")+senderJid.toUtf8()+
+                    QByteArray("' /><to jid='")+toJid+QByteArray("' /></envelope>");
 #endif
             document.setContent(serializedSceEnvelope, true);
             QXmppSceEnvelopeReader sceEnvelopeReader(document.documentElement());
@@ -3651,6 +3680,9 @@ QXmppTask<bool> ManagerPrivate::buildSessionWithDeviceBundle(const QString &jid,
         if (optionalDeviceBundle) {
             const auto &deviceBundle = *optionalDeviceBundle;
             device.keyId = deviceBundle.publicIdentityKey();
+            qDebug() << "[BUNDLE-DEBUG] keyId stored for" << jid << deviceId
+                     << "size:" << device.keyId.size()
+                     << "hex:" << device.keyId.toHex();
             auto future = q->trustLevel(jid, device.keyId);
             future.then(q, [=](TrustLevel trustLevel) mutable {
                 auto buildSessionDependingOnTrustLevel = [=](TrustLevel trustLevel) mutable {
@@ -3751,8 +3783,9 @@ bool ManagerPrivate::buildSession(signal_protocol_address address, const QXmppOm
         return false;
     }
 
-    if (session_builder_process_pre_key_bundle(sessionBuilder.get(), sessionBundle.get()) != SG_SUCCESS) {
-        warning(QStringLiteral("Session bundle could not be processed"));
+    const int sgRet = session_builder_process_pre_key_bundle(sessionBuilder.get(), sessionBundle.get());
+    if (sgRet != SG_SUCCESS) {
+        warning(u"Session bundle could not be processed for " + QString::fromUtf8(address.name, int(address.name_len)) + u":" + QString::number(address.device_id) + u" SG_ERR=" + QString::number(sgRet));
         return false;
     }
 
