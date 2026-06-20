@@ -4,7 +4,7 @@
 
 Name:       QXmpp
 Summary:    QXmpp Library
-Version:    1.7.0
+Version:    1.7.1
 Release:    1
 Group:      Qt/Qt
 Source:     master.zip
@@ -74,3 +74,9 @@ popd
 %{_includedir}/*/*/*.h
 %{_libdir}/cmake/*/*.cmake
 
+
+%changelog
+* Sat Jun 20 2026 Ronan <ronan35@gmx.fr> - 1.7.1-1
+- Fix OMEMO identity key extraction (strip 0x05 key-type prefix)
+- Route libomemo-c log warnings through Manager::warning()
+- Remove spurious protobuf-c link dependency, disable examples
