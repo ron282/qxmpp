@@ -53,7 +53,6 @@ popd
 %install
 pushd build
 %make_install 
-cp -Ra %{_sourcedir}/../build/qxmpp.pc %{buildroot}%{_libdir}/pkgconfig
 popd 
 
 %postun
