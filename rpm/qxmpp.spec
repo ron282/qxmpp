@@ -10,7 +10,7 @@ Group:      Qt/Qt
 Source:     %{name}-%{version}.tar.gz
 URL:        https://github.com/ron282/qxmpp.git
 License:    LGPLv2+
-BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel
+BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel qt5-qtnetwork-devel
 Requires:   qca omemo-c
 
 %description
