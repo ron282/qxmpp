@@ -58,12 +58,9 @@ popd
 %postun
 /sbin/ldconfig
 
-%files 
+%files
 %defattr(-, root, root, -)
-%{_libdir}/lib%{name}OmemoQt5.so
-%{_libdir}/lib%{name}OmemoQt5.so.*
-%{_libdir}/lib%{name}Qt5.so
-%{_libdir}/lib%{name}Qt5.so.*
+%{_libdir}/libQXmppQt5.so.*
 
 %files devel
 %defattr(-, root, root, -)
@@ -72,6 +69,9 @@ popd
 %{_includedir}/*/*.cpp
 %{_includedir}/*/*/*.h
 %{_libdir}/cmake/*/*.cmake
+%{_libdir}/libQXmppQt5.so
+%{_libdir}/libQXmppOmemoQt5.so
+%{_libdir}/libQXmppOmemoQt5.so.*
 
 
 %changelog
