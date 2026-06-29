@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-Name:       QXmpp
+Name:       qxmpp
 Summary:    QXmpp Library
 Version:    1.7.1
 Release:    1
 Group:      Qt/Qt
-Source:     master.zip
+Source:     %{name}-%{version}.tar.gz
 URL:        https://github.com/ron282/qxmpp.git
 License:    LGPLv2+
 BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel
@@ -31,7 +31,7 @@ Provides:	%{name}-devel
 Contains files needed to development with %{name}.
 
 %prep
-%autosetup -p1 -n %{name}-%{version}/%{name}
+%autosetup -p1 -n %{name}-%{version}
 
 %build
 mkdir -p build
