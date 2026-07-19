@@ -14,8 +14,6 @@ BuildRequires: cmake qca-devel qt5-qttest-devel qt5-qtnetwork-devel qt5-qtxml-de
 
 BuildRequires: pkgconfig(libomemo-c)
 
-Requires:      pkgconfig(libomemo-c)
-
 %description
 QXmpp is a cross-platform C++ XMPP client and server library. It is written in C++ and uses Qt framework.
 
