@@ -10,8 +10,9 @@ Group:      Qt/Qt
 Source:     %{name}-%{version}.tar.gz
 URL:        https://github.com/ron282/qxmpp.git
 License:    LGPLv2+
-BuildRequires: cmake qca-devel omemo-c-devel qt5-qttest-devel qt5-qtnetwork-devel qt5-qtxml-devel
-Requires:   qca omemo-c
+BuildRequires: cmake qca-devel qt5-qttest-devel qt5-qtnetwork-devel qt5-qtxml-devel
+
+BuildRequires: pkgconfig(libomemo-c)
 
 %description
 QXmpp is a cross-platform C++ XMPP client and server library. It is written in C++ and uses Qt framework.
